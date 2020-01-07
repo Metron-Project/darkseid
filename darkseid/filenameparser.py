@@ -5,23 +5,8 @@ This should probably be re-written, but, well, it mostly works!
 
 # Copyright 2012-2014 Anthony Beville
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-# Some portions of this code were modified from pyComicMetaThis project
-# http://code.google.com/p/pycomicmetathis/
-
+import pathlib
 import re
-import os
 from urllib.parse import unquote
 
 
@@ -249,12 +234,8 @@ class FileNameParser:
         return remainder.strip()
 
     def parseFilename(self, filename):
-
-        # remove the path
-        filename = os.path.basename(filename)
-
-        # remove the extension
-        filename = os.path.splitext(filename)[0]
+        # Get file name without path or extension
+        filename = pathlib.Path(filename).stem
 
         # url decode, just in case
         filename = unquote(filename)
