@@ -192,7 +192,15 @@ class GenericMetadata:
         # return a list of archive page indices of cover pages
         coverlist = []
         for p in self.pages:
-            if "Type" in p and p["Type"] == Pagingalse):
+            if "Type" in p and p["Type"] == PageType.FrontCover:
+                coverlist.append(int(p["Image"]))
+
+        if len(coverlist) == 0:
+            coverlist.append(0)
+
+        return coverlist
+
+    def addCredit(self, person, role, primary=False):
 
         credit = dict()
         credit["person"] = person
@@ -215,7 +223,7 @@ class GenericMetadata:
         if not found:
             self.credits.append(credit)
 
-    def __str__(self):ing
+    def __str__(self):
         vals = []
         if self.isEmpty:
             return "No metadata"
