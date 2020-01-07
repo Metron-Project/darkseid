@@ -1,9 +1,7 @@
 """Some generic utilities"""
-
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2019 Brian Pepple
 
-import os
 import pathlib
 
 
@@ -50,14 +48,3 @@ def removearticles(text):
     # newText = newText.replace(".", "")
 
     return newText
-
-
-def unique_file(file_name):
-    counter = 1
-    # returns ('/path/file', '.ext')
-    file_name_parts = os.path.splitext(file_name)
-    while True:
-        if not os.path.lexists(file_name):
-            return file_name
-        file_name = file_name_parts[0] + " (" + str(counter) + ")" + file_name_parts[1]
-        counter += 1
