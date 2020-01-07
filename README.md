@@ -1,5 +1,5 @@
-## Darkseid
+# Darkseid
 
-### Quick Description
+## Quick Description
 
 A python library to interact with comic archives.
