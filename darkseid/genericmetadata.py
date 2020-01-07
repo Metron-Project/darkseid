@@ -8,18 +8,6 @@ possible, however lossy it might be
 
 # Copyright 2012-2014 Anthony Beville
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from . import utils
 
 
@@ -204,15 +192,7 @@ class GenericMetadata:
         # return a list of archive page indices of cover pages
         coverlist = []
         for p in self.pages:
-            if "Type" in p and p["Type"] == PageType.FrontCover:
-                coverlist.append(int(p["Image"]))
-
-        if len(coverlist) == 0:
-            coverlist.append(0)
-
-        return coverlist
-
-    def addCredit(self, person, role, primary=False):
+            if "Type" in p and p["Type"] == Pagingalse):
 
         credit = dict()
         credit["person"] = person
@@ -235,7 +215,7 @@ class GenericMetadata:
         if not found:
             self.credits.append(credit)
 
-    def __str__(self):
+    def __str__(self):ing
         vals = []
         if self.isEmpty:
             return "No metadata"
