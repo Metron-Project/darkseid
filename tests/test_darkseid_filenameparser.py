@@ -16,8 +16,8 @@ class TestFileNameParser(TestCase):
     def test_special_format(self):
         """ Test for files with a special name like 'TPB' """
         comic = "Aquaman TPB (1994)"
-        _, issue_start, _ = self.fnp.getIssueNumber(comic)
-        series, volume = self.fnp.getSeriesName(comic, issue_start)
+        _, issue_start, _ = self.fnp.get_issue_number(comic)
+        series, volume = self.fnp.get_series_name(comic, issue_start)
         self.assertEqual(issue_start, 0)
         self.assertEqual(series, "Aquaman")
         self.assertEqual(volume, "1994")
@@ -25,42 +25,42 @@ class TestFileNameParser(TestCase):
     def test_get_issue_number(self):
         """ Test to get the issue number from the filename """
         # Returns a tuple of issue number string, and start and end indexes in the filename
-        issue, issue_start, issue_end = self.fnp.getIssueNumber(self.comic)
+        issue, issue_start, issue_end = self.fnp.get_issue_number(self.comic)
         self.assertEqual(issue, "002")
         self.assertEqual(issue_start, 25)
         self.assertEqual(issue_end, 29)
 
     def test_get_year(self):
         """ Test to get the year from a filename """
-        _, _, issue_end = self.fnp.getIssueNumber(self.comic)
-        year = self.fnp.getYear(self.comic, issue_end)
+        _, _, issue_end = self.fnp.get_issue_number(self.comic)
+        year = self.fnp.get_year(self.comic, issue_end)
         self.assertEqual(year, "2013")
 
     def test_get_series_name(self):
         """ Test to get the series name from a filename """
-        _, issue_start, _ = self.fnp.getIssueNumber(self.comic)
-        series, volume = self.fnp.getSeriesName(self.comic, issue_start)
+        _, issue_start, _ = self.fnp.get_issue_number(self.comic)
+        series, volume = self.fnp.get_series_name(self.comic, issue_start)
         self.assertEqual(series, "Afterlife With Archie")
         self.assertEqual(volume, "1")
 
     def test_get_count(self):
         """ Test to get the total number of issues from the filename """
-        _, _, issue_end = self.fnp.getIssueNumber(self.comic)
-        issue_count = self.fnp.getIssueCount(self.comic, issue_end)
+        _, _, issue_end = self.fnp.get_issue_number(self.comic)
+        issue_count = self.fnp.get_issue_count(self.comic, issue_end)
         self.assertEqual(issue_count, "8")
 
     def test_fix_spaces(self):
         """ Test of converting underscores to spaces in the filename """
-        new_name = self.fnp.fixSpaces(self.comic)
+        new_name = self.fnp.fix_spaces(self.comic)
         self.assertNotEqual(new_name, "Afterlife With Archie")
 
     def test_get_remainder(self):
         """ Test the remainder function """
-        _, issue_start, issue_end = self.fnp.getIssueNumber(self.comic)
-        year = self.fnp.getYear(self.comic, issue_end)
-        _, volume = self.fnp.getSeriesName(self.comic, issue_start)
-        count = self.fnp.getIssueCount(self.comic, issue_end)
-        remainder = self.fnp.getRemainder(self.comic, year, count, volume, issue_end)
+        _, issue_start, issue_end = self.fnp.get_issue_number(self.comic)
+        year = self.fnp.get_year(self.comic, issue_end)
+        _, volume = self.fnp.get_series_name(self.comic, issue_start)
+        count = self.fnp.get_issue_count(self.comic, issue_end)
+        remainder = self.fnp.get_remainder(self.comic, year, count, volume, issue_end)
         self.assertEqual(remainder, "(of 08)")
 
     def test_parse_filename(self):
@@ -70,7 +70,7 @@ class TestFileNameParser(TestCase):
         test_filename = tmp_path + os.path.pathsep + tmp_file.name
         tmp_file.close()
 
-        self.fnp.parseFilename(test_filename)
+        self.fnp.parse_filename(test_filename)
         self.assertEqual(self.fnp.series, "Afterlife With Archie")
         self.assertEqual(self.fnp.volume, "1")
         self.assertEqual(self.fnp.issue, "2")

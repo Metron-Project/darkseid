@@ -467,7 +467,7 @@ class ComicArchive:
         metadata = GenericMetadata()
 
         fnp = FileNameParser()
-        fnp.parseFilename(self.path)
+        fnp.parse_filename(self.path)
 
         if fnp.issue != "":
             metadata.issue = fnp.issue
