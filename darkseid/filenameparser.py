@@ -117,29 +117,29 @@ class FileNameParser:
 
         # first look for a word with "#" followed by digits with optional suffix
         # this is almost certainly the issue number
-        for w in reversed(word_list):
-            if re.match(r"#[-]?(([0-9]*\.[0-9]+|[0-9]+)(\w*))", w[0]):
+        for word in reversed(word_list):
+            if re.match(r"#[-]?(([0-9]*\.[0-9]+|[0-9]+)(\w*))", word[0]):
                 found = True
                 break
 
         # same as above but w/o a '#', and only look at the last word in the
         # list
         if not found:
-            w = word_list[-1]
-            if re.match(r"[-]?(([0-9]*\.[0-9]+|[0-9]+)(\w*))", w[0]):
+            word = word_list[-1]
+            if re.match(r"[-]?(([0-9]*\.[0-9]+|[0-9]+)(\w*))", word[0]):
                 found = True
 
         # now try to look for a # followed by any characters
         if not found:
-            for w in reversed(word_list):
-                if re.match(r"#\S+", w[0]):
+            for word in reversed(word_list):
+                if re.match(r"#\S+", word[0]):
                     found = True
                     break
 
         if found:
-            issue = w[0]
-            start = w[1]
-            end = w[2]
+            issue = word[0]
+            start = word[1]
+            end = word[2]
             if issue[0] == "#":
                 issue = issue[1:]
 
