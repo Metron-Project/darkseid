@@ -23,14 +23,14 @@ class TestUtils(unittest.TestCase):
 
     def test_remove_articles(self):
         txt = "The Champions & Inhumans"
-        new_txt = utils.removearticles(txt)
+        new_txt = utils.remove_articles(txt)
         self.assertEqual(new_txt, "champions inhumans")
 
     def test_list_to_string(self):
         thislist = ["apple", "banana", "cherry"]
         expected_result = "apple; banana; cherry"
 
-        list_string = utils.listToString(thislist)
+        list_string = utils.list_to_string(thislist)
         self.assertEqual(list_string, expected_result)
 
     def test_unique_name(self):

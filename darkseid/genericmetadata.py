@@ -275,7 +275,7 @@ class GenericMetadata:
         add_attr_string("comments")
         add_attr_string("notes")
 
-        add_string("tags", utils.listToString(self.tags))
+        add_string("tags", utils.list_to_string(self.tags))
 
         for c in self.credits:
             primary = ""
