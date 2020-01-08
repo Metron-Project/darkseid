@@ -10,8 +10,12 @@ def get_recursive_filelist(pathlist):
     """ Create a recursive list of comic files """
     filelist = []
     for path in pathlist:
-        for filename in pathlib.Path(path).rglob("*.[cC][bB][zZ]"):
-            filelist.append(filename)
+        path = pathlib.Path(path)
+        if path.is_dir():
+            for filename in path.rglob("*.[cC][bB][zZ]"):
+                filelist.append(filename)
+        else:
+            filelist.append(path)
 
     filelist = sorted(filelist)
 
