@@ -382,7 +382,7 @@ class ComicArchive:
                     self.cix_md.pages = []
 
             if len(self.cix_md.pages) == 0:
-                self.cix_md.setDefaultPageList(self.getNumberOfPages())
+                self.cix_md.set_default_page_list(self.getNumberOfPages())
 
         return self.cix_md
 

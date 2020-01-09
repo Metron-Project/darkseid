@@ -9,13 +9,13 @@ class TestGenericMetadata(TestCase):
         self.meta_data.series = "Aquaman"
         self.meta_data.issue = "0"
         self.meta_data.title = "A Crash of Symbols"
-        self.meta_data.isEmpty = False
+        self.meta_data.is_empty = False
 
         self.new_md = GenericMetadata()
         self.new_md.year = "1994"
         self.new_md.month = "10"
         self.new_md.day = "1"
-        self.meta_data.isEmpty = False
+        self.meta_data.is_empty = False
 
     def test_metadata_overlay(self):
         self.meta_data.overlay(self.new_md)
@@ -34,9 +34,9 @@ class TestGenericMetadata(TestCase):
             {"person": "Martin Egeland", "role": "Cover"},
         ]
 
-        self.meta_data.addCredit("Peter David", "Writer", primary=True)
-        self.meta_data.addCredit("Martin Egeland", "Penciller")
-        self.meta_data.addCredit("Martin Egeland", "Cover")
+        self.meta_data.add_credit("Peter David", "Writer", primary=True)
+        self.meta_data.add_credit("Martin Egeland", "Penciller")
+        self.meta_data.add_credit("Martin Egeland", "Cover")
 
         self.assertEqual(self.meta_data.credits, result)
 
@@ -47,8 +47,8 @@ class TestGenericMetadata(TestCase):
             {"person": "Tom McCray", "role": "Colorist"},
         ]
 
-        self.meta_data.addCredit("Peter David", "Writer")
-        self.meta_data.overlayCredits(new_credit)
+        self.meta_data.add_credit("Peter David", "Writer")
+        self.meta_data.overlay_credits(new_credit)
 
         self.assertEqual(self.meta_data.credits, result)
 

@@ -74,13 +74,13 @@ class ComicInfoXml:
         assign("Title", metadata.title)
         assign("Series", metadata.series)
         assign("Number", metadata.issue)
-        assign("Count", metadata.issueCount)
+        assign("Count", metadata.issue_count)
         assign("Volume", metadata.volume)
-        assign("AlternateSeries", metadata.alternateSeries)
-        assign("AlternateNumber", metadata.alternateNumber)
-        assign("StoryArc", metadata.storyArc)
-        assign("SeriesGroup", metadata.seriesGroup)
-        assign("AlternateCount", metadata.alternateCount)
+        assign("AlternateSeries", metadata.alternate_series)
+        assign("AlternateNumber", metadata.alternate_number)
+        assign("StoryArc", metadata.story_arc)
+        assign("SeriesGroup", metadata.series_group)
+        assign("AlternateCount", metadata.alternate_count)
         assign("Summary", metadata.comments)
         assign("Notes", metadata.notes)
         assign("Year", metadata.year)
@@ -154,18 +154,18 @@ class ComicInfoXml:
         assign("Publisher", metadata.publisher)
         assign("Imprint", metadata.imprint)
         assign("Genre", metadata.genre)
-        assign("Web", metadata.webLink)
-        assign("PageCount", metadata.pageCount)
+        assign("Web", metadata.web_link)
+        assign("PageCount", metadata.page_count)
         assign("LanguageISO", metadata.language)
         assign("Format", metadata.format)
-        assign("AgeRating", metadata.maturityRating)
-        if metadata.blackAndWhite is not None and metadata.blackAndWhite:
+        assign("AgeRating", metadata.maturity_rating)
+        if metadata.black_and_white is not None and metadata.black_and_white:
             ET.SubElement(root, "BlackAndWhite").text = "Yes"
         assign("Manga", metadata.manga)
         assign("Characters", metadata.characters)
         assign("Teams", metadata.teams)
         assign("Locations", metadata.locations)
-        assign("ScanInformation", metadata.scanInfo)
+        assign("ScanInformation", metadata.scan_info)
 
         #  loop and add the page entries under pages node
         if len(metadata.pages) > 0:
@@ -202,11 +202,11 @@ class ComicInfoXml:
         metadata.series = xlate("Series")
         metadata.title = xlate("Title")
         metadata.issue = xlate("Number")
-        metadata.issueCount = xlate("Count")
+        metadata.issue_count = xlate("Count")
         metadata.volume = xlate("Volume")
-        metadata.alternateSeries = xlate("AlternateSeries")
-        metadata.alternateNumber = xlate("AlternateNumber")
-        metadata.alternateCount = xlate("AlternateCount")
+        metadata.alternate_series = xlate("AlternateSeries")
+        metadata.alternate_number = xlate("AlternateNumber")
+        metadata.alternate_count = xlate("AlternateCount")
         metadata.comments = xlate("Summary")
         metadata.notes = xlate("Notes")
         metadata.year = xlate("Year")
@@ -215,23 +215,23 @@ class ComicInfoXml:
         metadata.publisher = xlate("Publisher")
         metadata.imprint = xlate("Imprint")
         metadata.genre = xlate("Genre")
-        metadata.webLink = xlate("Web")
+        metadata.web_link = xlate("Web")
         metadata.language = xlate("LanguageISO")
         metadata.format = xlate("Format")
         metadata.manga = xlate("Manga")
         metadata.characters = xlate("Characters")
         metadata.teams = xlate("Teams")
         metadata.locations = xlate("Locations")
-        metadata.pageCount = xlate("PageCount")
-        metadata.scanInfo = xlate("ScanInformation")
-        metadata.storyArc = xlate("StoryArc")
-        metadata.seriesGroup = xlate("SeriesGroup")
-        metadata.maturityRating = xlate("AgeRating")
+        metadata.page_count = xlate("PageCount")
+        metadata.scan_info = xlate("ScanInformation")
+        metadata.story_arc = xlate("StoryArc")
+        metadata.series_group = xlate("SeriesGroup")
+        metadata.maturity_rating = xlate("AgeRating")
 
         tmp = xlate("BlackAndWhite")
-        metadata.blackAndWhite = False
+        metadata.black_and_white = False
         if tmp is not None and tmp.lower() in ["yes", "true", "1"]:
-            metadata.blackAndWhite = True
+            metadata.black_and_white = True
         # Now extract the credit info
         for credit_node in root:
             if (
@@ -244,12 +244,12 @@ class ComicInfoXml:
             ):
                 if credit_node.text is not None:
                     for name in credit_node.text.split(","):
-                        metadata.addCredit(name.strip(), credit_node.tag)
+                        metadata.add_credit(name.strip(), credit_node.tag)
 
             if credit_node.tag == "CoverArtist":
                 if credit_node.text is not None:
                     for name in credit_node.text.split(","):
-                        metadata.addCredit(name.strip(), "Cover")
+                        metadata.add_credit(name.strip(), "Cover")
 
         # parse page data now
         pages_node = root.find("Pages")

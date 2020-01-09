@@ -15,13 +15,13 @@ class TestComicInfoXml(TestCase):
         self.meta_data.issue = "1"
         self.meta_data.year = "1993"
         self.meta_data.day = "15"
-        self.meta_data.addCredit("Peter David", "Writer", primary=True)
-        self.meta_data.addCredit("Martin Egeland", "Penciller")
-        self.meta_data.addCredit("Martin Egeland", "Cover")
-        self.meta_data.addCredit("Kevin Dooley", "Editor")
-        self.meta_data.addCredit("Howard Shum", "Inker")
-        self.meta_data.addCredit("Tom McCraw", "Colorist")
-        self.meta_data.addCredit("Dan Nakrosis", "Letterer")
+        self.meta_data.add_credit("Peter David", "Writer", primary=True)
+        self.meta_data.add_credit("Martin Egeland", "Penciller")
+        self.meta_data.add_credit("Martin Egeland", "Cover")
+        self.meta_data.add_credit("Kevin Dooley", "Editor")
+        self.meta_data.add_credit("Howard Shum", "Inker")
+        self.meta_data.add_credit("Tom McCraw", "Colorist")
+        self.meta_data.add_credit("Dan Nakrosis", "Letterer")
 
     def test_metadata_from_xml(self):
         """ Simple test of creating the ComicInfo """
