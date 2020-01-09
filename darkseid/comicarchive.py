@@ -195,10 +195,6 @@ class ComicArchive:
         self.page_list = None
         self.metadata = None
 
-    def rename(self, path):
-        self.path = path
-        self.archiver.path = path
-
     def zip_test(self):
         return zipfile.is_zipfile(self.path)
 
@@ -220,10 +216,6 @@ class ComicArchive:
             return True
         else:
             return False
-
-    def has_metadata(self):
-
-        return self.check_for_metadata()
 
     def get_page(self, index):
 
@@ -361,7 +353,7 @@ class ComicArchive:
         return self.metadata
 
     def read_raw_metadata(self):
-        if not self.check_for_metadata():
+        if not self.has_metadata():
             return None
         try:
             raw_metadata = self.archiver.read_archive_file(self.ci_xml_filename)
@@ -387,7 +379,7 @@ class ComicArchive:
             return False
 
     def remove_metadata(self):
-        if self.check_for_metadata():
+        if self.has_metadata():
             write_success = self.archiver.remove_archive_file(self.ci_xml_filename)
             if write_success:
                 self.has_md = False
@@ -396,7 +388,7 @@ class ComicArchive:
             return write_success
         return True
 
-    def check_for_metadata(self):
+    def has_metadata(self):
         if self.has_md is None:
 
             if not self.seems_to_be_a_comic_archive():
