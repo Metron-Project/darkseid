@@ -372,7 +372,7 @@ class ComicArchive:
             if raw_cix is None or raw_cix == "":
                 self.cix_md = GenericMetadata()
             else:
-                self.cix_md = ComicInfoXml().metadataFromString(raw_cix)
+                self.cix_md = ComicInfoXml().metadata_from_string(raw_cix)
 
             # validate the existing page list (make sure count is correct)
             if len(self.cix_md.pages) != 0:
@@ -400,7 +400,7 @@ class ComicArchive:
 
         if metadata is not None:
             self.applyArchiveInfoToMetadata(metadata, calc_page_sizes=True)
-            cix_string = ComicInfoXml().stringFromMetadata(metadata)
+            cix_string = ComicInfoXml().string_from_metadata(metadata)
             write_success = self.archiver.writeArchiveFile(
                 self.ci_xml_filename, cix_string
             )
