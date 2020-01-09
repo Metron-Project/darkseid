@@ -19,14 +19,6 @@ from .genericmetadata import GenericMetadata
 sys.path.insert(0, os.path.abspath("."))
 
 
-class MetaDataStyle:
-    # Only ComicRack is supported for now,
-    # if we want to add back other formats this
-    # will be useful to have
-    CIX = 0
-    name = ["ComicRack"]
-
-
 class ZipArchiver:
 
     """ZIP implementation"""
@@ -126,25 +118,6 @@ class ZipArchiver:
         os.remove(self.path)
         os.rename(tmp_name, self.path)
 
-    def copy_from_archive(self, other_archive):
-        """Replace the current zip with one copied from another archive"""
-
-        try:
-            zout = zipfile.ZipFile(self.path, "w", allowZip64=True)
-            for fname in other_archive.get_archive_filename_list():
-                data = other_archive.read_archive_file(fname)
-                if data is not None:
-                    zout.writestr(fname, data)
-            zout.close()
-        except Exception as exception_error:
-            print(
-                f"Error while copying to {self.path}: {exception_error}",
-                file=sys.stderr,
-            )
-            return False
-        else:
-            return True
-
 
 # ------------------------------------------
 
@@ -184,10 +157,10 @@ class ComicArchive:
         self.path = path
 
         self.ci_xml_filename = "ComicInfo.xml"
-        self.has_cix = None
+        self.has_md = None
         self.page_count = None
         self.page_list = None
-        self.cix_md = None
+        self.metadata = None
 
         self.archive_type = self.ArchiveType.Unknown
         self.archiver = UnknownArchiver(self.path)
@@ -198,18 +171,10 @@ class ComicArchive:
 
     def reset_cache(self):
         """Clears the cached data"""
-        self.has_cix = None
+        self.has_md = None
         self.page_count = None
         self.page_list = None
-        self.cix_md = None
-
-    def load_cache(self, style_list):
-        for style in style_list:
-            self.read_metadata(style)
-
-    def rename(self, path):
-        self.path = path
-        self.archiver.path = path
+        self.metadata = None
 
     def zip_test(self):
         return zipfile.is_zipfile(self.path)
@@ -226,43 +191,12 @@ class ComicArchive:
 
         return True
 
-    def is_writable_for_style(self, data_style):
-
-        return self.is_writable()
-
     def seems_to_be_a_comic_archive(self):
 
         if (self.is_zip()) and (self.get_number_of_pages() > 0):
             return True
         else:
             return False
-
-    def read_metadata(self, style):
-
-        if style == MetaDataStyle.CIX:
-            return self.read_cix()
-        else:
-            return GenericMetadata()
-
-    def write_metadata(self, metadata, style):
-
-        retcode = None
-        if style == MetaDataStyle.CIX:
-            retcode = self.write_cix(metadata)
-        return retcode
-
-    def has_metadata(self, style):
-
-        if style == MetaDataStyle.CIX:
-            return self.check_for_cix()
-        else:
-            return False
-
-    def remove_metadata(self, style):
-        retcode = True
-        if style == MetaDataStyle.CIX:
-            retcode = self.remove_cix()
-        return retcode
 
     def get_page(self, index):
 
@@ -379,72 +313,72 @@ class ComicArchive:
             self.page_count = len(self.get_page_name_list())
         return self.page_count
 
-    def read_cix(self):
-        if self.cix_md is None:
-            raw_cix = self.read_raw_cix()
-            if raw_cix is None or raw_cix == "":
-                self.cix_md = GenericMetadata()
+    def read_metadata(self):
+        if self.metadata is None:
+            raw_metadata = self.read_raw_metadata()
+            if raw_metadata is None or raw_metadata == "":
+                self.metadata = GenericMetadata()
             else:
-                self.cix_md = ComicInfoXml().metadata_from_string(raw_cix)
+                self.metadata = ComicInfoXml().metadata_from_string(raw_metadata)
 
             # validate the existing page list (make sure count is correct)
-            if len(self.cix_md.pages) != 0:
-                if len(self.cix_md.pages) != self.get_number_of_pages():
+            if len(self.metadata.pages) != 0:
+                if len(self.metadata.pages) != self.get_number_of_pages():
                     # pages array doesn't match the actual number of images we're seeing
                     # in the archive, so discard the data
-                    self.cix_md.pages = []
+                    self.metadata.pages = []
 
-            if len(self.cix_md.pages) == 0:
-                self.cix_md.set_default_page_list(self.get_number_of_pages())
+            if len(self.metadata.pages) == 0:
+                self.metadata.set_default_page_list(self.get_number_of_pages())
 
-        return self.cix_md
+        return self.metadata
 
-    def read_raw_cix(self):
-        if not self.check_for_cix():
+    def read_raw_metadata(self):
+        if not self.has_metadata():
             return None
         try:
-            raw_cix = self.archiver.read_archive_file(self.ci_xml_filename)
+            raw_metadata = self.archiver.read_archive_file(self.ci_xml_filename)
         except IOError:
             print("Error reading in raw CIX!")
-            raw_cix = ""
-        return raw_cix
+            raw_metadata = ""
+        return raw_metadata
 
-    def write_cix(self, metadata):
+    def write_metadata(self, metadata):
 
         if metadata is not None:
             self.apply_archive_info_to_metadata(metadata, calc_page_sizes=True)
-            cix_string = ComicInfoXml().string_from_metadata(metadata)
+            md_string = ComicInfoXml().string_from_metadata(metadata)
             write_success = self.archiver.write_archive_file(
-                self.ci_xml_filename, cix_string
+                self.ci_xml_filename, md_string
             )
             if write_success:
-                self.has_cix = True
-                self.cix_md = metadata
+                self.has_md = True
+                self.metadata = metadata
             self.reset_cache()
             return write_success
         else:
             return False
 
-    def remove_cix(self):
-        if self.check_for_cix():
+    def remove_metadata(self):
+        if self.has_metadata():
             write_success = self.archiver.remove_archive_file(self.ci_xml_filename)
             if write_success:
-                self.has_cix = False
-                self.cix_md = None
+                self.has_md = False
+                self.metadata = None
             self.reset_cache()
             return write_success
         return True
 
-    def check_for_cix(self):
-        if self.has_cix is None:
+    def has_metadata(self):
+        if self.has_md is None:
 
             if not self.seems_to_be_a_comic_archive():
-                self.has_cix = False
+                self.has_md = False
             elif self.ci_xml_filename in self.archiver.get_archive_filename_list():
-                self.has_cix = True
+                self.has_md = True
             else:
-                self.has_cix = False
-        return self.has_cix
+                self.has_md = False
+        return self.has_md
 
     def apply_archive_info_to_metadata(self, metadata, calc_page_sizes=False):
         metadata.page_count = self.get_number_of_pages()
@@ -498,11 +432,3 @@ class ComicArchive:
         metadata.isEmpty = False
 
         return metadata
-
-    def export_as_zip(self, zipfilename):
-        if self.archive_type == self.ArchiveType.Zip:
-            # nothing to do, we're already a zip
-            return True
-
-        zip_archiver = ZipArchiver(zipfilename)
-        return zip_archiver.copy_from_archive(self.archiver)

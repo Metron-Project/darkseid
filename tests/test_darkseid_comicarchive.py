@@ -4,7 +4,7 @@ import tempfile
 from shutil import make_archive
 from unittest import TestCase, main
 
-from darkseid.comicarchive import ComicArchive, MetaDataStyle
+from darkseid.comicarchive import ComicArchive
 from darkseid.genericmetadata import GenericMetadata
 
 
@@ -61,32 +61,27 @@ class TestComicArchive(TestCase):
         res = self.comic_archive.is_writable()
         self.assertTrue(res)
 
-    def test_archive_is_writable_for_style(self):
-        """ Test to determine writing style of comic tag """
-        res = self.comic_archive.is_writable_for_style(MetaDataStyle.CIX)
-        self.assertTrue(res)
-
     def test_archive_test_metadata(self):
         """ Test to determine if a comic archive has metadata """
         # verify archive has no metadata
-        res = self.comic_archive.has_metadata(MetaDataStyle.CIX)
+        res = self.comic_archive.has_metadata()
         self.assertFalse(res)
 
         # now let's test that we can write some
-        self.comic_archive.write_metadata(self.meta_data, MetaDataStyle.CIX)
-        has_md = self.comic_archive.has_metadata(MetaDataStyle.CIX)
+        self.comic_archive.write_metadata(self.meta_data)
+        has_md = self.comic_archive.has_metadata()
         self.assertTrue(has_md)
 
         # Verify what was written
-        new_md = self.comic_archive.read_metadata(MetaDataStyle.CIX)
+        new_md = self.comic_archive.read_metadata()
         self.assertEqual(new_md.series, self.meta_data.series)
         self.assertEqual(new_md.issue, self.meta_data.issue)
         self.assertEqual(new_md.title, self.meta_data.title)
         self.assertEqual(new_md.notes, self.meta_data.notes)
 
         # now remove what was just written
-        self.comic_archive.remove_metadata(MetaDataStyle.CIX)
-        remove_md = self.comic_archive.has_metadata(MetaDataStyle.CIX)
+        self.comic_archive.remove_metadata()
+        remove_md = self.comic_archive.has_metadata()
         self.assertFalse(remove_md)
 
     def test_archive_get_page(self):
