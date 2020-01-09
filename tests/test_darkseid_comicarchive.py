@@ -68,7 +68,7 @@ class TestComicArchive(TestCase):
         self.assertFalse(res)
 
         # now let's test that we can write some
-        self.comic_archive.write_metadata(self.meta_data, )
+        self.comic_archive.write_metadata(self.meta_data)
         has_md = self.comic_archive.has_metadata()
         self.assertTrue(has_md)
 
