@@ -7,7 +7,7 @@ import pathlib
 
 
 def get_recursive_filelist(pathlist):
-    """ Create a recursive list of comic files """
+    """Takes a list of paths and return a list of comic archives"""
     filelist = []
     for path in pathlist:
         path = pathlib.Path(path)
@@ -22,35 +22,41 @@ def get_recursive_filelist(pathlist):
     return filelist
 
 
-def listToString(l):
+def list_to_string(list_of_strings):
+    """
+    Function that takes a list of string and converts it to a string.
+    For example: ["apple", "banana", "cherry"] is changed to "apple; banana; cherry"
+    """
     string = ""
-    if l is not None:
-        for item in l:
+    if list_of_strings is not None:
+        for item in list_of_strings:
             if len(string) > 0:
                 string += "; "
             string += item
     return string
 
 
-def removearticles(text):
+def remove_articles(text):
+    """Takes a string and removes any articles in it."""
     text = text.lower()
     articles = ["and", "a", "&", "issue", "the"]
-    newText = ""
+    new_text = ""
     for word in text.split(" "):
         if word not in articles:
-            newText += word + " "
+            new_text += word + " "
 
-    newText = newText[:-1]
+    new_text = new_text[:-1]
 
     # now get rid of some other junk
-    newText = newText.replace(":", "")
-    newText = newText.replace(",", "")
-    newText = newText.replace("-", " ")
+    new_text = new_text.replace(":", "")
+    new_text = new_text.replace(",", "")
+    new_text = new_text.replace("-", " ")
 
-    return newText
+    return new_text
 
 
 def unique_file(file_name):
+    """Takes a filename and if one already exist with that name returns a new filename"""
     counter = 1
     # returns ('/path/file', '.ext')
     file_name_parts = os.path.splitext(file_name)

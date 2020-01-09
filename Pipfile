@@ -8,6 +8,7 @@ flake8 = "*"
 black = "*"
 pytest = "*"
 pytest-cov = "*"
+pylint = "*"
 
 [packages]
 natsort = "*"
@@ -15,3 +16,6 @@ pillow = "*"
 
 [requires]
 python_version = "3.6"
+
+[pipenv]
+allow_prereleases = true

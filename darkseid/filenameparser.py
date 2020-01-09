@@ -11,26 +11,39 @@ from urllib.parse import unquote
 
 
 class FileNameParser:
-    @staticmethod
-    def repl(m):
-        return " " * len(m.group())
+    """Class to get parse the filename to get information about the comic."""
 
-    def fixSpaces(self, string, remove_dashes=True):
+    def __init__(self):
+        self.issue = ""
+        self.series = ""
+        self.volume = ""
+        self.issue_count = ""
+        self.year = ""
+        self.remainder = ""
+
+    @staticmethod
+    def repl(match):
+        return " " * len(match.group())
+
+    def fix_spaces(self, string, remove_dashes=True):
+        """Returns a string with the spaces fixed"""
+
         if remove_dashes:
             placeholders = ["[-_]", "  +"]
         else:
             placeholders = ["[_]", "  +"]
-        for ph in placeholders:
-            string = re.sub(ph, self.repl, string)
+        for place_holder in placeholders:
+            string = re.sub(place_holder, self.repl, string)
         return string  # .strip()
 
-    def getIssueCount(self, filename, issue_end):
+    def get_issue_count(self, filename, issue_end):
+        """Returns a string with the issue count"""
 
         count = ""
         filename = filename[issue_end:]
 
         # replace any name separators with spaces
-        tmpstr = self.fixSpaces(filename)
+        tmpstr = self.fix_spaces(filename)
         found = False
 
         match = re.search(r"(?<=\sof\s)\d+(?=\s)", tmpstr, re.IGNORECASE)
@@ -48,7 +61,7 @@ class FileNameParser:
 
         return count
 
-    def getIssueNumber(self, filename):
+    def get_issue_number(self, filename):
         """Returns a tuple of issue number string, and start and end indexes in the filename
         (The indexes will be used to split the string up for further parsing)
         """
@@ -77,7 +90,7 @@ class FileNameParser:
         filename = re.sub(r"\[.*?\]", self.repl, filename)
 
         # replace any name separators with spaces
-        filename = self.fixSpaces(filename)
+        filename = self.fix_spaces(filename)
 
         # remove any "of NN" phrase with spaces (problem: this could break on
         # some titles)
@@ -90,8 +103,8 @@ class FileNameParser:
 
         # make a list of each word and its position
         word_list = list()
-        for m in re.finditer(r"\S+", filename):
-            word_list.append((m.group(0), m.start(), m.end()))
+        for match in re.finditer(r"\S+", filename):
+            word_list.append((match.group(0), match.start(), match.end()))
 
         # remove the first word, since it can't be the issue number
         if len(word_list) > 1:
@@ -104,35 +117,35 @@ class FileNameParser:
 
         # first look for a word with "#" followed by digits with optional suffix
         # this is almost certainly the issue number
-        for w in reversed(word_list):
-            if re.match(r"#[-]?(([0-9]*\.[0-9]+|[0-9]+)(\w*))", w[0]):
+        for word in reversed(word_list):
+            if re.match(r"#[-]?(([0-9]*\.[0-9]+|[0-9]+)(\w*))", word[0]):
                 found = True
                 break
 
         # same as above but w/o a '#', and only look at the last word in the
         # list
         if not found:
-            w = word_list[-1]
-            if re.match(r"[-]?(([0-9]*\.[0-9]+|[0-9]+)(\w*))", w[0]):
+            word = word_list[-1]
+            if re.match(r"[-]?(([0-9]*\.[0-9]+|[0-9]+)(\w*))", word[0]):
                 found = True
 
         # now try to look for a # followed by any characters
         if not found:
-            for w in reversed(word_list):
-                if re.match(r"#\S+", w[0]):
+            for word in reversed(word_list):
+                if re.match(r"#\S+", word[0]):
                     found = True
                     break
 
         if found:
-            issue = w[0]
-            start = w[1]
-            end = w[2]
+            issue = word[0]
+            start = word[1]
+            end = word[2]
             if issue[0] == "#":
                 issue = issue[1:]
 
         return issue, start, end
 
-    def getSeriesName(self, filename, issue_start):
+    def get_series_name(self, filename, issue_start):
         """Use the issue number string index to split the filename string"""
 
         if issue_start != 0:
@@ -150,7 +163,7 @@ class FileNameParser:
             filename = re.sub("__.*", self.repl, filename)
 
         filename = filename.replace("+", " ")
-        tmpstr = self.fixSpaces(filename, remove_dashes=False)
+        tmpstr = self.fix_spaces(filename, remove_dashes=False)
 
         series = tmpstr
         volume = ""
@@ -195,7 +208,8 @@ class FileNameParser:
         return series, volume.strip()
 
     @staticmethod
-    def getYear(filename, issue_end):
+    def get_year(filename, issue_end):
+        """Return the year from the filename"""
 
         filename = filename[issue_end:]
 
@@ -208,7 +222,7 @@ class FileNameParser:
             year = re.sub("[^0-9]", "", year)
         return year
 
-    def getRemainder(self, filename, year, count, volume, issue_end):
+    def get_remainder(self, filename, year, count, volume, issue_end):
         """Make a guess at where the the non-interesting stuff begins"""
 
         remainder = ""
@@ -220,7 +234,7 @@ class FileNameParser:
         elif issue_end != 0:
             remainder = filename[issue_end:]
 
-        remainder = self.fixSpaces(remainder, remove_dashes=False)
+        remainder = self.fix_spaces(remainder, remove_dashes=False)
         if volume != "":
             remainder = remainder.replace("Vol." + volume, "", 1)
         if year != "":
@@ -233,7 +247,9 @@ class FileNameParser:
 
         return remainder.strip()
 
-    def parseFilename(self, filename):
+    def parse_filename(self, filename):
+        """Method to parse the filename."""
+
         # Get file name without path or extension
         filename = pathlib.Path(filename).stem
 
@@ -247,16 +263,16 @@ class FileNameParser:
             filename = filename.replace("_28", "(")
             filename = filename.replace("_29", ")")
 
-        self.issue, issue_start, issue_end = self.getIssueNumber(filename)
-        self.series, self.volume = self.getSeriesName(filename, issue_start)
+        self.issue, issue_start, issue_end = self.get_issue_number(filename)
+        self.series, self.volume = self.get_series_name(filename, issue_start)
 
         # provides proper value when the filename doesn't have a issue number
         if issue_end == 0:
             issue_end = len(self.series)
 
-        self.year = self.getYear(filename, issue_end)
-        self.issue_count = self.getIssueCount(filename, issue_end)
-        self.remainder = self.getRemainder(
+        self.year = self.get_year(filename, issue_end)
+        self.issue_count = self.get_issue_count(filename, issue_end)
+        self.remainder = self.get_remainder(
             filename, self.year, self.issue_count, self.volume, issue_end
         )
 

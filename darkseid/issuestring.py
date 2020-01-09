@@ -9,6 +9,8 @@ comics industry throws at us.
 
 
 class IssueString:
+    """Class to handle various types of comic issue numbers."""
+
     def __init__(self, text):
 
         # break up the issue number string into 2 parts: the numeric and suffix string.
@@ -71,7 +73,8 @@ class IssueString:
 
         # print "num: {0} suf: {1}".format(self.num, self.suffix)
 
-    def asString(self, pad=0):
+    def as_string(self, pad=0):
+        """Returns a string with left-side zero padding"""
         # return the float, left side zero-padded, with suffix attached
         if self.num is None:
             return self.suffix
@@ -89,9 +92,9 @@ class IssueString:
 
         # create padding
         padding = ""
-        l = len(str(num_int))
-        if l < pad:
-            padding = "0" * (pad - l)
+        length = len(str(num_int))
+        if length < pad:
+            padding = "0" * (pad - length)
 
         num_s = padding + num_s
         if negative:
@@ -99,8 +102,11 @@ class IssueString:
 
         return num_s
 
-    def asFloat(self):
-        # return the float, with no suffix
+    def as_float(self):
+        """Return a float with no suffix
+
+        example: "1½" is returned as "1.5"
+        """
         if self.suffix == "½":
             if self.num is not None:
                 return self.num + 0.5
@@ -108,8 +114,8 @@ class IssueString:
                 return 0.5
         return self.num
 
-    def asInt(self):
-        # return the int version of the float
+    def as_int(self):
+        """Returns the integer version of the float"""
         if self.num is None:
             return None
         return int(self.num)
