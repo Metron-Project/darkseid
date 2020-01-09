@@ -118,25 +118,6 @@ class ZipArchiver:
         os.remove(self.path)
         os.rename(tmp_name, self.path)
 
-    def copy_from_archive(self, other_archive):
-        """Replace the current zip with one copied from another archive"""
-
-        try:
-            zout = zipfile.ZipFile(self.path, "w", allowZip64=True)
-            for fname in other_archive.get_archive_filename_list():
-                data = other_archive.read_archive_file(fname)
-                if data is not None:
-                    zout.writestr(fname, data)
-            zout.close()
-        except Exception as exception_error:
-            print(
-                f"Error while copying to {self.path}: {exception_error}",
-                file=sys.stderr,
-            )
-            return False
-        else:
-            return True
-
 
 # ------------------------------------------
 
@@ -451,11 +432,3 @@ class ComicArchive:
         metadata.isEmpty = False
 
         return metadata
-
-    def export_as_zip(self, zipfilename):
-        if self.archive_type == self.ArchiveType.Zip:
-            # nothing to do, we're already a zip
-            return True
-
-        zip_archiver = ZipArchiver(zipfilename)
-        return zip_archiver.copy_from_archive(self.archiver)
