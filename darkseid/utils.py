@@ -2,7 +2,6 @@
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2019 Brian Pepple
 
-import os
 import pathlib
 
 
@@ -57,11 +56,13 @@ def remove_articles(text):
 
 def unique_file(file_name):
     """Takes a filename and if one already exist with that name returns a new filename"""
-    counter = 1
-    # returns ('/path/file', '.ext')
-    file_name_parts = os.path.splitext(file_name)
+    counter = 0
+    path = pathlib.Path(file_name)
+
     while True:
-        if not os.path.lexists(file_name):
-            return file_name
-        file_name = file_name_parts[0] + " (" + str(counter) + ")" + file_name_parts[1]
+        if not path.exists():
+            return path
         counter += 1
+        path = pathlib.Path(path.parent).joinpath(
+            f"{path.stem} ({counter}){path.suffix}"
+        )

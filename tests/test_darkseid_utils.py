@@ -1,4 +1,3 @@
-import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -37,9 +36,10 @@ class TestUtils(unittest.TestCase):
         new_file = self.tmp_file_1.name
         new_name = utils.unique_file(new_file)
         # Now let's create our expected result
-        result_split = os.path.splitext(self.tmp_file_1.name)
-        correct_result = result_split[0] + " (1)" + result_split[1]
-        self.assertEqual(new_name, correct_result)
+        path = Path(self.tmp_file_1.name)
+        result = Path(path.parent).joinpath(f"{path.stem} (1){path.suffix}")
+
+        self.assertEqual(new_name, result)
 
     def test_recursive_list_with_file(self):
         expected_result = []
