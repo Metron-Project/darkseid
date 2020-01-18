@@ -11,13 +11,44 @@ from .genericmetadata import GenericMetadata
 
 class ComicInfoXml:
 
-    writer_synonyms = ["writer", "plotter", "scripter"]
-    penciller_synonyms = ["artist", "penciller", "penciler", "breakdowns", "illustrator"]
-    inker_synonyms = ["inker", "artist", "finishes", "illustrator"]
-    colorist_synonyms = ["colorist", "colourist", "colorer", "colourer"]
+    writer_synonyms = ["writer", "plotter", "scripter", "script", "story", "plot"]
+    penciller_synonyms = [
+        "artist",
+        "breakdowns",
+        "illustrator",
+        "layouts",
+        "penciller",
+        "penciler",
+    ]
+    inker_synonyms = [
+        "artist",
+        "embellisher",
+        "finishes",
+        "illustrator",
+        "ink assists",
+        "inker",
+    ]
+    colorist_synonyms = [
+        "colorist",
+        "colourist",
+        "colorer",
+        "colourer",
+        "color assists",
+        "color flats",
+    ]
     letterer_synonyms = ["letterer"]
     cover_synonyms = ["cover", "covers", "coverartist", "cover artist"]
-    editor_synonyms = ["editor"]
+    editor_synonyms = [
+        "assistant editor",
+        "associate editor",
+        "consulting editor",
+        "editor",
+        "editor in chief",
+        "executive editor",
+        "group editor",
+        "senior editor",
+        "supervising editor",
+    ]
 
     def get_parseable_credits(self):
         parsable_credits = []
