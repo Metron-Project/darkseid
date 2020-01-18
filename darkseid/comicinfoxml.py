@@ -12,8 +12,8 @@ from .genericmetadata import GenericMetadata
 class ComicInfoXml:
 
     writer_synonyms = ["writer", "plotter", "scripter"]
-    penciller_synonyms = ["artist", "penciller", "penciler", "breakdowns"]
-    inker_synonyms = ["inker", "artist", "finishes"]
+    penciller_synonyms = ["artist", "penciller", "penciler", "breakdowns", "illustrator"]
+    inker_synonyms = ["inker", "artist", "finishes", "illustrator"]
     colorist_synonyms = ["colorist", "colourist", "colorer", "colourer"]
     letterer_synonyms = ["letterer"]
     cover_synonyms = ["cover", "covers", "coverartist", "cover artist"]
