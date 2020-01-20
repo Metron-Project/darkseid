@@ -1,3 +1,6 @@
+.. image:: https://img.shields.io/pypi/v/darkseid.svg
+    :target: https://pypi.org/project/darkseid/
+
 Darkseid
 ========
 
@@ -37,6 +40,11 @@ Installing the latest version from Github:
     $ git clone https://github.com/bpepple/darkseid
     $ cd darkseid
     $ python setup.py install
+
+Bugs/Requests
+-------------
+
+Please use the `GitHub issue tracker <https://github.com/bpepple/darkseid/issues>`_ to submit bugs or request features.
 
 License
 -------
