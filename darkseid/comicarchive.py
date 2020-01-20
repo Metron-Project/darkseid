@@ -1,4 +1,4 @@
-"""A class to represent a single comic, be it file or folder of images"""
+"""A class to represent a single comic"""
 
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2019 Brian Pepple
