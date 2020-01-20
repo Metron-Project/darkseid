@@ -1,6 +1,12 @@
 .. image:: https://img.shields.io/pypi/v/darkseid.svg
     :target: https://pypi.org/project/darkseid/
 
+.. image:: https://img.shields.io/pypi/pyversions/darkseid.svg
+    :target: https://pypi.org/project/darkseid/
+
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/psf/black
+
 Darkseid
 ========
 
