@@ -1,0 +1,10 @@
+dist: xenial
+language: python
+python:
+  - "3.6"
+install:
+  - pip install pipenv
+  - pipenv install --dev 
+# command to run tests
+script:
+  - python3 -m pytest --cov=darkseid tests/
