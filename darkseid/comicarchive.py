@@ -243,58 +243,6 @@ class ComicArchive:
 
         return page_list[index]
 
-    def get_scanner_page_index(self):
-
-        scanner_page_index = None
-
-        # make a guess at the scanner page
-        name_list = self.get_page_name_list()
-        count = self.get_number_of_pages()
-
-        # too few pages to really know
-        if count < 5:
-            return None
-
-        # count the length of every filename, and count occurences
-        length_buckets = dict()
-        for name in name_list:
-            fname = os.path.split(name)[1]
-            length = len(fname)
-            if length in length_buckets:
-                length_buckets[length] += 1
-            else:
-                length_buckets[length] = 1
-
-        # sort by most common
-        sorted_buckets = sorted(
-            iter(length_buckets.items()), key=lambda k_v: (k_v[1], k_v[0]), reverse=True
-        )
-
-        # statistical mode occurence is first
-        mode_length = sorted_buckets[0][0]
-
-        # we are only going to consider the final image file:
-        final_name = os.path.split(name_list[count - 1])[1]
-
-        common_length_list = list()
-        for name in name_list:
-            if len(os.path.split(name)[1]) == mode_length:
-                common_length_list.append(os.path.split(name)[1])
-
-        prefix = os.path.commonprefix(common_length_list)
-
-        if mode_length <= 7 and prefix == "":
-            # probably all numbers
-            if len(final_name) > mode_length:
-                scanner_page_index = count - 1
-
-        # see if the last page doesn't start with the same prefix as most
-        # others
-        elif not final_name.startswith(prefix):
-            scanner_page_index = count - 1
-
-        return scanner_page_index
-
     def get_page_name_list(self, sort_list=True):
         """Returns a list of page names from an archive"""
 
