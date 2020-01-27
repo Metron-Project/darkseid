@@ -51,6 +51,20 @@ class TestComicArchive(TestCase):
         res = self.comic_archive.is_zip()
         self.assertTrue(res)
 
+    def test_whether_text_file_is_comic_archive(self):
+        """
+        Test that a text file produces a false result
+        when determining whether it's a comic archive
+        """
+        test_file = tempfile.NamedTemporaryFile(suffix=".txt", mode="wb")
+        test_file.write(b"Blah Blah Blah")
+
+        comic_archive = ComicArchive(test_file)
+        res = comic_archive.seems_to_be_a_comic_archive()
+        # Clean up tmp file
+        test_file.close()
+        self.assertFalse(res)
+
     def test_archive_number_of_pages(self):
         """ Test to determine number of pages in a comic archive """
         res = self.comic_archive.get_number_of_pages()
