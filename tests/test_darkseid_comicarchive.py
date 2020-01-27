@@ -1,6 +1,6 @@
 """ Tests for comic archive files """
-import os
 import tempfile
+from pathlib import Path
 from shutil import make_archive
 from unittest import TestCase, main
 
@@ -28,12 +28,16 @@ class TestComicArchive(TestCase):
         )
         img_3.write(b"yet more data")
 
-        self.zipfile = os.path.join(self.tmp_archive_dir.name, "Aquaman #1 (1994)")
+        zip_file = (
+            Path(self.tmp_archive_dir.name) / "Aquaman v1 #001 (of 08) (1994)"
+        )
 
         # Create zipfile
-        open(make_archive(self.zipfile, "zip", self.tmp_image_dir.name), "rb").read()
+        open(make_archive(zip_file, "zip", self.tmp_image_dir.name), "rb").read()
 
-        self.comic_archive = ComicArchive(self.zipfile + ".zip")
+        # Append .zip to pathlib
+        new_path = zip_file.parent / (zip_file.stem + ".zip")
+        self.comic_archive = ComicArchive(new_path)
 
         # Setup test metadata
         self.meta_data = GenericMetadata()
@@ -41,6 +45,7 @@ class TestComicArchive(TestCase):
         self.meta_data.issue = "0"
         self.meta_data.title = "A Crash of Symbols"
         self.meta_data.notes = "Test comment"
+        self.meta_data.volume = "1"
 
     def tearDown(self):
         self.tmp_archive_dir.cleanup()
@@ -82,9 +87,12 @@ class TestComicArchive(TestCase):
         self.assertFalse(res)
 
         # now let's test that we can write some
-        self.comic_archive.write_metadata(self.meta_data)
+        write_result = self.comic_archive.write_metadata(self.meta_data)
+        self.assertTrue(write_result)
         has_md = self.comic_archive.has_metadata()
+
         self.assertTrue(has_md)
+        self.assertFalse(res)
 
         # Verify what was written
         new_md = self.comic_archive.read_metadata()
@@ -92,11 +100,27 @@ class TestComicArchive(TestCase):
         self.assertEqual(new_md.issue, self.meta_data.issue)
         self.assertEqual(new_md.title, self.meta_data.title)
         self.assertEqual(new_md.notes, self.meta_data.notes)
+        self.assertEqual(new_md.volume, self.meta_data.volume)
 
         # now remove what was just written
         self.comic_archive.remove_metadata()
         remove_md = self.comic_archive.has_metadata()
         self.assertFalse(remove_md)
+
+    def test_archive_writing_with_no_metadata(self):
+        """Make sure writing no metadata to comic returns False"""
+        res = self.comic_archive.write_metadata(None)
+        self.assertFalse(res)
+
+    def test_removing_metadata_on_comic_wo_metadata(self):
+        """
+        Make sure trying to remove metadata from
+        comic w/o any returns True
+        """
+        res = self.comic_archive.write_metadata(None)
+        remove_result = self.comic_archive.remove_metadata()
+        self.assertFalse(res)
+        self.assertTrue(remove_result)
 
     def test_archive_get_page(self):
         """ Test to set if a page from a comic archive can be retrieved """
@@ -109,6 +133,7 @@ class TestComicArchive(TestCase):
         test_md = self.comic_archive.metadata_from_filename()
         self.assertEqual(test_md.series, "Aquaman")
         self.assertEqual(test_md.issue, "1")
+        self.assertEqual(test_md.volume, "1")
         self.assertEqual(test_md.year, "1994")
 
     def test_archive_apply_file_info_to_metadata(self):
