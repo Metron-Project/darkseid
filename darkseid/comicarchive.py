@@ -211,8 +211,8 @@ class ComicArchive:
 
         if (self.is_zip()) and (self.get_number_of_pages() > 0):
             return True
-        else:
-            return False
+
+        return False
 
     def get_page(self, index):
         """Returns an image(page) from an archive"""
