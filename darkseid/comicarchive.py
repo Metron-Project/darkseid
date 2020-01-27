@@ -327,8 +327,8 @@ class ComicArchive:
                 self.metadata = metadata
             self.reset_cache()
             return write_success
-        else:
-            return False
+
+        return False
 
     def remove_metadata(self):
         """Remove the metadata from the archive if present"""
