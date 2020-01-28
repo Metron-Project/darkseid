@@ -22,7 +22,7 @@ copyright = '2020, Brian Pepple'
 author = 'Brian Pepple'
 
 # The full version, including alpha/beta/rc tags
-release = '0.7.1'
+release = '1.0.0'
 
 
 # -- General configuration ---------------------------------------------------
