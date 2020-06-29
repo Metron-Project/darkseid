@@ -59,7 +59,7 @@ def test_whether_text_file_is_comic_archive(tmp_path):
 
     comic_archive = ComicArchive(test_file)
     res = comic_archive.seems_to_be_a_comic_archive()
-    assert res is not True
+    assert res is False
 
 
 def test_archive_number_of_pages(fake_comic):
