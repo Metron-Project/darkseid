@@ -1,67 +1,39 @@
-from unittest import TestCase, main
-
 from darkseid.genericmetadata import GenericMetadata
 
 
-class TestGenericMetadata(TestCase):
-    def setUp(self):
-        self.meta_data = GenericMetadata()
-        self.meta_data.series = "Aquaman"
-        self.meta_data.issue = "0"
-        self.meta_data.title = "A Crash of Symbols"
-        self.meta_data.is_empty = False
-
-        self.new_md = GenericMetadata()
-        self.new_md.year = "1994"
-        self.new_md.month = "10"
-        self.new_md.day = "1"
-        self.meta_data.is_empty = False
-
-    def test_metadata_overlay(self):
-        self.meta_data.overlay(self.new_md)
-
-        self.assertEqual(self.meta_data.series, "Aquaman")
-        self.assertEqual(self.meta_data.issue, "0")
-        self.assertEqual(self.meta_data.title, "A Crash of Symbols")
-        self.assertEqual(self.meta_data.year, "1994")
-        self.assertEqual(self.meta_data.month, "10")
-        self.assertEqual(self.meta_data.day, "1")
-
-    def test_metadata_credits(self):
-        result = [
-            {"person": "Peter David", "primary": True, "role": "Writer"},
-            {"person": "Martin Egeland", "role": "Penciller"},
-            {"person": "Martin Egeland", "role": "Cover"},
-        ]
-
-        self.meta_data.add_credit("Peter David", "Writer", primary=True)
-        self.meta_data.add_credit("Martin Egeland", "Penciller")
-        self.meta_data.add_credit("Martin Egeland", "Cover")
-
-        self.assertEqual(self.meta_data.credits, result)
-
-    def test_metadata_credits_overlay(self):
-        new_credit = [{"person": "Tom McCray", "role": "Colorist"}]
-        result = [
-            {"person": "Peter David", "role": "Writer"},
-            {"person": "Tom McCray", "role": "Colorist"},
-        ]
-
-        self.meta_data.add_credit("Peter David", "Writer")
-        self.meta_data.overlay_credits(new_credit)
-
-        self.assertEqual(self.meta_data.credits, result)
-
-    def test_metadata_print_str(self):
-        self.assertEqual(
-            str(self.meta_data),
-            "series: Aquaman\nissue:  0\ntitle:  A Crash of Symbols\n",
-        )
-
-    def test_no_metadata_print_str(self):
-        m_data = GenericMetadata()
-        self.assertEqual(str(m_data), "No metadata")
+def test_metadata_print_str(fake_metadata):
+    assert (
+        str(fake_metadata) == "series: Aquaman\nissue:  0\ntitle:  A Crash of Symbols\n"
+    )
 
 
-if __name__ == "__main__":
-    main()
+def test_no_metadata_print_str():
+    m_data = GenericMetadata()
+    assert str(m_data) == "No metadata"
+
+
+def test_metadata_overlay(fake_metadata, fake_overlay_metadata):
+    md = fake_metadata
+    md.overlay(fake_overlay_metadata)
+
+    assert md.series == "Aquaman"
+    assert md.issue == "0"
+    assert md.title == "A Crash of Symbols"
+    assert md.year == "1994"
+    assert md.month == "10"
+    assert md.day == "1"
+
+
+def test_metadata_credits(fake_metadata):
+    result = [
+        {"person": "Peter David", "primary": True, "role": "Writer"},
+        {"person": "Martin Egeland", "role": "Penciller"},
+        {"person": "Martin Egeland", "role": "Cover"},
+    ]
+
+    md = fake_metadata
+    md.add_credit("Peter David", "Writer", primary=True)
+    md.add_credit("Martin Egeland", "Penciller")
+    md.add_credit("Martin Egeland", "Cover")
+
+    assert md.credits == result
