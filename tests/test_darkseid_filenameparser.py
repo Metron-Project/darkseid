@@ -6,8 +6,7 @@ from darkseid.filenameparser import FileNameParser as fn
 
 @pytest.fixture()
 def comic_name():
-    comic = "Afterlife_With_Archie_V1_#002_(of_08)_(2013)"
-    return comic
+    return "Afterlife_With_Archie_V1_#002_(of_08)_(2013)"
 
 
 def test_special_format():

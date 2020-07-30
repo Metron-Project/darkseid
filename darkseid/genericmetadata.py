@@ -74,9 +74,9 @@ class GenericMetadata:
         self.teams = None
         self.locations = None
 
-        self.credits = list()
-        self.tags = list()
-        self.pages = list()
+        self.credits = []
+        self.tags = []
+        self.pages = []
 
         # Some CoMet-only items
         self.price = None
@@ -157,11 +157,7 @@ class GenericMetadata:
 
     def overlay_credits(self, new_credits):
         for credit in new_credits:
-            if "primary" in credit and credit["primary"]:
-                primary = True
-            else:
-                primary = False
-
+            primary = True if "primary" in credit and credit["primary"] else False
             # Remove credit role if person is blank
             if credit["person"] == "":
                 for r in reversed(self.credits):
@@ -174,8 +170,7 @@ class GenericMetadata:
     def set_default_page_list(self, count):
         # generate a default page list, with the first page marked as the cover
         for i in range(count):
-            page_dict = dict()
-            page_dict["Image"] = str(i)
+            page_dict = {"Image": str(i)}
             if i == 0:
                 page_dict["Type"] = PageType.FrontCover
             self.pages.append(page_dict)
@@ -190,21 +185,20 @@ class GenericMetadata:
 
     def get_cover_page_index_list(self):
         # return a list of archive page indices of cover pages
-        coverlist = []
-        for page in self.pages:
-            if "Type" in page and page["Type"] == PageType.FrontCover:
-                coverlist.append(int(page["Image"]))
+        coverlist = [
+            int(page["Image"])
+            for page in self.pages
+            if "Type" in page and page["Type"] == PageType.FrontCover
+        ]
 
-        if len(coverlist) == 0:
+        if not coverlist:
             coverlist.append(0)
 
         return coverlist
 
     def add_credit(self, person, role, primary=False):
 
-        credit = dict()
-        credit["person"] = person
-        credit["role"] = role
+        credit = {"person": person, "role": role}
         if primary:
             credit["primary"] = primary
 

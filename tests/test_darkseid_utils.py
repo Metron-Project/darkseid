@@ -28,11 +28,8 @@ def test_unique_name(tmp_path):
 
 def test_recursive_list_with_file(tmp_path):
     temp_file = tmp_path / "test.cbz"
-    expected_result = []
-    expected_result.append(temp_file)
-
-    file_list = []
-    file_list.append(temp_file)
+    expected_result = [temp_file]
+    file_list = [temp_file]
     result = utils.get_recursive_filelist(file_list)
 
     assert result == expected_result
@@ -49,13 +46,10 @@ def test_recursive_list_with_directory(tmp_path):
     temp_file_2 = temp_dir / "test-2.cbz"
     temp_file_2.write_text("content")
 
-    expected_result = []
-    expected_result.append(temp_file_2)
-    expected_result.append(temp_file_1)
+    expected_result = [temp_file_2, temp_file_1]
     expected_result = sorted(expected_result)
 
-    file_list = []
-    file_list.append(temp_dir)
+    file_list = [temp_dir]
     result = utils.get_recursive_filelist(file_list)
 
     assert result == expected_result

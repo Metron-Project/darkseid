@@ -31,11 +31,7 @@ class IssueString:
         text = str(text)
 
         # skip the minus sign if it's first
-        if text[0] == "-":
-            start = 1
-        else:
-            start = 0
-
+        start = 1 if text[0] == "-" else 0
         # if it's still not numeric at start skip it
         if text[start].isdigit() or text[start] == ".":
             # walk through the string, look for split point (the first
