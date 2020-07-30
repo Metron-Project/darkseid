@@ -38,9 +38,7 @@ def fake_comic(tmp_path):
     finally:
         zf.close()
 
-    comic = ComicArchive(z_file)
-
-    return comic
+    return ComicArchive(z_file)
 
 
 def test_zip_file_exists(fake_comic):

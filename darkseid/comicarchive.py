@@ -201,18 +201,12 @@ class ComicArchive:
         if self.archive_type == self.ArchiveType.Unknown:
             return False
 
-        if not os.access(self.path, os.W_OK):
-            return False
-
-        return True
+        return bool(os.access(self.path, os.W_OK))
 
     def seems_to_be_a_comic_archive(self):
         """Returns a boolean as to whether the file is a comic archive"""
 
-        if (self.is_zip()) and (self.get_number_of_pages() > 0):
-            return True
-
-        return False
+        return bool((self.is_zip()) and (self.get_number_of_pages() > 0))
 
     def get_page(self, index):
         """Returns an image(page) from an archive"""
@@ -292,11 +286,13 @@ class ComicArchive:
                 self.metadata = ComicInfoXml().metadata_from_string(raw_metadata)
 
             # validate the existing page list (make sure count is correct)
-            if len(self.metadata.pages) != 0:
-                if len(self.metadata.pages) != self.get_number_of_pages():
-                    # pages array doesn't match the actual number of images we're seeing
-                    # in the archive, so discard the data
-                    self.metadata.pages = []
+            if (
+                len(self.metadata.pages) != 0
+                and len(self.metadata.pages) != self.get_number_of_pages()
+            ):
+                # pages array doesn't match the actual number of images we're seeing
+                # in the archive, so discard the data
+                self.metadata.pages = []
 
             if len(self.metadata.pages) == 0:
                 self.metadata.set_default_page_list(self.get_number_of_pages())
@@ -316,19 +312,18 @@ class ComicArchive:
     def write_metadata(self, metadata):
         """Write the metadata to the archive"""
 
-        if metadata is not None:
-            self.apply_archive_info_to_metadata(metadata, calc_page_sizes=True)
-            md_string = ComicInfoXml().string_from_metadata(metadata)
-            write_success = self.archiver.write_archive_file(
-                self.ci_xml_filename, md_string
-            )
-            if write_success:
-                self.has_md = True
-                self.metadata = metadata
-            self.reset_cache()
-            return write_success
-
-        return False
+        if metadata is None:
+            return False
+        self.apply_archive_info_to_metadata(metadata, calc_page_sizes=True)
+        md_string = ComicInfoXml().string_from_metadata(metadata)
+        write_success = self.archiver.write_archive_file(
+            self.ci_xml_filename, md_string
+        )
+        if write_success:
+            self.has_md = True
+            self.metadata = metadata
+        self.reset_cache()
+        return write_success
 
     def remove_metadata(self):
         """Remove the metadata from the archive if present"""
@@ -347,12 +342,15 @@ class ComicArchive:
 
         if self.has_md is None:
 
-            if not self.seems_to_be_a_comic_archive():
+            if (
+                not self.seems_to_be_a_comic_archive()
+                or self.seems_to_be_a_comic_archive()
+                and self.ci_xml_filename
+                not in self.archiver.get_archive_filename_list()
+            ):
                 self.has_md = False
-            elif self.ci_xml_filename in self.archiver.get_archive_filename_list():
-                self.has_md = True
             else:
-                self.has_md = False
+                self.has_md = True
         return self.has_md
 
     def apply_archive_info_to_metadata(self, metadata, calc_page_sizes=False):
@@ -362,12 +360,12 @@ class ComicArchive:
 
         if calc_page_sizes:
             for page in metadata.pages:
-                idx = int(page["Image"])
                 if (
                     "ImageSize" not in page
                     or "ImageHeight" not in page
                     or "ImageWidth" not in page
                 ):
+                    idx = int(page["Image"])
                     data = self.get_page(idx)
                     if data is not None:
                         try:
@@ -379,11 +377,6 @@ class ComicArchive:
                             page["ImageWidth"] = str(width)
                         except IOError:
                             page["ImageSize"] = str(len(data))
-
-                else:
-                    if "ImageSize" not in page:
-                        data = self.get_page(idx)
-                        page["ImageSize"] = str(len(data))
 
     def metadata_from_filename(self, parse_scan_info=True):
         """Attempts to get the metadata from the filename"""
@@ -403,9 +396,8 @@ class ComicArchive:
             metadata.year = fnp.year
         if fnp.issue_count != "":
             metadata.issueCount = fnp.issue_count
-        if parse_scan_info:
-            if fnp.remainder != "":
-                metadata.scanInfo = fnp.remainder
+        if parse_scan_info and fnp.remainder != "":
+            metadata.scanInfo = fnp.remainder
 
         metadata.isEmpty = False
 

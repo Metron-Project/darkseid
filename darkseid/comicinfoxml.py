@@ -51,8 +51,7 @@ class ComicInfoXml:
     ]
 
     def get_parseable_credits(self):
-        parsable_credits = []
-        parsable_credits.extend(self.writer_synonyms)
+        parsable_credits = list(self.writer_synonyms)
         parsable_credits.extend(self.penciller_synonyms)
         parsable_credits.extend(self.inker_synonyms)
         parsable_credits.extend(self.colorist_synonyms)
