@@ -26,13 +26,7 @@ def list_to_string(list_of_strings):
     Function that takes a list of string and converts it to a string.
     For example: ["apple", "banana", "cherry"] is changed to "apple; banana; cherry"
     """
-    string = ""
-    if list_of_strings is not None:
-        for item in list_of_strings:
-            if len(string) > 0:
-                string += "; "
-            string += item
-    return string
+    return "; ".join(map(str, list_of_strings))
 
 
 def remove_articles(text):
