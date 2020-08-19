@@ -2,23 +2,22 @@
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2019 Brian Pepple
 
-import pathlib
+from pathlib import Path
+from typing import List
 
 
-def get_recursive_filelist(pathlist):
+def get_recursive_filelist(pathlist: List[str]) -> List[Path]:
     """Takes a list of paths and return a list of comic archives"""
-    filelist = []
-    for path in pathlist:
-        path = pathlib.Path(path)
+    filelist: List[Path] = []
+    for path_str in pathlist:
+        path = Path(path_str)
         if path.is_dir():
             for filename in path.rglob("*.[cC][bB][zZ]"):
                 filelist.append(filename)
         else:
             filelist.append(path)
 
-    filelist = sorted(filelist)
-
-    return filelist
+    return sorted(filelist)
 
 
 def list_to_string(list_of_strings):
@@ -51,7 +50,7 @@ def remove_articles(text):
 def unique_file(file_name):
     """Takes a filename and if one already exist with that name returns a new filename"""
     counter = 0
-    path = pathlib.Path(file_name)
+    path = Path(file_name)
     # Use original stem so on multiple matches it doesn't keep appending counter variable
     original_stem = path.stem
 
