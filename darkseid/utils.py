@@ -20,7 +20,7 @@ def get_recursive_filelist(pathlist: List[str]) -> List[Path]:
     return sorted(filelist)
 
 
-def list_to_string(list_of_strings):
+def list_to_string(list_of_strings: List[str]) -> str:
     """
     Function that takes a list of string and converts it to a string.
     For example: ["apple", "banana", "cherry"] is changed to "apple; banana; cherry"
