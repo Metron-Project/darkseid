@@ -28,11 +28,11 @@ def list_to_string(list_of_strings: List[str]) -> str:
     return "; ".join(map(str, list_of_strings))
 
 
-def remove_articles(text):
+def remove_articles(text: str) -> str:
     """Takes a string and removes any articles in it."""
     text = text.lower()
-    articles = ["and", "a", "&", "issue", "the"]
-    new_text = ""
+    articles: List[str] = ["and", "a", "&", "issue", "the"]
+    new_text: str = ""
     for word in text.split(" "):
         if word not in articles:
             new_text += word + " "
@@ -47,9 +47,9 @@ def remove_articles(text):
     return new_text
 
 
-def unique_file(file_name):
+def unique_file(file_name: str) -> Path:
     """Takes a filename and if one already exist with that name returns a new filename"""
-    counter = 0
+    counter: int = 0
     path = Path(file_name)
     # Use original stem so on multiple matches it doesn't keep appending counter variable
     original_stem = path.stem
