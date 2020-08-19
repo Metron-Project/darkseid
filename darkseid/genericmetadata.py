@@ -8,8 +8,9 @@ possible, however lossy it might be
 
 # Copyright 2012-2014 Anthony Beville
 
+from typing import Dict, List, Optional
+
 from . import utils
-from typing import Optional, List, Dict
 
 
 class PageType:
