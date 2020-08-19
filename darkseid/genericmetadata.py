@@ -9,6 +9,7 @@ possible, however lossy it might be
 # Copyright 2012-2014 Anthony Beville
 
 from . import utils
+from typing import Optional, List, Dict
 
 
 class PageType:
@@ -32,59 +33,60 @@ class PageType:
 
 
 class GenericMetadata:
-    def __init__(self):
+    def __init__(self) -> None:
 
-        self.is_empty = True
-        self.tag_origin = None
+        self.is_empty: bool = True
+        self.tag_origin: Optional[str] = None
 
-        self.series = None
-        self.issue = None
-        self.title = None
-        self.publisher = None
-        self.month = None
-        self.year = None
-        self.day = None
-        self.issue_count = None
-        self.volume = None
-        self.genre = None
-        self.language = None  # 2 letter iso code
-        self.comments = None  # use same way as Summary in CIX
+        self.series: Optional[str] = None
+        self.issue: Optional[str] = None
+        self.title: Optional[str] = None
+        self.publisher: Optional[str] = None
+        self.month: Optional[str] = None
+        self.year: Optional[str] = None
+        self.day: Optional[str] = None
+        self.issue_count: Optional[str] = None
+        self.volume: Optional[str] = None
+        self.genre: Optional[str] = None
+        self.language: Optional[str] = None  # 2 letter iso code
+        self.comments: Optional[str] = None  # use same way as Summary in CIX
 
-        self.volume_count = None
-        self.critical_rating = None
-        self.country = None
+        self.volume_count: Optional[str] = None
+        self.critical_rating: Optional[str] = None
+        self.country: Optional[str] = None
 
-        self.alternate_series = None
-        self.alternate_number = None
-        self.alternate_count = None
-        self.imprint = None
-        self.notes = None
-        self.web_link = None
-        self.format = None
-        self.manga = None
-        self.black_and_white = None
-        self.page_count = None
-        self.maturity_rating = None
+        self.alternate_series: Optional[str] = None
+        self.alternate_number: Optional[str] = None
+        self.alternate_count: Optional[str] = None
+        self.imprint: Optional[str] = None
+        self.notes: Optional[str] = None
+        self.web_link: Optional[str] = None
+        self.format: Optional[str] = None
+        self.manga: Optional[str] = None
+        self.black_and_white: Optional[str] = None
+        self.page_count: Optional[str] = None
+        self.maturity_rating: Optional[str] = None
 
-        self.story_arc = None
-        self.series_group = None
-        self.scan_info = None
+        self.story_arc: Optional[str] = None
+        self.series_group: Optional[str] = None
+        self.scan_info: Optional[str] = None
 
-        self.characters = None
-        self.teams = None
-        self.locations = None
+        self.characters: Optional[str] = None
+        self.teams: Optional[str] = None
+        self.locations: Optional[str] = None
 
+        # TODO: Need to type hint the credits.
         self.credits = []
-        self.tags = []
-        self.pages = []
+        self.tags: List[str] = []
+        self.pages: List[Dict[str, str]] = []
 
         # Some CoMet-only items
-        self.price = None
-        self.is_version_of = None
-        self.rights = None
-        self.identifier = None
-        self.last_mark = None
-        self.cover_image = None
+        self.price: Optional[str] = None
+        self.is_version_of: Optional[str] = None
+        self.rights: Optional[str] = None
+        self.identifier: Optional[str] = None
+        self.last_mark: Optional[str] = None
+        self.cover_image: Optional[str] = None
 
     def overlay(self, new_md):
         """Overlay a metadata object on this one
@@ -167,7 +169,7 @@ class GenericMetadata:
             else:
                 self.add_credit(credit["person"], credit["role"], primary)
 
-    def set_default_page_list(self, count):
+    def set_default_page_list(self, count: int) -> None:
         # generate a default page list, with the first page marked as the cover
         for i in range(count):
             page_dict = {"Image": str(i)}
@@ -175,7 +177,7 @@ class GenericMetadata:
                 page_dict["Type"] = PageType.FrontCover
             self.pages.append(page_dict)
 
-    def get_archive_page_index(self, pagenum):
+    def get_archive_page_index(self, pagenum: int) -> int:
         # convert the displayed page number to the page index of the file in
         # the archive
         if pagenum < len(self.pages):
