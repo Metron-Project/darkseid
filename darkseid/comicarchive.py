@@ -8,6 +8,7 @@ import os
 import sys
 import tempfile
 import zipfile
+from typing import List, Optional, Text
 
 from natsort import natsorted
 from PIL import Image
@@ -23,10 +24,10 @@ class ZipArchiver:
 
     """ZIP implementation"""
 
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         self.path = path
 
-    def read_archive_file(self, archive_file):
+    def read_archive_file(self, archive_file: str) -> bytes:
         """Read the contents of a comic archive"""
 
         data = ""
@@ -52,7 +53,7 @@ class ZipArchiver:
             zip_file.close()
         return data
 
-    def remove_archive_file(self, archive_file):
+    def remove_archive_file(self, archive_file: str) -> bool:
         """Returns a boolean when attempting to remove a file from an archive"""
 
         try:
@@ -62,7 +63,7 @@ class ZipArchiver:
         else:
             return True
 
-    def write_archive_file(self, archive_file, data):
+    def write_archive_file(self, archive_file: str, data: str) -> bool:
         #  At the moment, no other option but to rebuild the whole
         #  zip archive w/o the indicated file. Very sucky, but maybe
         # another solution can be found
@@ -80,7 +81,7 @@ class ZipArchiver:
             print(f"Error writing zipfile: {exception_error}.")
             return False
 
-    def get_archive_filename_list(self):
+    def get_archive_filename_list(self) -> List[Text]:
         """Returns a list of the filenames in an archive"""
 
         try:
@@ -95,7 +96,7 @@ class ZipArchiver:
             )
             return []
 
-    def rebuild_zipfile(self, exclude_list):
+    def rebuild_zipfile(self, exclude_list: List[str]) -> None:
         """Zip helper func
 
         This recompresses the zip archive, without the files in the exclude_list
@@ -130,7 +131,7 @@ class UnknownArchiver:
 
     """Unknown implementation"""
 
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         self.path = path
 
     @classmethod
@@ -162,40 +163,40 @@ class ComicArchive:
 
         Zip, Unknown = list(range(2))
 
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         self.path = path
 
         self.ci_xml_filename = "ComicInfo.xml"
-        self.has_md = None
-        self.page_count = None
-        self.page_list = None
-        self.metadata = None
+        self.has_md: Optional[bool] = None
+        self.page_count: Optional[int] = None
+        self.page_list: Optional[List[str]] = None
+        self.metadata: Optional[GenericMetadata] = None
 
-        self.archive_type = self.ArchiveType.Unknown
+        self.archive_type: int = self.ArchiveType.Unknown
         self.archiver = UnknownArchiver(self.path)
 
         if self.zip_test():
-            self.archive_type = self.ArchiveType.Zip
+            self.archive_type: int = self.ArchiveType.Zip
             self.archiver = ZipArchiver(self.path)
 
-    def reset_cache(self):
+    def reset_cache(self) -> None:
         """Clears the cached data"""
         self.has_md = None
         self.page_count = None
         self.page_list = None
         self.metadata = None
 
-    def zip_test(self):
+    def zip_test(self) -> bool:
         """Tests whether an archive is a zipfile"""
 
         return zipfile.is_zipfile(self.path)
 
-    def is_zip(self):
+    def is_zip(self) -> bool:
         """Returns a boolean as to whether an archive is a zipfile"""
 
         return self.archive_type == self.ArchiveType.Zip
 
-    def is_writable(self):
+    def is_writable(self) -> bool:
         """Returns a boolean as to whether an archive is writable"""
 
         if self.archive_type == self.ArchiveType.Unknown:
@@ -203,12 +204,12 @@ class ComicArchive:
 
         return bool(os.access(self.path, os.W_OK))
 
-    def seems_to_be_a_comic_archive(self):
+    def seems_to_be_a_comic_archive(self) -> bool:
         """Returns a boolean as to whether the file is a comic archive"""
 
         return bool((self.is_zip()) and (self.get_number_of_pages() > 0))
 
-    def get_page(self, index):
+    def get_page(self, index: int) -> Optional[bytes]:
         """Returns an image(page) from an archive"""
 
         image_data = None
