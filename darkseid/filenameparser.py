@@ -7,25 +7,26 @@ This should probably be re-written, but, well, it mostly works!
 
 import pathlib
 import re
+from typing import List, Match, Optional, Tuple
 from urllib.parse import unquote
 
 
 class FileNameParser:
     """Class to get parse the filename to get information about the comic."""
 
-    def __init__(self):
-        self.issue = ""
-        self.series = ""
-        self.volume = ""
-        self.issue_count = ""
-        self.year = ""
-        self.remainder = ""
+    def __init__(self) -> None:
+        self.issue: str = ""
+        self.series: str = ""
+        self.volume: str = ""
+        self.issue_count: str = ""
+        self.year: str = ""
+        self.remainder: str = ""
 
     @staticmethod
     def repl(match):
         return " " * len(match.group())
 
-    def fix_spaces(self, string, remove_dashes=True):
+    def fix_spaces(self, string: str, remove_dashes: bool = True) -> str:
         """Returns a string with the spaces fixed"""
 
         placeholders = ["[-_]", "  +"] if remove_dashes else ["[_]", "  +"]
@@ -33,17 +34,19 @@ class FileNameParser:
             string = re.sub(place_holder, self.repl, string)
         return string  # .strip()
 
-    def get_issue_count(self, filename, issue_end):
+    def get_issue_count(self, filename: str, issue_end: int) -> str:
         """Returns a string with the issue count"""
 
-        count = ""
+        count: str = ""
         filename = filename[issue_end:]
 
         # replace any name separators with spaces
-        tmpstr = self.fix_spaces(filename)
-        found = False
+        tmpstr: str = self.fix_spaces(filename)
+        found: bool = False
 
-        match = re.search(r"(?<=\sof\s)\d+(?=\s)", tmpstr, re.IGNORECASE)
+        match: Optional[Match[str]] = re.search(
+            r"(?<=\sof\s)\d+(?=\s)", tmpstr, re.IGNORECASE
+        )
         if match:
             count = match.group()
             found = True
@@ -58,15 +61,15 @@ class FileNameParser:
 
         return count
 
-    def get_issue_number(self, filename):
+    def get_issue_number(self, filename: str) -> Tuple[str, int, int]:
         """Returns a tuple of issue number string, and start and end indexes in the filename
         (The indexes will be used to split the string up for further parsing)
         """
 
-        found = False
-        issue = ""
-        start = 0
-        end = 0
+        found: bool = False
+        issue: str = ""
+        start: int = 0
+        end: int = 0
 
         # first, look for multiple "--", this means it's formatted differently
         # from most:
@@ -99,7 +102,7 @@ class FileNameParser:
         # the same positions as original filename
 
         # make a list of each word and its position
-        word_list = list()
+        word_list: List[Tuple[str, int, int]] = list()
         for match in re.finditer(r"\S+", filename):
             word_list.append((match.group(0), match.start(), match.end()))
 
@@ -112,6 +115,8 @@ class FileNameParser:
 
         # Now try to search for the likely issue number word in the list
 
+        # Intialize the word variable so that it's not unbound.
+        word: Tuple[str, int, int] = ("", 0, 0)
         # first look for a word with "#" followed by digits with optional suffix
         # this is almost certainly the issue number
         for word in reversed(word_list):
@@ -142,7 +147,7 @@ class FileNameParser:
 
         return issue, start, end
 
-    def get_series_name(self, filename, issue_start):
+    def get_series_name(self, filename: str, issue_start: int) -> Tuple[str, str]:
         """Use the issue number string index to split the filename string"""
 
         if issue_start != 0:
@@ -205,24 +210,28 @@ class FileNameParser:
         return series, volume.strip()
 
     @staticmethod
-    def get_year(filename, issue_end):
+    def get_year(filename: str, issue_end: int) -> str:
         """Return the year from the filename"""
 
         filename = filename[issue_end:]
 
-        year = ""
+        year: str = ""
         # look for four digit number with "(" ")" or "--" around it
-        match = re.search(r"(\(\d\d\d\d\))|(--\d\d\d\d--)", filename)
+        match: Optional[Match[str]] = re.search(
+            r"(\(\d\d\d\d\))|(--\d\d\d\d--)", filename
+        )
         if match:
             year = match.group()
             # remove non-digits
             year = re.sub("[^0-9]", "", year)
         return year
 
-    def get_remainder(self, filename, year, count, volume, issue_end):
+    def get_remainder(
+        self, filename: str, year: str, count: str, volume: str, issue_end: int
+    ) -> str:
         """Make a guess at where the the non-interesting stuff begins"""
 
-        remainder = ""
+        remainder: str = ""
 
         if "--" in filename:
             remainder = filename.split("--", 1)[1]
@@ -244,7 +253,7 @@ class FileNameParser:
 
         return remainder.strip()
 
-    def parse_filename(self, filename):
+    def parse_filename(self, filename: str) -> None:
         """Method to parse the filename."""
 
         # Get file name without path or extension
