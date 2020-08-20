@@ -129,7 +129,6 @@ class GenericMetadata:
         assign("comments", new_md.comments)
         assign("notes", new_md.notes)
 
-        self.overlay_credits(new_md.credits)
         # TODO
 
         # not sure if the tags and pages should broken down, or treated
@@ -142,17 +141,6 @@ class GenericMetadata:
 
         if len(new_md.pages) > 0:
             assign("pages", new_md.pages)
-
-    def overlay_credits(self, new_credits):
-        for credit in new_credits:
-            # Remove credit role if person is blank
-            if credit["person"] == "":
-                for r in reversed(self.credits):
-                    if r["role"].lower() == credit["role"].lower():
-                        self.credits.remove(r)
-            # otherwise, add it!
-            else:
-                self.add_credit(credit["person"], credit["role"])
 
     def set_default_page_list(self, count: int) -> None:
         # generate a default page list, with the first page marked as the cover
