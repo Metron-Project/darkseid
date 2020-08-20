@@ -193,7 +193,7 @@ class ComicArchive:
 
         return image_data
 
-    def get_page_name(self, index):
+    def get_page_name(self, index: int) -> Optional[str]:
         """Returns the page name from an index"""
 
         if index is None:
@@ -207,7 +207,7 @@ class ComicArchive:
 
         return page_list[index]
 
-    def get_page_name_list(self, sort_list=True):
+    def get_page_name_list(self, sort_list: bool = True) -> List[str]:
         """Returns a list of page names from an archive"""
 
         if self.page_list is None:
@@ -238,14 +238,14 @@ class ComicArchive:
 
         return self.page_list
 
-    def get_number_of_pages(self):
+    def get_number_of_pages(self) -> int:
         """Returns the number of pages in an archive"""
 
         if self.page_count is None:
             self.page_count = len(self.get_page_name_list())
         return self.page_count
 
-    def read_metadata(self):
+    def read_metadata(self) -> GenericMetadata:
         """Reads the metadata from an archive if present"""
 
         if self.metadata is None:
@@ -269,17 +269,19 @@ class ComicArchive:
 
         return self.metadata
 
-    def read_raw_metadata(self):
+    def read_raw_metadata(self) -> Optional[str]:
         if not self.has_metadata():
             return None
         try:
-            raw_metadata = self.archiver.read_archive_file(self.ci_xml_filename)
+            tmp_raw_metadata = self.archiver.read_archive_file(self.ci_xml_filename)
+            # Convert bytes to str. Is it safe to decode with utf-8?
+            raw_metadata = tmp_raw_metadata.decode("utf-8")
         except IOError:
             print("Error reading in raw CIX!")
-            raw_metadata = ""
+            raw_metadata = None
         return raw_metadata
 
-    def write_metadata(self, metadata):
+    def write_metadata(self, metadata: GenericMetadata) -> bool:
         """Write the metadata to the archive"""
 
         if metadata is None:
@@ -295,7 +297,7 @@ class ComicArchive:
         self.reset_cache()
         return write_success
 
-    def remove_metadata(self):
+    def remove_metadata(self) -> bool:
         """Remove the metadata from the archive if present"""
 
         if self.has_metadata():
@@ -307,7 +309,7 @@ class ComicArchive:
             return write_success
         return True
 
-    def has_metadata(self):
+    def has_metadata(self) -> bool:
         """Checks to see if the archive has metadata"""
 
         if self.has_md is None:
@@ -323,7 +325,9 @@ class ComicArchive:
                 self.has_md = True
         return self.has_md
 
-    def apply_archive_info_to_metadata(self, metadata, calc_page_sizes=False):
+    def apply_archive_info_to_metadata(
+        self, metadata: GenericMetadata, calc_page_sizes: bool = False
+    ) -> None:
         """Apply page information from the archive to the metadata"""
 
         metadata.page_count = self.get_number_of_pages()
@@ -348,7 +352,7 @@ class ComicArchive:
                         except IOError:
                             page["ImageSize"] = str(len(data))
 
-    def metadata_from_filename(self, parse_scan_info=True):
+    def metadata_from_filename(self, parse_scan_info: bool = True) -> GenericMetadata:
         """Attempts to get the metadata from the filename"""
 
         metadata = GenericMetadata()
