@@ -89,7 +89,7 @@ class GenericMetadata:
         self.last_mark: Optional[str] = None
         self.cover_image: Optional[str] = None
 
-    def overlay(self, new_md):
+    def overlay(self, new_md: "GenericMetadata") -> None:
         """Overlay a metadata object on this one
 
         That is, when the new object has non-None values, over-write them
@@ -160,7 +160,6 @@ class GenericMetadata:
 
     def overlay_credits(self, new_credits):
         for credit in new_credits:
-            primary = True if "primary" in credit and credit["primary"] else False
             # Remove credit role if person is blank
             if credit["person"] == "":
                 for r in reversed(self.credits):
@@ -168,7 +167,7 @@ class GenericMetadata:
                         self.credits.remove(r)
             # otherwise, add it!
             else:
-                self.add_credit(credit["person"], credit["role"], primary)
+                self.add_credit(credit["person"], credit["role"])
 
     def set_default_page_list(self, count: int) -> None:
         # generate a default page list, with the first page marked as the cover
@@ -199,26 +198,10 @@ class GenericMetadata:
 
         return coverlist
 
-    def add_credit(self, person, role, primary=False):
+    def add_credit(self, person: str, role: str) -> None:
 
-        credit = {"person": person, "role": role}
-        if primary:
-            credit["primary"] = primary
-
-        # look to see if it's not already there...
-        found = False
-        for c in self.credits:
-            if (
-                c["person"].lower() == person.lower()
-                and c["role"].lower() == role.lower()
-            ):
-                # no need to add it. just adjust the "primary" flag as needed
-                c["primary"] = primary
-                found = True
-                break
-
-        if not found:
-            self.credits.append(credit)
+        credit: Dict[str, str] = {"person": person, "role": role}
+        self.credits.append(credit)
 
     def __str__(self) -> str:
         vals: List[Tuple[str, str]] = []
