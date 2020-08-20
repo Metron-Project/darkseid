@@ -64,7 +64,7 @@ class GenericMetadata:
         self.web_link: Optional[str] = None
         self.format: Optional[str] = None
         self.manga: Optional[str] = None
-        self.black_and_white: Optional[str] = None
+        self.black_and_white: Optional[bool] = None
         self.page_count: Optional[str] = None
         self.maturity_rating: Optional[str] = None
 
@@ -76,8 +76,7 @@ class GenericMetadata:
         self.teams: Optional[str] = None
         self.locations: Optional[str] = None
 
-        # TODO: Need to type hint the credits.
-        self.credits = []
+        self.credits: List[Dict[str, str]] = []
         self.tags: List[str] = []
         self.pages: List[Dict[str, str]] = []
 
