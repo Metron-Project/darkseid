@@ -4,6 +4,7 @@
 
 
 import xml.etree.ElementTree as ET
+from typing import List
 
 from . import utils
 from .genericmetadata import GenericMetadata
@@ -11,8 +12,15 @@ from .genericmetadata import GenericMetadata
 
 class ComicInfoXml:
 
-    writer_synonyms = ["writer", "plotter", "scripter", "script", "story", "plot"]
-    penciller_synonyms = [
+    writer_synonyms: List[str] = [
+        "writer",
+        "plotter",
+        "scripter",
+        "script",
+        "story",
+        "plot",
+    ]
+    penciller_synonyms: List[str] = [
         "artist",
         "breakdowns",
         "illustrator",
@@ -20,7 +28,7 @@ class ComicInfoXml:
         "penciller",
         "penciler",
     ]
-    inker_synonyms = [
+    inker_synonyms: List[str] = [
         "artist",
         "embellisher",
         "finishes",
@@ -28,7 +36,7 @@ class ComicInfoXml:
         "ink assists",
         "inker",
     ]
-    colorist_synonyms = [
+    colorist_synonyms: List[str] = [
         "colorist",
         "colourist",
         "colorer",
@@ -36,9 +44,9 @@ class ComicInfoXml:
         "color assists",
         "color flats",
     ]
-    letterer_synonyms = ["letterer"]
-    cover_synonyms = ["cover", "covers", "coverartist", "cover artist"]
-    editor_synonyms = [
+    letterer_synonyms: List[str] = ["letterer"]
+    cover_synonyms: List[str] = ["cover", "covers", "coverartist", "cover artist"]
+    editor_synonyms: List[str] = [
         "assistant editor",
         "associate editor",
         "consulting editor",
