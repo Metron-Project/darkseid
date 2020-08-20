@@ -8,7 +8,7 @@ possible, however lossy it might be
 
 # Copyright 2012-2014 Anthony Beville
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from . import utils
 
@@ -186,7 +186,7 @@ class GenericMetadata:
         else:
             return 0
 
-    def get_cover_page_index_list(self):
+    def get_cover_page_index_list(self) -> List[int]:
         # return a list of archive page indices of cover pages
         coverlist = [
             int(page["Image"])
@@ -220,16 +220,16 @@ class GenericMetadata:
         if not found:
             self.credits.append(credit)
 
-    def __str__(self):
-        vals = []
+    def __str__(self) -> str:
+        vals: List[Tuple[str, str]] = []
         if self.is_empty:
             return "No metadata"
 
-        def add_string(tag, val):
+        def add_string(tag: str, val: str) -> None:
             if val is not None and "{0}".format(val) != "":
                 vals.append((tag, val))
 
-        def add_attr_string(tag):
+        def add_attr_string(tag: str) -> None:
             add_string(tag, getattr(self, tag))
 
         add_attr_string("series")
