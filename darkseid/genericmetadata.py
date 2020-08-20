@@ -80,14 +80,6 @@ class GenericMetadata:
         self.tags: List[str] = []
         self.pages: List[Dict[str, str]] = []
 
-        # Some CoMet-only items
-        self.price: Optional[str] = None
-        self.is_version_of: Optional[str] = None
-        self.rights: Optional[str] = None
-        self.identifier: Optional[str] = None
-        self.last_mark: Optional[str] = None
-        self.cover_image: Optional[str] = None
-
     def overlay(self, new_md: "GenericMetadata") -> None:
         """Overlay a metadata object on this one
 
@@ -136,12 +128,6 @@ class GenericMetadata:
         assign("locations", new_md.locations)
         assign("comments", new_md.comments)
         assign("notes", new_md.notes)
-
-        assign("price", new_md.price)
-        assign("is_version_of", new_md.is_version_of)
-        assign("rights", new_md.rights)
-        assign("identifier", new_md.identifier)
-        assign("last_mark", new_md.last_mark)
 
         self.overlay_credits(new_md.credits)
         # TODO
