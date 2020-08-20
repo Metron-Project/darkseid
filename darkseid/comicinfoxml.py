@@ -1,10 +1,11 @@
 """A class to encapsulate ComicRack's ComicInfo.xml data"""
 
 # Copyright 2012-2014 Anthony Beville
+# Copyright 2020 Brian Pepple
 
 
 import xml.etree.ElementTree as ET
-from typing import List
+from typing import List, Optional
 
 from . import utils
 from .genericmetadata import GenericMetadata
@@ -58,7 +59,7 @@ class ComicInfoXml:
         "supervising editor",
     ]
 
-    def get_parseable_credits(self):
+    def get_parseable_credits(self) -> List[str]:
         parsable_credits = list(self.writer_synonyms)
         parsable_credits.extend(self.penciller_synonyms)
         parsable_credits.extend(self.inker_synonyms)
@@ -68,20 +69,20 @@ class ComicInfoXml:
         parsable_credits.extend(self.editor_synonyms)
         return parsable_credits
 
-    def metadata_from_string(self, string):
+    def metadata_from_string(self, string: str) -> GenericMetadata:
 
         tree = ET.ElementTree(ET.fromstring(string))
         return self.convert_xml_to_metadata(tree)
 
-    def string_from_metadata(self, metadata):
+    def string_from_metadata(self, metadata: GenericMetadata) -> str:
 
         header = '<?xml version="1.0"?>\n'
 
-        tree = self.convert_metadata_to_xml(self, metadata)
+        tree = self.convert_metadata_to_xml(metadata)
         tree_str = ET.tostring(tree.getroot()).decode()
         return header + tree_str
 
-    def indent(self, elem, level=0):
+    def indent(self, elem: ET.Element, level: int = 0) -> None:
         # for making the XML output readable
         i = "\n" + level * "  "
         if elem:
@@ -97,7 +98,7 @@ class ComicInfoXml:
             if level and (not elem.tail or not elem.tail.strip()):
                 elem.tail = i
 
-    def convert_metadata_to_xml(self, filename, metadata):
+    def convert_metadata_to_xml(self, metadata: GenericMetadata) -> ET.ElementTree:
 
         # build a tree structure
         root = ET.Element("ComicInfo")
@@ -105,9 +106,9 @@ class ComicInfoXml:
         root.attrib["xmlns:xsd"] = "http://www.w3.org/2001/XMLSchema"
         # helper func
 
-        def assign(cix_entry, md_entry):
+        def assign(cix_entry: str, md_entry: Optional[str]) -> None:
             if md_entry is not None:
-                ET.SubElement(root, cix_entry).text = "{0}".format(md_entry)
+                ET.SubElement(root, cix_entry).text = f"{md_entry}"
 
         assign("Title", metadata.title)
         assign("Series", metadata.series)
@@ -127,13 +128,13 @@ class ComicInfoXml:
 
         # need to specially process the credits, since they are structured
         # differently than CIX
-        credit_writer_list = list()
-        credit_penciller_list = list()
-        credit_inker_list = list()
-        credit_colorist_list = list()
-        credit_letterer_list = list()
-        credit_cover_list = list()
-        credit_editor_list = list()
+        credit_writer_list: List[str] = []
+        credit_penciller_list: List[str] = []
+        credit_inker_list: List[str] = []
+        credit_colorist_list: List[str] = []
+        credit_letterer_list: List[str] = []
+        credit_cover_list: List[str] = []
+        credit_editor_list: List[str] = []
 
         # first, loop thru credits, and build a list for each role that CIX
         # supports
@@ -220,7 +221,7 @@ class ComicInfoXml:
         return tree
 
     @classmethod
-    def convert_xml_to_metadata(cls, tree):
+    def convert_xml_to_metadata(cls, tree: ET.ElementTree) -> GenericMetadata:
 
         root = tree.getroot()
 
@@ -230,7 +231,7 @@ class ComicInfoXml:
         metadata = GenericMetadata()
 
         # Helper function
-        def xlate(tag):
+        def xlate(tag: str) -> Optional[str]:
             node = root.find(tag)
             if node is not None:
                 return node.text
@@ -300,13 +301,13 @@ class ComicInfoXml:
 
         return metadata
 
-    def write_to_external_file(self, filename, metadata):
+    def write_to_external_file(self, filename: str, metadata: GenericMetadata) -> None:
 
-        tree = self.convert_metadata_to_xml(self, metadata)
+        tree = self.convert_metadata_to_xml(metadata)
         # ET.dump(tree)
         tree.write(filename, encoding="utf-8")
 
-    def read_from_external_file(self, filename):
+    def read_from_external_file(self, filename: str) -> GenericMetadata:
 
         tree = ET.parse(filename)
         return self.convert_xml_to_metadata(tree)
