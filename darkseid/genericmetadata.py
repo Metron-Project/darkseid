@@ -210,12 +210,6 @@ class GenericMetadata:
         add_attr_string("format")
         add_attr_string("manga")
 
-        add_attr_string("price")
-        add_attr_string("is_version_of")
-        add_attr_string("rights")
-        add_attr_string("identifier")
-        add_attr_string("last_mark")
-
         if self.black_and_white:
             add_attr_string("black_and_white")
         add_attr_string("maturity_rating")
@@ -229,12 +223,6 @@ class GenericMetadata:
         add_attr_string("notes")
 
         add_string("tags", utils.list_to_string(self.tags))
-
-        for c in self.credits:
-            primary = ""
-            if "primary" in c and c["primary"]:
-                primary = " [P]"
-            add_string("credit", c["role"] + ": " + c["person"] + primary)
 
         # find the longest field name
         flen = 0
