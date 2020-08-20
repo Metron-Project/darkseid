@@ -124,33 +124,6 @@ class ZipArchiver:
         os.rename(tmp_name, self.path)
 
 
-# ------------------------------------------
-
-
-class UnknownArchiver:
-
-    """Unknown implementation"""
-
-    def __init__(self, path: str) -> None:
-        self.path = path
-
-    @classmethod
-    def read_archive_file(cls):
-        return ""
-
-    @classmethod
-    def write_archive_file(cls, archive_file, data):
-        return False
-
-    @classmethod
-    def remove_archive_file(cls, archive_file):
-        return False
-
-    @classmethod
-    def get_archive_filename_list(cls):
-        return []
-
-
 # ------------------------------------------------------------------
 
 
@@ -172,12 +145,8 @@ class ComicArchive:
         self.page_list: Optional[List[str]] = None
         self.metadata: Optional[GenericMetadata] = None
 
-        self.archive_type: int = self.ArchiveType.Unknown
-        self.archiver = UnknownArchiver(self.path)
-
-        if self.zip_test():
-            self.archive_type: int = self.ArchiveType.Zip
-            self.archiver = ZipArchiver(self.path)
+        self.archive_type: int = self.ArchiveType.Zip
+        self.archiver = ZipArchiver(self.path)
 
     def reset_cache(self) -> None:
         """Clears the cached data"""
