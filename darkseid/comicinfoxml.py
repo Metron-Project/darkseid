@@ -288,7 +288,7 @@ class ComicInfoXml:
                 metadata.pages.append(page.attrib)
                 # print page.attrib
 
-        metadata.isEmpty = False
+        metadata.is_empty = False
 
         return metadata
 
