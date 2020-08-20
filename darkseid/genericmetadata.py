@@ -7,6 +7,7 @@ possible, however lossy it might be
 """
 
 # Copyright 2012-2014 Anthony Beville
+# Copyright 2020 Brian Pepple
 
 from typing import Dict, List, Optional, Tuple
 
