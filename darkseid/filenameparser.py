@@ -5,8 +5,8 @@ This should probably be re-written, but, well, it mostly works!
 
 # Copyright 2012-2014 Anthony Beville
 
-import pathlib
 import re
+from pathlib import Path
 from typing import List, Match, Optional, Tuple
 from urllib.parse import unquote
 
@@ -253,11 +253,11 @@ class FileNameParser:
 
         return remainder.strip()
 
-    def parse_filename(self, filename: str) -> None:
+    def parse_filename(self, comic: Path) -> None:
         """Method to parse the filename."""
 
-        # Get file name without path or extension
-        filename = pathlib.Path(filename).stem
+        # Get comic name without path or extension
+        filename = comic.stem
 
         # url decode, just in case
         filename = unquote(filename)

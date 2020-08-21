@@ -8,6 +8,7 @@ import os
 import sys
 import tempfile
 import zipfile
+from pathlib import Path
 from typing import List, Optional, Text
 
 from natsort import natsorted
@@ -24,7 +25,7 @@ class ZipArchiver:
 
     """ZIP implementation"""
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: Path) -> None:
         self.path = path
 
     def read_archive_file(self, archive_file: str) -> bytes:
@@ -106,7 +107,7 @@ class ZipArchiver:
         #                                            self.path, exclude_list )
 
         # generate temp file
-        tmp_fd, tmp_name = tempfile.mkstemp(dir=os.path.dirname(self.path))
+        tmp_fd, tmp_name = tempfile.mkstemp(dir=self.path.parent)
         os.close(tmp_fd)
 
         zin = zipfile.ZipFile(self.path, "r")
@@ -120,7 +121,7 @@ class ZipArchiver:
         zin.close()
 
         # replace with the new file
-        os.remove(self.path)
+        self.path.unlink()
         os.rename(tmp_name, self.path)
 
 
@@ -136,7 +137,7 @@ class ComicArchive:
 
         Zip, Unknown = list(range(2))
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: Path) -> None:
         self.path = path
 
         self.ci_xml_filename = "ComicInfo.xml"
