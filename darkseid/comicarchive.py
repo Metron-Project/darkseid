@@ -8,6 +8,7 @@ import os
 import sys
 import tempfile
 import zipfile
+from typing import List, Optional, Text
 
 from natsort import natsorted
 from PIL import Image
@@ -23,10 +24,10 @@ class ZipArchiver:
 
     """ZIP implementation"""
 
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         self.path = path
 
-    def read_archive_file(self, archive_file):
+    def read_archive_file(self, archive_file: str) -> bytes:
         """Read the contents of a comic archive"""
 
         data = ""
@@ -52,7 +53,7 @@ class ZipArchiver:
             zip_file.close()
         return data
 
-    def remove_archive_file(self, archive_file):
+    def remove_archive_file(self, archive_file: str) -> bool:
         """Returns a boolean when attempting to remove a file from an archive"""
 
         try:
@@ -62,7 +63,7 @@ class ZipArchiver:
         else:
             return True
 
-    def write_archive_file(self, archive_file, data):
+    def write_archive_file(self, archive_file: str, data: str) -> bool:
         #  At the moment, no other option but to rebuild the whole
         #  zip archive w/o the indicated file. Very sucky, but maybe
         # another solution can be found
@@ -80,7 +81,7 @@ class ZipArchiver:
             print(f"Error writing zipfile: {exception_error}.")
             return False
 
-    def get_archive_filename_list(self):
+    def get_archive_filename_list(self) -> List[Text]:
         """Returns a list of the filenames in an archive"""
 
         try:
@@ -95,7 +96,7 @@ class ZipArchiver:
             )
             return []
 
-    def rebuild_zipfile(self, exclude_list):
+    def rebuild_zipfile(self, exclude_list: List[str]) -> None:
         """Zip helper func
 
         This recompresses the zip archive, without the files in the exclude_list
@@ -123,33 +124,6 @@ class ZipArchiver:
         os.rename(tmp_name, self.path)
 
 
-# ------------------------------------------
-
-
-class UnknownArchiver:
-
-    """Unknown implementation"""
-
-    def __init__(self, path):
-        self.path = path
-
-    @classmethod
-    def read_archive_file(cls):
-        return ""
-
-    @classmethod
-    def write_archive_file(cls, archive_file, data):
-        return False
-
-    @classmethod
-    def remove_archive_file(cls, archive_file):
-        return False
-
-    @classmethod
-    def get_archive_filename_list(cls):
-        return []
-
-
 # ------------------------------------------------------------------
 
 
@@ -162,40 +136,36 @@ class ComicArchive:
 
         Zip, Unknown = list(range(2))
 
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         self.path = path
 
         self.ci_xml_filename = "ComicInfo.xml"
-        self.has_md = None
-        self.page_count = None
-        self.page_list = None
-        self.metadata = None
+        self.has_md: Optional[bool] = None
+        self.page_count: Optional[int] = None
+        self.page_list: Optional[List[str]] = None
+        self.metadata: Optional[GenericMetadata] = None
 
-        self.archive_type = self.ArchiveType.Unknown
-        self.archiver = UnknownArchiver(self.path)
+        self.archive_type: int = self.ArchiveType.Zip
+        self.archiver = ZipArchiver(self.path)
 
-        if self.zip_test():
-            self.archive_type = self.ArchiveType.Zip
-            self.archiver = ZipArchiver(self.path)
-
-    def reset_cache(self):
+    def reset_cache(self) -> None:
         """Clears the cached data"""
         self.has_md = None
         self.page_count = None
         self.page_list = None
         self.metadata = None
 
-    def zip_test(self):
+    def zip_test(self) -> bool:
         """Tests whether an archive is a zipfile"""
 
         return zipfile.is_zipfile(self.path)
 
-    def is_zip(self):
+    def is_zip(self) -> bool:
         """Returns a boolean as to whether an archive is a zipfile"""
 
         return self.archive_type == self.ArchiveType.Zip
 
-    def is_writable(self):
+    def is_writable(self) -> bool:
         """Returns a boolean as to whether an archive is writable"""
 
         if self.archive_type == self.ArchiveType.Unknown:
@@ -203,12 +173,12 @@ class ComicArchive:
 
         return bool(os.access(self.path, os.W_OK))
 
-    def seems_to_be_a_comic_archive(self):
+    def seems_to_be_a_comic_archive(self) -> bool:
         """Returns a boolean as to whether the file is a comic archive"""
 
         return bool((self.is_zip()) and (self.get_number_of_pages() > 0))
 
-    def get_page(self, index):
+    def get_page(self, index: int) -> Optional[bytes]:
         """Returns an image(page) from an archive"""
 
         image_data = None
@@ -223,7 +193,7 @@ class ComicArchive:
 
         return image_data
 
-    def get_page_name(self, index):
+    def get_page_name(self, index: int) -> Optional[str]:
         """Returns the page name from an index"""
 
         if index is None:
@@ -237,7 +207,7 @@ class ComicArchive:
 
         return page_list[index]
 
-    def get_page_name_list(self, sort_list=True):
+    def get_page_name_list(self, sort_list: bool = True) -> List[str]:
         """Returns a list of page names from an archive"""
 
         if self.page_list is None:
@@ -268,14 +238,14 @@ class ComicArchive:
 
         return self.page_list
 
-    def get_number_of_pages(self):
+    def get_number_of_pages(self) -> int:
         """Returns the number of pages in an archive"""
 
         if self.page_count is None:
             self.page_count = len(self.get_page_name_list())
         return self.page_count
 
-    def read_metadata(self):
+    def read_metadata(self) -> GenericMetadata:
         """Reads the metadata from an archive if present"""
 
         if self.metadata is None:
@@ -299,17 +269,19 @@ class ComicArchive:
 
         return self.metadata
 
-    def read_raw_metadata(self):
+    def read_raw_metadata(self) -> Optional[str]:
         if not self.has_metadata():
             return None
         try:
-            raw_metadata = self.archiver.read_archive_file(self.ci_xml_filename)
+            tmp_raw_metadata = self.archiver.read_archive_file(self.ci_xml_filename)
+            # Convert bytes to str. Is it safe to decode with utf-8?
+            raw_metadata = tmp_raw_metadata.decode("utf-8")
         except IOError:
             print("Error reading in raw CIX!")
-            raw_metadata = ""
+            raw_metadata = None
         return raw_metadata
 
-    def write_metadata(self, metadata):
+    def write_metadata(self, metadata: GenericMetadata) -> bool:
         """Write the metadata to the archive"""
 
         if metadata is None:
@@ -325,7 +297,7 @@ class ComicArchive:
         self.reset_cache()
         return write_success
 
-    def remove_metadata(self):
+    def remove_metadata(self) -> bool:
         """Remove the metadata from the archive if present"""
 
         if self.has_metadata():
@@ -337,7 +309,7 @@ class ComicArchive:
             return write_success
         return True
 
-    def has_metadata(self):
+    def has_metadata(self) -> bool:
         """Checks to see if the archive has metadata"""
 
         if self.has_md is None:
@@ -353,7 +325,9 @@ class ComicArchive:
                 self.has_md = True
         return self.has_md
 
-    def apply_archive_info_to_metadata(self, metadata, calc_page_sizes=False):
+    def apply_archive_info_to_metadata(
+        self, metadata: GenericMetadata, calc_page_sizes: bool = False
+    ) -> None:
         """Apply page information from the archive to the metadata"""
 
         metadata.page_count = self.get_number_of_pages()
@@ -378,7 +352,7 @@ class ComicArchive:
                         except IOError:
                             page["ImageSize"] = str(len(data))
 
-    def metadata_from_filename(self, parse_scan_info=True):
+    def metadata_from_filename(self, parse_scan_info: bool = True) -> GenericMetadata:
         """Attempts to get the metadata from the filename"""
 
         metadata = GenericMetadata()
@@ -395,10 +369,10 @@ class ComicArchive:
         if fnp.year != "":
             metadata.year = fnp.year
         if fnp.issue_count != "":
-            metadata.issueCount = fnp.issue_count
+            metadata.issue_count = fnp.issue_count
         if parse_scan_info and fnp.remainder != "":
-            metadata.scanInfo = fnp.remainder
+            metadata.scan_info = fnp.remainder
 
-        metadata.isEmpty = False
+        metadata.is_empty = False
 
         return metadata

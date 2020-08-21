@@ -7,6 +7,9 @@ possible, however lossy it might be
 """
 
 # Copyright 2012-2014 Anthony Beville
+# Copyright 2020 Brian Pepple
+
+from typing import Dict, List, Optional, Tuple
 
 from . import utils
 
@@ -32,61 +35,53 @@ class PageType:
 
 
 class GenericMetadata:
-    def __init__(self):
+    def __init__(self) -> None:
 
-        self.is_empty = True
-        self.tag_origin = None
+        self.is_empty: bool = True
+        self.tag_origin: Optional[str] = None
 
-        self.series = None
-        self.issue = None
-        self.title = None
-        self.publisher = None
-        self.month = None
-        self.year = None
-        self.day = None
-        self.issue_count = None
-        self.volume = None
-        self.genre = None
-        self.language = None  # 2 letter iso code
-        self.comments = None  # use same way as Summary in CIX
+        self.series: Optional[str] = None
+        self.issue: Optional[str] = None
+        self.title: Optional[str] = None
+        self.publisher: Optional[str] = None
+        self.month: Optional[str] = None
+        self.year: Optional[str] = None
+        self.day: Optional[str] = None
+        self.issue_count: Optional[str] = None
+        self.volume: Optional[str] = None
+        self.genre: Optional[str] = None
+        self.language: Optional[str] = None  # 2 letter iso code
+        self.comments: Optional[str] = None  # use same way as Summary in CIX
 
-        self.volume_count = None
-        self.critical_rating = None
-        self.country = None
+        self.volume_count: Optional[str] = None
+        self.critical_rating: Optional[str] = None
+        self.country: Optional[str] = None
 
-        self.alternate_series = None
-        self.alternate_number = None
-        self.alternate_count = None
-        self.imprint = None
-        self.notes = None
-        self.web_link = None
-        self.format = None
-        self.manga = None
-        self.black_and_white = None
-        self.page_count = None
-        self.maturity_rating = None
+        self.alternate_series: Optional[str] = None
+        self.alternate_number: Optional[str] = None
+        self.alternate_count: Optional[str] = None
+        self.imprint: Optional[str] = None
+        self.notes: Optional[str] = None
+        self.web_link: Optional[str] = None
+        self.format: Optional[str] = None
+        self.manga: Optional[str] = None
+        self.black_and_white: Optional[bool] = None
+        self.page_count: Optional[int] = None
+        self.maturity_rating: Optional[str] = None
 
-        self.story_arc = None
-        self.series_group = None
-        self.scan_info = None
+        self.story_arc: Optional[str] = None
+        self.series_group: Optional[str] = None
+        self.scan_info: Optional[str] = None
 
-        self.characters = None
-        self.teams = None
-        self.locations = None
+        self.characters: Optional[str] = None
+        self.teams: Optional[str] = None
+        self.locations: Optional[str] = None
 
-        self.credits = []
-        self.tags = []
-        self.pages = []
+        self.credits: List[Dict[str, str]] = []
+        self.tags: List[str] = []
+        self.pages: List[Dict[str, str]] = []
 
-        # Some CoMet-only items
-        self.price = None
-        self.is_version_of = None
-        self.rights = None
-        self.identifier = None
-        self.last_mark = None
-        self.cover_image = None
-
-    def overlay(self, new_md):
+    def overlay(self, new_md: "GenericMetadata") -> None:
         """Overlay a metadata object on this one
 
         That is, when the new object has non-None values, over-write them
@@ -135,13 +130,6 @@ class GenericMetadata:
         assign("comments", new_md.comments)
         assign("notes", new_md.notes)
 
-        assign("price", new_md.price)
-        assign("is_version_of", new_md.is_version_of)
-        assign("rights", new_md.rights)
-        assign("identifier", new_md.identifier)
-        assign("last_mark", new_md.last_mark)
-
-        self.overlay_credits(new_md.credits)
         # TODO
 
         # not sure if the tags and pages should broken down, or treated
@@ -155,19 +143,7 @@ class GenericMetadata:
         if len(new_md.pages) > 0:
             assign("pages", new_md.pages)
 
-    def overlay_credits(self, new_credits):
-        for credit in new_credits:
-            primary = True if "primary" in credit and credit["primary"] else False
-            # Remove credit role if person is blank
-            if credit["person"] == "":
-                for r in reversed(self.credits):
-                    if r["role"].lower() == credit["role"].lower():
-                        self.credits.remove(r)
-            # otherwise, add it!
-            else:
-                self.add_credit(credit["person"], credit["role"], primary)
-
-    def set_default_page_list(self, count):
+    def set_default_page_list(self, count: int) -> None:
         # generate a default page list, with the first page marked as the cover
         for i in range(count):
             page_dict = {"Image": str(i)}
@@ -175,7 +151,7 @@ class GenericMetadata:
                 page_dict["Type"] = PageType.FrontCover
             self.pages.append(page_dict)
 
-    def get_archive_page_index(self, pagenum):
+    def get_archive_page_index(self, pagenum: int) -> int:
         # convert the displayed page number to the page index of the file in
         # the archive
         if pagenum < len(self.pages):
@@ -183,7 +159,7 @@ class GenericMetadata:
         else:
             return 0
 
-    def get_cover_page_index_list(self):
+    def get_cover_page_index_list(self) -> List[int]:
         # return a list of archive page indices of cover pages
         coverlist = [
             int(page["Image"])
@@ -196,37 +172,21 @@ class GenericMetadata:
 
         return coverlist
 
-    def add_credit(self, person, role, primary=False):
+    def add_credit(self, person: str, role: str) -> None:
 
-        credit = {"person": person, "role": role}
-        if primary:
-            credit["primary"] = primary
+        credit: Dict[str, str] = {"person": person, "role": role}
+        self.credits.append(credit)
 
-        # look to see if it's not already there...
-        found = False
-        for c in self.credits:
-            if (
-                c["person"].lower() == person.lower()
-                and c["role"].lower() == role.lower()
-            ):
-                # no need to add it. just adjust the "primary" flag as needed
-                c["primary"] = primary
-                found = True
-                break
-
-        if not found:
-            self.credits.append(credit)
-
-    def __str__(self):
-        vals = []
+    def __str__(self) -> str:
+        vals: List[Tuple[str, str]] = []
         if self.is_empty:
             return "No metadata"
 
-        def add_string(tag, val):
+        def add_string(tag: str, val: str) -> None:
             if val is not None and "{0}".format(val) != "":
                 vals.append((tag, val))
 
-        def add_attr_string(tag):
+        def add_attr_string(tag: str) -> None:
             add_string(tag, getattr(self, tag))
 
         add_attr_string("series")
@@ -251,12 +211,6 @@ class GenericMetadata:
         add_attr_string("format")
         add_attr_string("manga")
 
-        add_attr_string("price")
-        add_attr_string("is_version_of")
-        add_attr_string("rights")
-        add_attr_string("identifier")
-        add_attr_string("last_mark")
-
         if self.black_and_white:
             add_attr_string("black_and_white")
         add_attr_string("maturity_rating")
@@ -270,12 +224,6 @@ class GenericMetadata:
         add_attr_string("notes")
 
         add_string("tags", utils.list_to_string(self.tags))
-
-        for c in self.credits:
-            primary = ""
-            if "primary" in c and c["primary"]:
-                primary = " [P]"
-            add_string("credit", c["role"] + ": " + c["person"] + primary)
 
         # find the longest field name
         flen = 0

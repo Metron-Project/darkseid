@@ -7,36 +7,37 @@ e.g.: "12", "12.1", "0", "-1", "5AU", "100-2"
 
 # Copyright 2012-2014 Anthony Beville
 
+from typing import Optional
+
 
 class IssueString:
     """Class to handle various types of comic issue numbers."""
 
-    def __init__(self, text):
+    def __init__(self, text: str) -> None:
 
         # break up the issue number string into 2 parts: the numeric and suffix string.
         # (assumes that the numeric portion is always first)
 
-        self.num = None
-        self.suffix = ""
+        self.num: Optional[float] = None
+        self.suffix: str = ""
 
         if text is None:
             return
 
+        # TODO: Once type hinting is finished for the project this check can be removed
         if isinstance(text, int):
             text = str(text)
 
         if len(text) == 0:
             return
 
-        text = str(text)
-
         # skip the minus sign if it's first
-        start = 1 if text[0] == "-" else 0
+        start: int = 1 if text[0] == "-" else 0
         # if it's still not numeric at start skip it
         if text[start].isdigit() or text[start] == ".":
             # walk through the string, look for split point (the first
             # non-numeric)
-            decimal_count = 0
+            decimal_count: int = 0
             for idx in range(start, len(text)):
                 if text[idx] not in "0123456789.":
                     break
@@ -69,15 +70,15 @@ class IssueString:
 
         # print "num: {0} suf: {1}".format(self.num, self.suffix)
 
-    def as_string(self, pad=0):
+    def as_string(self, pad: int = 0) -> str:
         """Returns a string with left-side zero padding"""
         # return the float, left side zero-padded, with suffix attached
         if self.num is None:
             return self.suffix
 
-        negative = self.num < 0
+        negative: bool = self.num < 0
 
-        num_f = abs(self.num)
+        num_f: float = abs(self.num)
 
         num_int = int(num_f)
         num_s = str(num_int)
@@ -87,7 +88,7 @@ class IssueString:
         num_s += self.suffix
 
         # create padding
-        padding = ""
+        padding: str = ""
         length = len(str(num_int))
         if length < pad:
             padding = "0" * (pad - length)
@@ -98,7 +99,7 @@ class IssueString:
 
         return num_s
 
-    def as_float(self):
+    def as_float(self) -> Optional[float]:
         """Return a float with no suffix
 
         example: "1½" is returned as "1.5"
@@ -110,7 +111,7 @@ class IssueString:
                 return 0.5
         return self.num
 
-    def as_int(self):
+    def as_int(self) -> Optional[int]:
         """Returns the integer version of the float"""
         if self.num is None:
             return None

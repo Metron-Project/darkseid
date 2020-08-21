@@ -26,13 +26,13 @@ def test_metadata_overlay(fake_metadata, fake_overlay_metadata):
 
 def test_metadata_credits(fake_metadata):
     result = [
-        {"person": "Peter David", "primary": True, "role": "Writer"},
+        {"person": "Peter David", "role": "Writer"},
         {"person": "Martin Egeland", "role": "Penciller"},
         {"person": "Martin Egeland", "role": "Cover"},
     ]
 
     md = fake_metadata
-    md.add_credit("Peter David", "Writer", primary=True)
+    md.add_credit("Peter David", "Writer")
     md.add_credit("Martin Egeland", "Penciller")
     md.add_credit("Martin Egeland", "Cover")
 
