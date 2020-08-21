@@ -4,10 +4,11 @@
 # Copyright 2019 Brian Pepple
 
 import io
+import logging
 import os
-import sys
 import tempfile
 import zipfile
+from pathlib import Path
 from typing import List, Optional, Text
 
 from natsort import natsorted
@@ -17,14 +18,14 @@ from .comicinfoxml import ComicInfoXml
 from .filenameparser import FileNameParser
 from .genericmetadata import GenericMetadata
 
-sys.path.insert(0, os.path.abspath("."))
+logger = logging.getLogger(__name__)
 
 
 class ZipArchiver:
 
     """ZIP implementation"""
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: Path) -> None:
         self.path = path
 
     def read_archive_file(self, archive_file: str) -> bytes:
@@ -36,18 +37,16 @@ class ZipArchiver:
         try:
             data = zip_file.read(archive_file)
         except zipfile.BadZipfile as bad_zip_error:
-            print(
-                f"bad zipfile [{bad_zip_error}]: {self.path} :: {archive_file}",
-                file=sys.stderr,
+            logger.exception(
+                f"bad zipfile [{bad_zip_error}]: {self.path} :: {archive_file}"
             )
             zip_file.close()
             raise IOError
         except Exception as exception_error:
-            zip_file.close()
-            print(
-                f"bad zipfile [{exception_error}]: {self.path} :: {archive_file}",
-                file=sys.stderr,
+            logger.exception(
+                f"bad zipfile [{exception_error}]: {self.path} :: {archive_file}"
             )
+            zip_file.close()
             raise IOError
         finally:
             zip_file.close()
@@ -78,7 +77,7 @@ class ZipArchiver:
             zip_file.close()
             return True
         except (zipfile.BadZipfile, zipfile.LargeZipFile) as exception_error:
-            print(f"Error writing zipfile: {exception_error}.")
+            logger.exception(f"Error writing zipfile: {exception_error}.")
             return False
 
     def get_archive_filename_list(self) -> List[Text]:
@@ -90,9 +89,8 @@ class ZipArchiver:
             zip_file.close()
             return namelist
         except Exception as exception_error:
-            print(
-                f"Unable to get zipfile list [{exception_error}]: {self.path}",
-                file=sys.stderr,
+            logger.exception(
+                f"Unable to get zipfile list [{exception_error}]: {self.path}"
             )
             return []
 
@@ -101,12 +99,8 @@ class ZipArchiver:
 
         This recompresses the zip archive, without the files in the exclude_list
         """
-
-        # print ">> sys.stderr, Rebuilding zip {0} without {1}".format(
-        #                                            self.path, exclude_list )
-
         # generate temp file
-        tmp_fd, tmp_name = tempfile.mkstemp(dir=os.path.dirname(self.path))
+        tmp_fd, tmp_name = tempfile.mkstemp(dir=self.path.parent)
         os.close(tmp_fd)
 
         zin = zipfile.ZipFile(self.path, "r")
@@ -120,7 +114,7 @@ class ZipArchiver:
         zin.close()
 
         # replace with the new file
-        os.remove(self.path)
+        self.path.unlink()
         os.rename(tmp_name, self.path)
 
 
@@ -136,7 +130,7 @@ class ComicArchive:
 
         Zip, Unknown = list(range(2))
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: Path) -> None:
         self.path = path
 
         self.ci_xml_filename = "ComicInfo.xml"
@@ -189,7 +183,7 @@ class ComicArchive:
             try:
                 image_data = self.archiver.read_archive_file(filename)
             except IOError:
-                print("Error reading in page.", file=sys.stderr)
+                logger.exception("Error reading in page.")
 
         return image_data
 
@@ -230,9 +224,10 @@ class ComicArchive:
             # make a sub-list of image files
             self.page_list = []
             for name in files:
+                name_path = Path(name)
                 if (
-                    name[-4:].lower() in [".jpg", "jpeg", ".png", ".gif", "webp"]
-                    and os.path.basename(name)[0] != "."
+                    name_path.suffix.lower() in [".jpg", "jpeg", ".png", ".gif", "webp"]
+                    and name_path.name[0] != "."
                 ):
                     self.page_list.append(name)
 
