@@ -6,7 +6,6 @@
 import io
 import logging
 import os
-import sys
 import tempfile
 import zipfile
 from pathlib import Path
@@ -18,8 +17,6 @@ from PIL import Image
 from .comicinfoxml import ComicInfoXml
 from .filenameparser import FileNameParser
 from .genericmetadata import GenericMetadata
-
-sys.path.insert(0, os.path.abspath("."))
 
 logger = logging.getLogger(__name__)
 
