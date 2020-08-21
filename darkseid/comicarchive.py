@@ -4,6 +4,7 @@
 # Copyright 2019 Brian Pepple
 
 import io
+import logging
 import os
 import sys
 import tempfile
@@ -19,6 +20,8 @@ from .filenameparser import FileNameParser
 from .genericmetadata import GenericMetadata
 
 sys.path.insert(0, os.path.abspath("."))
+
+logger = logging.getLogger(__name__)
 
 
 class ZipArchiver:
@@ -37,18 +40,16 @@ class ZipArchiver:
         try:
             data = zip_file.read(archive_file)
         except zipfile.BadZipfile as bad_zip_error:
-            print(
-                f"bad zipfile [{bad_zip_error}]: {self.path} :: {archive_file}",
-                file=sys.stderr,
+            logger.exception(
+                f"bad zipfile [{bad_zip_error}]: {self.path} :: {archive_file}"
             )
             zip_file.close()
             raise IOError
         except Exception as exception_error:
-            zip_file.close()
-            print(
-                f"bad zipfile [{exception_error}]: {self.path} :: {archive_file}",
-                file=sys.stderr,
+            logger.exception(
+                f"bad zipfile [{exception_error}]: {self.path} :: {archive_file}"
             )
+            zip_file.close()
             raise IOError
         finally:
             zip_file.close()
@@ -79,7 +80,7 @@ class ZipArchiver:
             zip_file.close()
             return True
         except (zipfile.BadZipfile, zipfile.LargeZipFile) as exception_error:
-            print(f"Error writing zipfile: {exception_error}.")
+            logger.exception(f"Error writing zipfile: {exception_error}.")
             return False
 
     def get_archive_filename_list(self) -> List[Text]:
@@ -91,9 +92,8 @@ class ZipArchiver:
             zip_file.close()
             return namelist
         except Exception as exception_error:
-            print(
-                f"Unable to get zipfile list [{exception_error}]: {self.path}",
-                file=sys.stderr,
+            logger.exception(
+                f"Unable to get zipfile list [{exception_error}]: {self.path}"
             )
             return []
 
@@ -102,10 +102,6 @@ class ZipArchiver:
 
         This recompresses the zip archive, without the files in the exclude_list
         """
-
-        # print ">> sys.stderr, Rebuilding zip {0} without {1}".format(
-        #                                            self.path, exclude_list )
-
         # generate temp file
         tmp_fd, tmp_name = tempfile.mkstemp(dir=self.path.parent)
         os.close(tmp_fd)
@@ -190,7 +186,7 @@ class ComicArchive:
             try:
                 image_data = self.archiver.read_archive_file(filename)
             except IOError:
-                print("Error reading in page.", file=sys.stderr)
+                logger.exception("Error reading in page.")
 
         return image_data
 
