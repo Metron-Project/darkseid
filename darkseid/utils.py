@@ -47,15 +47,14 @@ def remove_articles(text: str) -> str:
     return new_text
 
 
-def unique_file(file_name: str) -> Path:
+def unique_file(file_name: Path) -> Path:
     """Takes a filename and if one already exist with that name returns a new filename"""
     counter: int = 0
-    path = Path(file_name)
     # Use original stem so on multiple matches it doesn't keep appending counter variable
-    original_stem = path.stem
+    original_stem = file_name.stem
 
     while True:
-        if not path.exists():
-            return path
+        if not file_name.exists():
+            return file_name
         counter += 1
-        path = path.parent / f"{original_stem} ({counter}){path.suffix}"
+        file_name = file_name.parent / f"{original_stem} ({counter}){file_name.suffix}"
