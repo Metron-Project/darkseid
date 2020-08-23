@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List
 
 
-def get_recursive_filelist(pathlist: List[str]) -> List[Path]:
+def get_recursive_filelist(pathlist: List[Path]) -> List[Path]:
     """Takes a list of paths and return a list of comic archives"""
     filelist: List[Path] = []
     for path_str in pathlist:
