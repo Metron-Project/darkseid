@@ -90,16 +90,11 @@ class GenericMetadata:
 
         def assign_str(cur: str, new: Optional[str]) -> None:
             if new is not None:
-                if len(new) == 0:
-                    setattr(self, cur, None)
-                else:
-                    setattr(self, cur, new)
+                setattr(self, cur, new)
 
         def assign_bool(cur: str, new: Optional[bool]) -> None:
             if new is not None:
                 setattr(self, cur, new)
-            else:
-                setattr(self, cur, None)
 
         if not new_md.is_empty:
             self.is_empty = False
