@@ -102,8 +102,8 @@ class ComicInfoXml:
 
         # build a tree structure
         root = ET.Element("ComicInfo")
-        root.attrib["xmlns:xsi"] = "http://www.w3.org/2001/XMLSchema-instance"
-        root.attrib["xmlns:xsd"] = "http://www.w3.org/2001/XMLSchema"
+        root.attrib["xmlns:xsi"] = "https://www.w3.org/2001/XMLSchema-instance"
+        root.attrib["xmlns:xsd"] = "https://www.w3.org/2001/XMLSchema"
         # helper func
 
         def assign(cix_entry: str, md_entry: Optional[str]) -> None:
