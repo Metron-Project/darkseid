@@ -48,8 +48,6 @@ class IssueString:
         else:
             self.suffix = text
 
-        # print "num: {0} suf: {1}".format(self.num, self.suffix)
-
     def move_trailing_numeric_decimal_to_suffix(self, idx: int, text: str) -> int:
         # move trailing numeric decimal to suffix (only if there is other junk after )
         if text[idx - 1] == "." and len(text) != idx:
