@@ -1,5 +1,11 @@
 from darkseid.genericmetadata import GenericMetadata
 
+MARTY = "Martin Egeland"
+PETER = "Peter David"
+WRITER = "Writer"
+PENCILLER = "Penciller"
+COVER = "Cover"
+
 
 def test_metadata_print_str(fake_metadata):
     assert (
@@ -26,14 +32,14 @@ def test_metadata_overlay(fake_metadata, fake_overlay_metadata):
 
 def test_metadata_credits(fake_metadata):
     result = [
-        {"person": "Peter David", "role": "Writer"},
-        {"person": "Martin Egeland", "role": "Penciller"},
-        {"person": "Martin Egeland", "role": "Cover"},
+        {"person": PETER, "role": WRITER},
+        {"person": MARTY, "role": PENCILLER},
+        {"person": MARTY, "role": COVER},
     ]
 
     md = fake_metadata
-    md.add_credit("Peter David", "Writer")
-    md.add_credit("Martin Egeland", "Penciller")
-    md.add_credit("Martin Egeland", "Cover")
+    md.add_credit(PETER, WRITER)
+    md.add_credit(MARTY, PENCILLER)
+    md.add_credit(MARTY, COVER)
 
     assert md.credits == result
