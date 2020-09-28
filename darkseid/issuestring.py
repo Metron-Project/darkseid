@@ -25,7 +25,7 @@ class IssueString:
             return
 
         # TODO: Once type hinting is finished for the project this check can be removed
-        if isinstance(text, int):
+        if isinstance(text, int) or isinstance(text, float):
             text = str(text)
 
         if len(text) == 0:
