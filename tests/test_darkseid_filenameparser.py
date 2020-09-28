@@ -3,6 +3,8 @@ import pytest
 
 from darkseid.filenameparser import FileNameParser as fn
 
+SERIES_NAME = "Afterlife With Archie"
+
 
 @pytest.fixture()
 def comic_name():
@@ -39,7 +41,7 @@ def test_get_series_name(comic_name):
     """ Test to get the series name from a filename """
     _, issue_start, _ = fn().get_issue_number(comic_name)
     series, volume = fn().get_series_name(comic_name, issue_start)
-    assert series == "Afterlife With Archie"
+    assert series == SERIES_NAME
     assert volume == "1"
 
 
@@ -53,7 +55,7 @@ def test_get_count(comic_name):
 def test_fix_spaces(comic_name):
     """ Test of converting underscores to spaces in the filename """
     new_name = fn().fix_spaces(comic_name)
-    assert new_name != "Afterlife With Archie"
+    assert new_name != SERIES_NAME
 
 
 def test_get_remainder(comic_name):
@@ -73,7 +75,7 @@ def test_parse_filename(comic_name, tmp_path):
 
     f = fn()
     f.parse_filename(test_file)
-    assert f.series == "Afterlife With Archie"
+    assert f.series == SERIES_NAME
     assert f.volume == "1"
     assert f.issue == "2"
     assert f.issue_count == "8"
