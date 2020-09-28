@@ -280,15 +280,13 @@ class ComicInfoXml:
                 or credit_node.tag == "Colorist"
                 or credit_node.tag == "Letterer"
                 or credit_node.tag == "Editor"
-            ):
-                if credit_node.text is not None:
-                    for name in credit_node.text.split(","):
-                        metadata.add_credit(name.strip(), credit_node.tag)
+            ) and credit_node.text is not None:
+                for name in credit_node.text.split(","):
+                    metadata.add_credit(name.strip(), credit_node.tag)
 
-            if credit_node.tag == "CoverArtist":
-                if credit_node.text is not None:
-                    for name in credit_node.text.split(","):
-                        metadata.add_credit(name.strip(), "Cover")
+            if credit_node.tag == "CoverArtist" and credit_node.text is not None:
+                for name in credit_node.text.split(","):
+                    metadata.add_credit(name.strip(), "Cover")
 
         # parse page data now
         pages_node = root.find("Pages")
