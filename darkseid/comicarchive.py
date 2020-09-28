@@ -128,7 +128,7 @@ class ComicArchive:
     class ArchiveType:
         """Types of archives supported. Currently only .cbz"""
 
-        Zip, Unknown = list(range(2))
+        zip, unknown = list(range(2))
 
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -139,7 +139,7 @@ class ComicArchive:
         self.page_list: Optional[List[str]] = None
         self.metadata: Optional[GenericMetadata] = None
 
-        self.archive_type: int = self.ArchiveType.Zip
+        self.archive_type: int = self.ArchiveType.zip
         self.archiver = ZipArchiver(self.path)
 
     def reset_cache(self) -> None:
@@ -157,12 +157,12 @@ class ComicArchive:
     def is_zip(self) -> bool:
         """Returns a boolean as to whether an archive is a zipfile"""
 
-        return self.archive_type == self.ArchiveType.Zip
+        return self.archive_type == self.ArchiveType.zip
 
     def is_writable(self) -> bool:
         """Returns a boolean as to whether an archive is writable"""
 
-        if self.archive_type == self.ArchiveType.Unknown:
+        if self.archive_type == self.ArchiveType.unknown:
             return False
 
         return bool(os.access(self.path, os.W_OK))
