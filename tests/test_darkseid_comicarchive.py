@@ -22,12 +22,14 @@ def test_metadata():
 
 @pytest.fixture()
 def fake_comic(tmp_path):
-    img_1 = tmp_path / "image-1.jpg"
+    img_1 = tmp_path / "MarvelTeam-Up058-00fc.jpg"
     img_1.write_text(CONTENT)
-    img_2 = tmp_path / "image-2.jpg"
+    img_2 = tmp_path / "MarvelTeam-Up058-01.jpg"
     img_2.write_text(CONTENT)
-    img_3 = tmp_path / "image-3.jpg"
+    img_3 = tmp_path / "MarvelTeam-Up058-02.jpg"
     img_3.write_text(CONTENT)
+    img_4 = tmp_path / "MarvelTeam-Up058-LP.jpg"
+    img_4.write_text(CONTENT)
 
     z_file = tmp_path / "Aquaman v1 #001 (of 08) (1994).cbz"
     zf = zipfile.ZipFile(z_file, "w")
@@ -35,6 +37,7 @@ def fake_comic(tmp_path):
         zf.write(img_1)
         zf.write(img_2)
         zf.write(img_3)
+        zf.write(img_4)
     finally:
         zf.close()
 
@@ -63,7 +66,7 @@ def test_whether_text_file_is_comic_archive(tmp_path):
 def test_archive_number_of_pages(fake_comic):
     """ Test to determine number of pages in a comic archive """
     res = fake_comic.get_number_of_pages()
-    assert res == 3
+    assert res == 4
 
 
 def test_archive_is_writable(fake_comic):
@@ -138,4 +141,4 @@ def test_archive_apply_file_info_to_metadata(fake_comic):
     test_md = GenericMetadata()
     fake_comic.apply_archive_info_to_metadata(test_md)
     # TODO: Need to test calculate page sizes
-    assert test_md.page_count == 3
+    assert test_md.page_count == 4

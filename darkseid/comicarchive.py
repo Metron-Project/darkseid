@@ -11,7 +11,7 @@ import zipfile
 from pathlib import Path
 from typing import List, Optional, Text
 
-from natsort import natsorted
+from natsort import natsorted, ns
 from PIL import Image
 
 from .comicinfoxml import ComicInfoXml
@@ -211,15 +211,7 @@ class ComicArchive:
             # seems like some archive creators are on  Windows, and don't know
             # about case-sensitivity!
             if sort_list:
-
-                def keyfunc(k):
-                    # hack to account for some weird scanner ID pages
-                    # basename=os.path.split(k)[1]
-                    # if basename < '0':
-                    #    k = os.path.join(os.path.split(k)[0], "z" + basename)
-                    return k.lower()
-
-                files = natsorted(files, key=keyfunc)
+                files = natsorted(files, alg=ns.IGNORECASE)
 
             # make a sub-list of image files
             self.page_list = []
