@@ -243,10 +243,7 @@ class ComicArchive:
                 self.metadata = ComicInfoXml().metadata_from_string(raw_metadata)
 
             # validate the existing page list (make sure count is correct)
-            if (
-                len(self.metadata.pages) != 0
-                and len(self.metadata.pages) != self.get_number_of_pages()
-            ):
+            if len(self.metadata.pages) not in [0, self.get_number_of_pages()]:
                 # pages array doesn't match the actual number of images we're seeing
                 # in the archive, so discard the data
                 self.metadata.pages = []
