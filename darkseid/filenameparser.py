@@ -102,7 +102,7 @@ class FileNameParser:
         # the same positions as original filename
 
         # make a list of each word and its position
-        word_list: List[Tuple[str, int, int]] = list()
+        word_list: List[Tuple[str, int, int]] = []
         for match in re.finditer(r"\S+", filename):
             word_list.append((match.group(0), match.start(), match.end()))
 
