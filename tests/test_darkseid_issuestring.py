@@ -2,7 +2,7 @@ from darkseid.issuestring import IssueString
 
 
 def test_issue_string_pad():
-    val = IssueString(int(1)).as_string(pad=3)
+    val = IssueString("1").as_string(pad=3)
     assert val == "001"
 
 
