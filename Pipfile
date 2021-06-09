@@ -9,6 +9,8 @@ black = "*"
 pytest = "*"
 pytest-cov = "*"
 pylint = "*"
+sphinx-rtd-theme = "*"
+sphinxcontrib-napoleon = "*"
 
 [packages]
 natsort = "*"
