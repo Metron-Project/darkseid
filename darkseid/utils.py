@@ -7,7 +7,12 @@ from typing import List
 
 
 def get_recursive_filelist(pathlist: List[Path]) -> List[Path]:
-    """Takes a list of paths and return a list of comic archives"""
+    """
+    Returns a path list of comic archives.
+
+    :param pathlist: A list of path objects
+    :type pathlist:  list of Path
+    """
     filelist: List[Path] = []
     for path_str in pathlist:
         path = Path(path_str)
@@ -24,12 +29,19 @@ def list_to_string(list_of_strings: List[str]) -> str:
     """
     Function that takes a list of string and converts it to a string.
     For example: ["apple", "banana", "cherry"] is changed to "apple; banana; cherry"
+
+    :param list_of_strings: A list of strings.
+    :type list_of_strings: list of str
     """
     return "; ".join(map(str, list_of_strings))
 
 
 def remove_articles(text: str) -> str:
-    """Takes a string and removes any articles in it."""
+    """
+    Takes a string and removes any articles in it.
+
+    :param str text: A string with articles (ex. 'and', 'a', 'the').
+    """
     text = text.lower()
     articles: List[str] = ["and", "a", "&", "issue", "the"]
     new_text: str = ""
@@ -48,7 +60,11 @@ def remove_articles(text: str) -> str:
 
 
 def unique_file(file_name: Path) -> Path:
-    """Takes a filename and if one already exist with that name returns a new filename"""
+    """
+    Takes a filename and if one already exist with that name, returns a new filename.
+
+    :param Path file_name: A path objects
+    """
     counter: int = 0
     # Use original stem so on multiple matches it doesn't keep appending counter variable
     original_stem = file_name.stem
