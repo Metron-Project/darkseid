@@ -1,7 +1,7 @@
 """A class for internal metadata storage
 
 The goal of this class is to handle ALL the data that might come from various
-tagging schemes and databases, such as ComicVine or GCD.  This makes conversion
+tagging schemes and databases, such as Metron, ComicVine or GCD.  This makes conversion
 possible, however lossy it might be
 
 """
