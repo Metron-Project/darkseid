@@ -19,7 +19,10 @@ def test_list_to_string():
 
 
 def test_unique_name(tmp_path):
-    new_file = tmp_path
+    d = tmp_path / "test"
+    d.mkdir()
+    new_file = d / "Test.cbz"
+    new_file.write_text("Blah")
     result = utils.unique_file(new_file)
     expected_result = Path(new_file.parent / f"{new_file.stem} (1){new_file.suffix}")
 

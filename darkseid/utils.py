@@ -2,6 +2,7 @@
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2019 Brian Pepple
 
+import itertools
 from pathlib import Path
 from typing import List
 
@@ -65,12 +66,11 @@ def unique_file(file_name: Path) -> Path:
 
     :param Path file_name: A path objects
     """
-    counter: int = 0
-    # Use original stem so on multiple matches it doesn't keep appending counter variable
     original_stem = file_name.stem
 
-    while True:
+    for i in itertools.count(1):
         if not file_name.exists():
-            return file_name
-        counter += 1
-        file_name = file_name.parent / f"{original_stem} ({counter}){file_name.suffix}"
+            break
+        file_name = file_name.parent / f"{original_stem} ({i}){file_name.suffix}"
+
+    return file_name
