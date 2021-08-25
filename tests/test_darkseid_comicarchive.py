@@ -45,7 +45,7 @@ def fake_comic(tmp_path):
 
 
 def test_zip_file_exists(fake_comic):
-    """ Test function that determines if a file is a zip file """
+    """Test function that determines if a file is a zip file"""
     res = fake_comic.is_zip()
     assert res is True
 
@@ -64,13 +64,13 @@ def test_whether_text_file_is_comic_archive(tmp_path):
 
 
 def test_archive_number_of_pages(fake_comic):
-    """ Test to determine number of pages in a comic archive """
+    """Test to determine number of pages in a comic archive"""
     res = fake_comic.get_number_of_pages()
     assert res == 4
 
 
 def test_archive_is_writable(fake_comic):
-    """ Test to determine if a comic archive is writable """
+    """Test to determine if a comic archive is writable"""
     res = fake_comic.is_writable()
     assert res is True
 
@@ -82,7 +82,7 @@ def test_archive_writing_with_no_metadata(fake_comic):
 
 
 def test_archive_test_metadata(fake_comic, test_metadata):
-    """ Test to determine if a comic archive has metadata """
+    """Test to determine if a comic archive has metadata"""
     # verify archive has no metadata
     res = fake_comic.has_metadata()
     assert res is False
@@ -121,14 +121,14 @@ def test_removing_metadata_on_comic_wo_metadata(fake_comic):
 
 
 def test_archive_get_page(fake_comic):
-    """ Test to set if a page from a comic archive can be retrieved """
+    """Test to set if a page from a comic archive can be retrieved"""
     # Get page 2
     img = fake_comic.get_page(1)
     assert img is not None
 
 
 def test_archive_metadata_from_filename(fake_comic):
-    """ Test to get metadata from comic archives filename """
+    """Test to get metadata from comic archives filename"""
     test_md = fake_comic.metadata_from_filename()
     assert test_md.series == "Aquaman"
     assert test_md.issue == "1"
@@ -137,7 +137,7 @@ def test_archive_metadata_from_filename(fake_comic):
 
 
 def test_archive_apply_file_info_to_metadata(fake_comic):
-    """ Test to apply archive info to the generic metadata """
+    """Test to apply archive info to the generic metadata"""
     test_md = GenericMetadata()
     fake_comic.apply_archive_info_to_metadata(test_md)
     # TODO: Need to test calculate page sizes

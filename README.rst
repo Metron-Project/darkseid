@@ -4,13 +4,6 @@
 .. image:: https://img.shields.io/pypi/pyversions/darkseid.svg
     :target: https://pypi.org/project/darkseid/
 
-.. image:: https://codecov.io/gh/bpepple/darkseid/branch/master/graph/badge.svg
-    :target: https://codecov.io/gh/bpepple/darkseid
-    :alt: Code coverage Status
-
-.. image:: https://travis-ci.org/bpepple/darkseid.svg?branch=master
-    :target: https://travis-ci.org/bpepple/darkseid
-
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/psf/black
 
