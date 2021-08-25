@@ -1,0 +1,76 @@
+[tool.poetry]
+name = "darkseid"
+version = "1.0.6"
+description = "A library to interact with comic archives"
+authors = ["Brian Pepple <bdpepple@gmail.com>"]
+license = "GPL-3.0-or-later"
+maintainers = ["Brian Pepple <bdpepple@gmail.com>"]
+readme = "README.rst"
+packages = [
+	{ include = "darkseid" },
+]
+include = [
+    { path = "tests", format = "sdist" }
+]
+classifiers=[
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.8",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Utilities",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: POSIX",
+    "Operating System :: POSIX :: BSD",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+]
+keywords=["comics", "comic", "metadata", "tagging", "tagger"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+Pillow = "^8.3.1"
+natsort = "^7.1.1"
+
+# Optional dependencies
+sphinx-rtd-theme = {version="^0.5.2", optional=true}
+sphinxcontrib-napoleon = {version="^0.7", optional=true}
+
+[tool.poetry.dev-dependencies]
+flake8 = "^3.9.2"
+black = "^21.7b0"
+pytest = "^6.2.4"
+pytest-cov = "^2.12.1"
+pylint = "^2.10.2"
+isort = "^5.9.3"
+seed-isort-config = "^2.2.0"
+pre-commit = "^2.14.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 95
+target-version = [ "py38",]
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 95
+default_section = "THIRDPARTY"
+known_first_party = []
+known_third_party = ["PIL", "natsort", "pytest"]
+
+[tool.poetry.urls]
+"Homepage" = "https://github.com/bpepple/darkseid"
+"Bug Tracker" = "https://github.com/bpepple/darkseid/issues"
+
+[tool.poetry.extras]
+docs = ["sphinx-rtd-theme", "sphinxcontrib-napoleon"]
+
+[tool.coverage.run]
+source = ["darkseid"]
+
+[tool.coverage.report]
+show_missing = true
