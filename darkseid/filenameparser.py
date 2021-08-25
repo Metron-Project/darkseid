@@ -44,9 +44,7 @@ class FileNameParser:
         tmpstr: str = self.fix_spaces(filename)
         found: bool = False
 
-        match: Optional[Match[str]] = re.search(
-            r"(?<=\sof\s)\d+(?=\s)", tmpstr, re.IGNORECASE
-        )
+        match: Optional[Match[str]] = re.search(r"(?<=\sof\s)\d+(?=\s)", tmpstr, re.IGNORECASE)
         if match:
             count = match.group()
             found = True
@@ -217,9 +215,7 @@ class FileNameParser:
 
         year: str = ""
         # look for four digit number with "(" ")" or "--" around it
-        match: Optional[Match[str]] = re.search(
-            r"(\(\d\d\d\d\))|(--\d\d\d\d--)", filename
-        )
+        match: Optional[Match[str]] = re.search(r"(\(\d\d\d\d\))|(--\d\d\d\d--)", filename)
         if match:
             year = match.group()
             # remove non-digits

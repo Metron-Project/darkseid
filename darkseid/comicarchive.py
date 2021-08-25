@@ -37,15 +37,11 @@ class ZipArchiver:
         try:
             data = zip_file.read(archive_file)
         except zipfile.BadZipfile as bad_zip_error:
-            logger.exception(
-                f"bad zipfile [{bad_zip_error}]: {self.path} :: {archive_file}"
-            )
+            logger.exception(f"bad zipfile [{bad_zip_error}]: {self.path} :: {archive_file}")
             zip_file.close()
             raise IOError
         except Exception as exception_error:
-            logger.exception(
-                f"bad zipfile [{exception_error}]: {self.path} :: {archive_file}"
-            )
+            logger.exception(f"bad zipfile [{exception_error}]: {self.path} :: {archive_file}")
             zip_file.close()
             raise IOError
         finally:
@@ -89,9 +85,7 @@ class ZipArchiver:
             zip_file.close()
             return namelist
         except Exception as exception_error:
-            logger.exception(
-                f"Unable to get zipfile list [{exception_error}]: {self.path}"
-            )
+            logger.exception(f"Unable to get zipfile list [{exception_error}]: {self.path}")
             return []
 
     def rebuild_zipfile(self, exclude_list: List[str]) -> None:
@@ -273,9 +267,7 @@ class ComicArchive:
             return False
         self.apply_archive_info_to_metadata(metadata, calc_page_sizes=True)
         md_string = ComicInfoXml().string_from_metadata(metadata)
-        write_success = self.archiver.write_archive_file(
-            self.ci_xml_filename, md_string
-        )
+        write_success = self.archiver.write_archive_file(self.ci_xml_filename, md_string)
         if write_success:
             self.has_md = True
             self.metadata = metadata
@@ -302,8 +294,7 @@ class ComicArchive:
             if (
                 not self.seems_to_be_a_comic_archive()
                 or self.seems_to_be_a_comic_archive()
-                and self.ci_xml_filename
-                not in self.archiver.get_archive_filename_list()
+                and self.ci_xml_filename not in self.archiver.get_archive_filename_list()
             ):
                 self.has_md = False
             else:

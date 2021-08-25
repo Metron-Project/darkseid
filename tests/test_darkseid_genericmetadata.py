@@ -8,9 +8,7 @@ COVER = "Cover"
 
 
 def test_metadata_print_str(fake_metadata):
-    assert (
-        str(fake_metadata) == "series: Aquaman\nissue:  0\ntitle:  A Crash of Symbols\n"
-    )
+    assert str(fake_metadata) == "series: Aquaman\nissue:  0\ntitle:  A Crash of Symbols\n"
 
 
 def test_no_metadata_print_str():

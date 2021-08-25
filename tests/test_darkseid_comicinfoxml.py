@@ -23,14 +23,14 @@ def test_meta_data():
 
 
 def test_metadata_from_xml(test_meta_data):
-    """ Simple test of creating the ComicInfo """
+    """Simple test of creating the ComicInfo"""
     res = ComicInfoXml().string_from_metadata(test_meta_data)
     # TODO: add more asserts to verify data.
     assert res is not None
 
 
 def test_meta_write_to_file(test_meta_data, tmp_path):
-    """ Test of writing the metadata to a file """
+    """Test of writing the metadata to a file"""
     tmp_file = tmp_path / "test-write.xml"
     ComicInfoXml().write_to_external_file(tmp_file, test_meta_data)
     # Read the contents of the file just written.
@@ -39,7 +39,7 @@ def test_meta_write_to_file(test_meta_data, tmp_path):
 
 
 def test_read_from_file(test_meta_data, tmp_path):
-    """ Test to read in the data from a file """
+    """Test to read in the data from a file"""
     tmp_file = tmp_path / "test-read.xml"
     # Write metadata to file
     ComicInfoXml().write_to_external_file(tmp_file, test_meta_data)
