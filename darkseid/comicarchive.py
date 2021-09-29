@@ -9,7 +9,7 @@ import os
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import List, Optional, Text
+from typing import List, Optional
 
 from natsort import natsorted, ns
 from PIL import Image
@@ -39,11 +39,11 @@ class ZipArchiver:
         except zipfile.BadZipfile as bad_zip_error:
             logger.exception(f"bad zipfile [{bad_zip_error}]: {self.path} :: {archive_file}")
             zip_file.close()
-            raise IOError
+            raise OSError
         except Exception as exception_error:
             logger.exception(f"bad zipfile [{exception_error}]: {self.path} :: {archive_file}")
             zip_file.close()
-            raise IOError
+            raise OSError
         finally:
             zip_file.close()
         return data
@@ -76,7 +76,7 @@ class ZipArchiver:
             logger.exception(f"Error writing zipfile: {exception_error}.")
             return False
 
-    def get_archive_filename_list(self) -> List[Text]:
+    def get_archive_filename_list(self) -> List[str]:
         """Returns a list of the filenames in an archive"""
 
         try:
@@ -176,7 +176,7 @@ class ComicArchive:
         if filename is not None:
             try:
                 image_data = self.archiver.read_archive_file(filename)
-            except IOError:
+            except OSError:
                 logger.exception("Error reading in page.")
 
         return image_data
@@ -255,7 +255,7 @@ class ComicArchive:
             tmp_raw_metadata = self.archiver.read_archive_file(self.ci_xml_filename)
             # Convert bytes to str. Is it safe to decode with utf-8?
             raw_metadata = tmp_raw_metadata.decode("utf-8")
-        except IOError:
+        except OSError:
             print("Error reading in raw CIX!")
             raw_metadata = None
         return raw_metadata
@@ -325,7 +325,7 @@ class ComicArchive:
                             page["ImageSize"] = str(len(data))
                             page["ImageHeight"] = str(height)
                             page["ImageWidth"] = str(width)
-                        except IOError:
+                        except OSError:
                             page["ImageSize"] = str(len(data))
 
     def metadata_from_filename(self, parse_scan_info: bool = True) -> GenericMetadata:

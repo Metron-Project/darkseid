@@ -190,7 +190,7 @@ class GenericMetadata:
             return "No metadata"
 
         def add_string(tag: str, val: str) -> None:
-            if val is not None and "{0}".format(val) != "":
+            if val is not None and f"{val}" != "":
                 vals.append((tag, val))
 
         def add_attr_string(tag: str) -> None:
