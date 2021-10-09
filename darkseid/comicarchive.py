@@ -268,23 +268,24 @@ class ComicArchive:
         self.apply_archive_info_to_metadata(metadata, calc_page_sizes=True)
         md_string = ComicInfoXml().string_from_metadata(metadata)
         write_success = self.archiver.write_archive_file(self.ci_xml_filename, md_string)
-        if write_success:
-            self.has_md = True
-            self.metadata = metadata
-        self.reset_cache()
-        return write_success
+        return self._successful_write(write_success, True, metadata)
 
     def remove_metadata(self) -> bool:
         """Remove the metadata from the archive if present"""
 
         if self.has_metadata():
             write_success = self.archiver.remove_archive_file(self.ci_xml_filename)
-            if write_success:
-                self.has_md = False
-                self.metadata = None
-            self.reset_cache()
-            return write_success
+            return self._successful_write(write_success, False, None)
         return True
+
+    def _successful_write(
+        self, write_success: bool, has_md: bool, metadata: Optional[GenericMetadata]
+    ) -> bool:
+        if write_success:
+            self.has_md = has_md
+            self.metadata = metadata
+        self.reset_cache()
+        return write_success
 
     def has_metadata(self) -> bool:
         """Checks to see if the archive has metadata"""
