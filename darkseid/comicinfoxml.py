@@ -94,9 +94,8 @@ class ComicInfoXml:
                 self.indent(elem, level + 1)
             if not elem.tail or not elem.tail.strip():
                 elem.tail = i
-        else:
-            if level and (not elem.tail or not elem.tail.strip()):
-                elem.tail = i
+        elif level and (not elem.tail or not elem.tail.strip()):
+            elem.tail = i
 
     def convert_metadata_to_xml(self, metadata: GenericMetadata) -> ET.ElementTree:
 
