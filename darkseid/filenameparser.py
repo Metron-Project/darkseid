@@ -162,7 +162,6 @@ class FileNameParser:
             # is the series name followed by issue
             filename = re.sub("__.*", self.repl, filename)
 
-        filename = filename.replace("+", " ")
         tmpstr = self.fix_spaces(filename, remove_dashes=False)
 
         series = tmpstr
