@@ -89,10 +89,7 @@ class IssueString:
         num_f: float = abs(self.num)
 
         num_int = int(num_f)
-        num_s = str(num_int)
-        if float(num_int) != num_f:
-            num_s = str(num_f)
-
+        num_s = str(num_f) if float(num_int) != num_f else str(num_int)
         num_s += self.suffix
 
         # create padding
