@@ -18,23 +18,9 @@ Installation
 PyPi
 ~~~~
 
-Add this line to your application's requirements.txt:
-
-.. code:: python
-
-    darkseid
-
-And then execute:
-
 .. code:: bash
 
-    $ pip install -r requirements.txt
-
-Or install it yourself:
-
-.. code:: bash
-
-    $ pip install darkseid
+    $ pip3 install --user darkseid
 
 GitHub
 ~~~~~~
