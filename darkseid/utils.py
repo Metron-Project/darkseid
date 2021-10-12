@@ -43,19 +43,10 @@ def remove_articles(text: str) -> str:
 
     :param str text: A string with articles (ex. 'and', 'a', 'the').
     """
-    text = text.lower()
-    articles: List[str] = ["and", "a", "&", "issue", "the"]
-    new_text: str = ""
-    for word in text.split(" "):
-        if word not in articles:
-            new_text += word + " "
+    articles = ["and", "a", "&", "issue", "the"]
+    new_text = "".join(word + " " for word in text.split(" ") if word.lower() not in articles)
 
     new_text = new_text[:-1]
-
-    # now get rid of some other junk
-    new_text = new_text.replace(":", "")
-    new_text = new_text.replace(",", "")
-    new_text = new_text.replace("-", " ")
 
     return new_text
 

@@ -5,7 +5,14 @@ from darkseid import utils
 
 def test_remove_articles():
     txt = "The Champions & Inhumans"
-    expected_result = "champions inhumans"
+    expected_result = "Champions Inhumans"
+    result = utils.remove_articles(txt)
+    assert result == expected_result
+
+
+def test_removes_articles_that_contain_no_articles():
+    txt = "Justice League"
+    expected_result = "Justice League"
     result = utils.remove_articles(txt)
     assert result == expected_result
 
