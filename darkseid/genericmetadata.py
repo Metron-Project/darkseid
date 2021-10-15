@@ -66,7 +66,7 @@ class GenericMetadata:
         self.format: Optional[str] = None
         self.manga: Optional[str] = None
         self.black_and_white: Optional[bool] = None
-        self.page_count: Optional[int] = None
+        self.page_count: Optional[str] = None
         self.maturity_rating: Optional[str] = None
 
         self.story_arc: Optional[str] = None

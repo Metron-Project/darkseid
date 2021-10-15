@@ -141,4 +141,4 @@ def test_archive_apply_file_info_to_metadata(fake_comic):
     test_md = GenericMetadata()
     fake_comic.apply_archive_info_to_metadata(test_md)
     # TODO: Need to test calculate page sizes
-    assert test_md.page_count == 4
+    assert test_md.page_count == "4"
