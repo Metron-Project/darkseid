@@ -214,9 +214,9 @@ class ComicArchive:
             # make a sub-list of image files
             self.page_list = []
             for name in files:
-                name_path = Path(name)
-                if self.is_image(name_path):
-                    self.page_list.append(name)
+                name_str = str(name)
+                if self.is_image(Path(name_str)):
+                    self.page_list.append(name_str)
 
         return self.page_list
 
