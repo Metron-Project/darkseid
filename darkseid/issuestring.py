@@ -11,10 +11,14 @@ from typing import Optional
 
 
 class IssueString:
-    """Class to handle various types of comic issue numbers."""
+    """
+    Class to handle various types of comic issue numbers.
+
+    :param str text: The issue number.
+    """
 
     def __init__(self, text: str) -> None:
-
+        """Intialize a new IssueString."""
         # break up the issue number string into 2 parts: the numeric and suffix string.
         # (assumes that the numeric portion is always first)
 
@@ -24,7 +28,6 @@ class IssueString:
         if text is None:
             return
 
-        # TODO: Once type hinting is finished for the project this check can be removed
         if isinstance(text, (int, float)):
             text = str(text)
 
@@ -79,7 +82,14 @@ class IssueString:
         return idx
 
     def as_string(self, pad: int = 0) -> str:
-        """Returns a string with left-side zero padding"""
+        """
+        Returns a string with left-side zero padding
+
+        :param int pad: The number of left-side zeroes to pad with.
+
+        :returns: String with zero padding.
+        :rtype: str
+        """
         # return the float, left side zero-padded, with suffix attached
         if self.num is None:
             return self.suffix
@@ -105,9 +115,13 @@ class IssueString:
         return num_s
 
     def as_float(self) -> Optional[float]:
-        """Return a float with no suffix
+        """
+        Return a float with no suffix
 
         example: "1½" is returned as "1.5"
+
+        :returns: String as a float.
+        :rtype: float, optional
         """
         if self.suffix == "½":
             if self.num is not None:
@@ -117,7 +131,12 @@ class IssueString:
         return self.num
 
     def as_int(self) -> Optional[int]:
-        """Returns the integer version of the float"""
+        """
+        Returns the integer version of the float
+
+        :returns: String as an integer.
+        :rtype: int, optional
+        """
         if self.num is None:
             return None
         return int(self.num)
