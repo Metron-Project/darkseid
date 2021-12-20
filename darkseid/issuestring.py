@@ -102,12 +102,8 @@ class IssueString:
         num_s = str(num_f) if float(num_int) != num_f else str(num_int)
         num_s += self.suffix
 
-        # create padding
-        padding: str = ""
         length = len(str(num_int))
-        if length < pad:
-            padding = "0" * (pad - length)
-
+        padding: str = "0" * (pad - length) if length < pad else ""
         num_s = padding + num_s
         if negative:
             num_s = "-" + num_s
