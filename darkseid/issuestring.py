@@ -31,7 +31,7 @@ class IssueString:
         if isinstance(text, (int, float)):
             text = str(text)
 
-        if len(text) == 0:
+        if text == "":
             return
 
         # skip the minus sign if it's first
@@ -42,7 +42,7 @@ class IssueString:
             idx = self._move_trailing_numeric_decimal_to_suffix(idx, text)
             idx = self._determine_if_number_after_minus_sign(idx, start)
 
-            part1 = text[0:idx]
+            part1 = text[:idx]
             part2 = text[idx : len(text)]
 
             if part1 != "":
