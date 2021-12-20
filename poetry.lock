@@ -304,7 +304,7 @@ python-versions = "*"
 
 [[package]]
 name = "natsort"
-version = "7.2.0"
+version = "8.0.2"
 description = "Simple yet flexible natural sorting in Python."
 category = "main"
 optional = false
@@ -798,7 +798,7 @@ docs = ["sphinx-rtd-theme", "sphinxcontrib-napoleon"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "e0964129a0957495f9b25c423e7c2f2512cec7d37daf3a5d078c44310052b50f"
+content-hash = "8235f1b5346c2e8960311126e481f1d7d85e8a57e10e5b4a30beb0f200fda869"
 
 [metadata.files]
 alabaster = [
@@ -1065,8 +1065,8 @@ mypy-extensions = [
     {file = "mypy_extensions-0.4.3.tar.gz", hash = "sha256:2d82818f5bb3e369420cb3c4060a7970edba416647068eb4c5343488a6c604a8"},
 ]
 natsort = [
-    {file = "natsort-7.2.0-py3-none-any.whl", hash = "sha256:24f245daf9622683d4d2dfbd6076ba4aa0054074e73bbeea4253b4bfec0ea2bc"},
-    {file = "natsort-7.2.0.tar.gz", hash = "sha256:e7054b4e1f47365f141602a742685165a552291b643a214652d0dd9d6cea58d1"},
+    {file = "natsort-8.0.2-py3-none-any.whl", hash = "sha256:09cff3cabb617f9794f643758ab5b337c1c0af1a6df11edf5c04de496fd7fb26"},
+    {file = "natsort-8.0.2.tar.gz", hash = "sha256:feb87e0ce1dc1f8f3f21e18a85216c790e746d76a5ff6889563394605f504a2b"},
 ]
 nodeenv = [
     {file = "nodeenv-1.6.0-py2.py3-none-any.whl", hash = "sha256:621e6b7076565ddcacd2db0294c0381e01fd28945ab36bcf00f41c5daf63bef7"},
