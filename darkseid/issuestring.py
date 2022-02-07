@@ -31,7 +31,7 @@ class IssueString:
         if isinstance(text, (int, float)):
             text = str(text)
 
-        if text == "":
+        if not text:
             return
 
         # skip the minus sign if it's first
@@ -120,10 +120,7 @@ class IssueString:
         :rtype: float, optional
         """
         if self.suffix == "½":
-            if self.num is not None:
-                return self.num + 0.5
-            else:
-                return 0.5
+            return self.num + 0.5 if self.num is not None else 0.5
         return self.num
 
     def as_int(self) -> Optional[int]:
@@ -133,6 +130,4 @@ class IssueString:
         :returns: String as an integer.
         :rtype: int, optional
         """
-        if self.num is None:
-            return None
-        return int(self.num)
+        return None if self.num is None else int(self.num)
