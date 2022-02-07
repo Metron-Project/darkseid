@@ -159,12 +159,8 @@ class GenericMetadata:
             self.pages.append(page_dict)
 
     def get_archive_page_index(self, pagenum: int) -> int:
-        # convert the displayed page number to the page index of the file in
-        # the archive
-        if pagenum < len(self.pages):
-            return int(self.pages[pagenum]["Image"])
-        else:
-            return 0
+        # convert the displayed page number to the page index of the file in the archive
+        return int(self.pages[pagenum]["Image"]) if pagenum < len(self.pages) else 0
 
     def get_cover_page_index_list(self) -> List[int]:
         # return a list of archive page indices of cover pages
