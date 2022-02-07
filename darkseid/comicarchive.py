@@ -291,15 +291,14 @@ class ComicArchive:
         """Checks to see if the archive has metadata"""
 
         if self.has_md is None:
+            self.has_md = bool(
+                self.seems_to_be_a_comic_archive()
+                and (
+                    not self.seems_to_be_a_comic_archive()
+                    or self.ci_xml_filename in self.archiver.get_archive_filename_list()
+                )
+            )
 
-            if (
-                not self.seems_to_be_a_comic_archive()
-                or self.seems_to_be_a_comic_archive()
-                and self.ci_xml_filename not in self.archiver.get_archive_filename_list()
-            ):
-                self.has_md = False
-            else:
-                self.has_md = True
         return self.has_md
 
     def apply_archive_info_to_metadata(
