@@ -232,10 +232,7 @@ class ComicInfoXml:
         # Helper function
         def xlate(tag: str) -> Optional[str]:
             node = root.find(tag)
-            if node is not None:
-                return node.text
-            else:
-                return None
+            return node.text if node is not None else None
 
         metadata.series = xlate("Series")
         metadata.title = xlate("Title")

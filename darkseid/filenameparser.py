@@ -49,9 +49,8 @@ class FileNameParser:
             count = match.group()
             found = True
 
-        if not found:
-            match = re.search(r"(?<=\(of\s)\d+(?=\))", tmpstr, re.IGNORECASE)
-            if match:
+        if match := re.search(r"(?<=\(of\s)\d+(?=\))", tmpstr, re.IGNORECASE):
+            if not found:
                 count = match.group()
                 found = True
 
@@ -100,9 +99,10 @@ class FileNameParser:
         # the same positions as original filename
 
         # make a list of each word and its position
-        word_list: List[Tuple[str, int, int]] = []
-        for match in re.finditer(r"\S+", filename):
-            word_list.append((match.group(0), match.start(), match.end()))
+        word_list: List[Tuple[str, int, int]] = [
+            (match.group(0), match.start(), match.end())
+            for match in re.finditer(r"\S+", filename)
+        ]
 
         # remove the first word, since it can't be the issue number
         if len(word_list) > 1:
@@ -177,17 +177,14 @@ class FileNameParser:
         series = re.sub(r"\(.*?\)", "", series)
 
         # search for volume number
-        match = re.search(r"(.+)([vV]|[Vv][oO][Ll]\.?\s?)(\d+)\s*$", series)
-        if match:
+        if match := re.search(r"(.+)([vV]|[Vv][oO][Ll]\.?\s?)(\d+)\s*$", series):
             series = match.group(1)
             volume = match.group(3)
 
         # if a volume wasn't found, see if the last word is a year in parentheses
         # since that's a common way to designate the volume
         if volume == "":
-            # match either (YEAR), (YEAR-), or (YEAR-YEAR2)
-            match = re.search(r"(\()(\d{4})(-(\d{4}|)|)(\))", last_word)
-            if match:
+            if match := re.search(r"(\()(\d{4})(-(\d{4}|)|)(\))", last_word):
                 volume = match.group(2)
 
         series = series.strip()
