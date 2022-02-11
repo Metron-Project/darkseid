@@ -43,7 +43,7 @@ class IssueString:
             idx = self._determine_if_number_after_minus_sign(idx, start)
 
             part1 = text[:idx]
-            part2 = text[idx : len(text)]
+            part2 = text[idx:]
 
             if part1 != "":
                 self.num = float(part1)
@@ -106,7 +106,7 @@ class IssueString:
         padding: str = "0" * (pad - length) if length < pad else ""
         num_s = padding + num_s
         if negative:
-            num_s = "-" + num_s
+            num_s = f"-{num_s}"
 
         return num_s
 

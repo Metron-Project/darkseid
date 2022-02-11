@@ -87,7 +87,7 @@ class ComicInfoXml:
         i = "\n" + level * "  "
         if elem:
             if not elem.text or not elem.text.strip():
-                elem.text = i + "  "
+                elem.text = f"{i}  "
             if not elem.tail or not elem.tail.strip():
                 elem.tail = i
             for elem in elem:
