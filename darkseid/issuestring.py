@@ -43,7 +43,7 @@ class IssueString:
             idx = self._determine_if_number_after_minus_sign(idx, start)
 
             part1 = text[:idx]
-            part2 = text[idx : len(text)]
+            part2 = text[idx:]
 
             if part1 != "":
                 self.num = float(part1)
