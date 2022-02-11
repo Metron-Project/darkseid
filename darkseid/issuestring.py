@@ -106,7 +106,7 @@ class IssueString:
         padding: str = "0" * (pad - length) if length < pad else ""
         num_s = padding + num_s
         if negative:
-            num_s = "-" + num_s
+            num_s = f"-{num_s}"
 
         return num_s
 

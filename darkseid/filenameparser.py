@@ -234,11 +234,11 @@ class FileNameParser:
 
         remainder = self.fix_spaces(remainder, remove_dashes=False)
         if volume != "":
-            remainder = remainder.replace("Vol." + volume, "", 1)
+            remainder = remainder.replace(f"Vol.{volume}", "", 1)
         if year != "":
             remainder = remainder.replace(year, "", 1)
         if count != "":
-            remainder = remainder.replace("of " + count, "", 1)
+            remainder = remainder.replace(f"of {count}", "", 1)
 
         remainder = remainder.replace("()", "")
         remainder = remainder.replace("  ", " ")  # cleans some whitespace mess
@@ -280,4 +280,4 @@ class FileNameParser:
             if self.issue == "":
                 self.issue = "0"
             if self.issue[0] == ".":
-                self.issue = "0" + self.issue
+                self.issue = f"0{self.issue}"
