@@ -39,11 +39,11 @@ class ZipArchiver:
         except zipfile.BadZipfile as bad_zip_error:
             logger.exception(f"bad zipfile [{bad_zip_error}]: {self.path} :: {archive_file}")
             zip_file.close()
-            raise OSError
+            raise OSError from bad_zip_error
         except Exception as exception_error:
             logger.exception(f"bad zipfile [{exception_error}]: {self.path} :: {archive_file}")
             zip_file.close()
-            raise OSError
+            raise OSError from exception_error
         finally:
             zip_file.close()
         return data
