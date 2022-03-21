@@ -5,6 +5,7 @@ This should probably be re-written, but, well, it mostly works!
 
 # Copyright 2012-2014 Anthony Beville
 
+import contextlib
 import re
 from pathlib import Path
 from typing import List, Match, Optional, Tuple
@@ -194,13 +195,10 @@ class FileNameParser:
         # be removed to help search online
         if issue_start == 0:
             one_shot_words = ["tpb", "os", "one-shot", "ogn", "gn"]
-            try:
+            with contextlib.suppress(ValueError):
                 last_word = series.split()[-1]
                 if last_word.lower() in one_shot_words:
                     series = series.rsplit(" ", 1)[0]
-            except ValueError:
-                pass
-
         return series, volume.strip()
 
     @staticmethod
