@@ -60,10 +60,7 @@ class IssueString:
     def _determine_if_number_after_minus_sign(self, idx: int, start: int) -> int:
         # if there is no numeric after the minus, make the minus part of
         # the suffix
-        if idx == 1 and start == 1:
-            return 0
-        else:
-            return idx
+        return 0 if idx == 1 and start == 1 else idx
 
     def _find_splitpoint(self, text: str, start: int) -> int:
         # walk through the string, look for split point (the first non-numeric)
