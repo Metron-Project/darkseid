@@ -37,6 +37,7 @@ natsort = "^8.0.0"
 # Optional dependencies
 sphinx-rtd-theme = {version="^0.5.2", optional=true}
 sphinxcontrib-napoleon = {version="^0.7", optional=true}
+py7zr = "^0.18.3"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.9.2"
