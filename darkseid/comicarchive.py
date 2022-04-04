@@ -11,6 +11,7 @@ import zipfile
 from pathlib import Path
 from typing import List, Optional
 
+import py7zr
 from natsort import natsorted, ns
 from PIL import Image
 
@@ -113,6 +114,101 @@ class ZipArchiver:
 
 
 # ------------------------------------------------------------------
+class SevenZipArchiver:
+
+    """7Z implementation"""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+
+    def read_archive_file(self, archive_file: str):
+        data = ""
+        try:
+            with py7zr.SevenZipFile(self.path, "r") as zf:
+                if r := zf.read([archive_file]):
+                    data = r[archive_file].read()
+                else:
+                    logger.warning(f"No data in 7zipfile: {self.path} :: {archive_file}")
+                    raise OSError
+        except py7zr.Bad7zFile as e:
+            logger.warning(f"bad 7zip file [{e}]: {self.path} :: {archive_file}")
+            raise OSError from e
+        except Exception as e:
+            logger.warning(f"bad 7zip file [{e}]: {self.path} :: {archive_file}")
+            raise OSError from e
+
+        return data
+
+    def remove_archive_file(self, archive_file: str) -> bool:
+        try:
+            self.rebuild_seven_zipfile([archive_file])
+        except py7zr.Bad7zFile:
+            return False
+        else:
+            return True
+
+    def write_archive_file(self, archive_file: str, data: str) -> bool:
+        try:
+            files = self.get_archive_filename_list()
+            if archive_file in files:
+                self.rebuild_seven_zipfile([archive_file])
+
+            # now just add the archive file as a new one
+            with py7zr.SevenZipFile(self.path, "a") as zf:
+                zf.writestr(data, archive_file)
+            return True
+        except py7zr.Bad7zFile:
+            return False
+
+    def get_archive_filename_list(self) -> List[str]:
+        try:
+            with py7zr.SevenZipFile(self.path, "r") as zf:
+                namelist = zf.getnames()
+
+            return namelist
+        except Exception as e:
+            logger.warning("Unable to get 7zip file list [%s]: %s", e, self.path)
+            return []
+
+    def rebuild_seven_zipfile(self, exclude_list: List[str]) -> None:
+        """Zip helper func
+
+        This recompresses the zip archive, without the files in the exclude_list
+        """
+        tmp_fd, tmp_name = tempfile.mkstemp(dir=self.path.parent)
+        os.close(tmp_fd)
+
+        try:
+            with py7zr.SevenZipFile(self.path, "r") as zip:
+                targets = [f for f in zip.getnames() if f not in exclude_list]
+            with py7zr.SevenZipFile(self.path, "r") as zin:
+                with py7zr.SevenZipFile(tmp_name, "w") as zout:
+                    if r := zin.read(targets):
+                        for fname, bio in r.items():
+                            zout.writef(bio, fname)
+        except Exception as e:
+            logger.warning("Exception[%s]: %s", e, self.path)
+            return
+
+        # replace with the new file
+        self.path.unlink()
+        os.rename(tmp_name, self.path)
+
+    # def copy_from_archive(self, otherArchive: ZipArchiver) -> bool:
+    #     """Replace the current zip with one copied from another archive"""
+    #     try:
+    #         with py7zr.SevenZipFile(self.path, "w") as zout:
+    #             for fname in otherArchive.get_archive_filename_list():
+    #                 if data := otherArchive.read_archive_file(fname):
+    #                     zout.writestr(data, fname)
+    #     except Exception as e:
+    #         logger.warning("Error while copying to %s: %s", self.path, e)
+    #         return False
+    #     else:
+    #         return True
+
+
+# ------------------------------------------------------------------
 
 
 class ComicArchive:
@@ -120,9 +216,9 @@ class ComicArchive:
     """Comic Archive implementation"""
 
     class ArchiveType:
-        """Types of archives supported. Currently only .cbz"""
+        """Types of archives supported. Currently only .cbz and .cb7"""
 
-        zip, unknown = list(range(2))
+        zip, sevenzip, unknown = list(range(3))
 
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -133,8 +229,12 @@ class ComicArchive:
         self.page_list: Optional[List[str]] = None
         self.metadata: Optional[GenericMetadata] = None
 
-        self.archive_type: int = self.ArchiveType.zip
-        self.archiver = ZipArchiver(self.path)
+        if self.sevenzip_test():
+            self.archive_type: int = self.ArchiveType.sevenzip
+            self.archiver = SevenZipArchiver(self.path)
+        elif self.zip_test:
+            self.archive_type: int = self.ArchiveType.zip
+            self.archiver = ZipArchiver(self.path)
 
     def reset_cache(self) -> None:
         """Clears the cached data"""
@@ -143,10 +243,18 @@ class ComicArchive:
         self.page_list = None
         self.metadata = None
 
+    def sevenzip_test(self) -> bool:
+        """Tests whether an archive is a sevenzipfile"""
+        return py7zr.is_7zfile(self.path)
+
     def zip_test(self) -> bool:
         """Tests whether an archive is a zipfile"""
 
         return zipfile.is_zipfile(self.path)
+
+    def is_sevenzip(self) -> bool:
+        """Returns a boolean as to whether an archive is a sevenzipfile"""
+        return self.archive_type == self.ArchiveType.sevenzip
 
     def is_zip(self) -> bool:
         """Returns a boolean as to whether an archive is a zipfile"""
@@ -164,7 +272,7 @@ class ComicArchive:
     def seems_to_be_a_comic_archive(self) -> bool:
         """Returns a boolean as to whether the file is a comic archive"""
 
-        return bool((self.is_zip()) and (self.get_number_of_pages() > 0))
+        return bool((self.is_zip() or self.is_sevenzip()) and (self.get_number_of_pages() > 0))
 
     def get_page(self, index: int) -> Optional[bytes]:
         """Returns an image(page) from an archive"""
@@ -260,7 +368,7 @@ class ComicArchive:
             raw_metadata = None
         return raw_metadata
 
-    def write_metadata(self, metadata: GenericMetadata) -> bool:
+    def write_metadata(self, metadata: Optional[GenericMetadata]) -> bool:
         """Write the metadata to the archive"""
 
         if metadata is None:

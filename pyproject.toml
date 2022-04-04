@@ -65,7 +65,7 @@ multi_line_output = 3
 line_length = 95
 default_section = "THIRDPARTY"
 known_first_party = []
-known_third_party = ["PIL", "natsort", "pytest"]
+known_third_party = ["PIL", "natsort", "py7zr", "pytest"]
 
 [tool.poetry.urls]
 "Homepage" = "https://github.com/bpepple/darkseid"
