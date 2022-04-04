@@ -53,7 +53,7 @@ class ZipArchiver:
         """Returns a boolean when attempting to remove a file from an archive"""
 
         try:
-            self.rebuild_zipfile([archive_file])
+            self._rebuild_zipfile([archive_file])
         except zipfile.BadZipfile:
             return False
         else:
@@ -64,7 +64,7 @@ class ZipArchiver:
         #  zip archive w/o the indicated file. Very sucky, but maybe
         # another solution can be found
         try:
-            self.rebuild_zipfile([archive_file])
+            self._rebuild_zipfile([archive_file])
 
             # now just add the archive file as a new one
             zip_file = zipfile.ZipFile(
@@ -89,7 +89,7 @@ class ZipArchiver:
             logger.exception(f"Unable to get zipfile list [{exception_error}]: {self.path}")
             return []
 
-    def rebuild_zipfile(self, exclude_list: List[str]) -> None:
+    def _rebuild_zipfile(self, exclude_list: List[str]) -> None:
         """Zip helper func
 
         This recompresses the zip archive, without the files in the exclude_list
@@ -141,7 +141,7 @@ class SevenZipArchiver:
 
     def remove_archive_file(self, archive_file: str) -> bool:
         try:
-            self.rebuild_seven_zipfile([archive_file])
+            self._rebuild_seven_zipfile([archive_file])
         except py7zr.Bad7zFile:
             return False
         else:
@@ -151,7 +151,7 @@ class SevenZipArchiver:
         try:
             files = self.get_archive_filename_list()
             if archive_file in files:
-                self.rebuild_seven_zipfile([archive_file])
+                self._rebuild_seven_zipfile([archive_file])
 
             # now just add the archive file as a new one
             with py7zr.SevenZipFile(self.path, "a") as zf:
@@ -170,7 +170,7 @@ class SevenZipArchiver:
             logger.warning("Unable to get 7zip file list [%s]: %s", e, self.path)
             return []
 
-    def rebuild_seven_zipfile(self, exclude_list: List[str]) -> None:
+    def _rebuild_seven_zipfile(self, exclude_list: List[str]) -> None:
         """Zip helper func
 
         This recompresses the zip archive, without the files in the exclude_list
