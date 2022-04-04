@@ -9,7 +9,7 @@ import os
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import py7zr
 from natsort import natsorted, ns
@@ -209,6 +209,27 @@ class SevenZipArchiver:
 
 
 # ------------------------------------------------------------------
+class UnknownArchiver:
+
+    """Unknown implementation"""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+
+    def read_archive_file(self, archive_file: str) -> Any:
+        return Any
+
+    def write_archive_file(self, archive_file: str, data: str) -> bool:
+        return False
+
+    def remove_archive_file(self, archive_file: str) -> bool:
+        return False
+
+    def get_archive_filename_list(self) -> List[str]:
+        return []
+
+
+# ------------------------------------------------------------------
 
 
 class ComicArchive:
@@ -232,9 +253,12 @@ class ComicArchive:
         if self.sevenzip_test():
             self.archive_type: int = self.ArchiveType.sevenzip
             self.archiver = SevenZipArchiver(self.path)
-        elif self.zip_test:
+        elif self.zip_test():
             self.archive_type: int = self.ArchiveType.zip
             self.archiver = ZipArchiver(self.path)
+        else:
+            self.archive_type = self.ArchiveType.unknown
+            self.archiver = UnknownArchiver(self.path)
 
     def reset_cache(self) -> None:
         """Clears the cached data"""
