@@ -194,18 +194,18 @@ class SevenZipArchiver:
         self.path.unlink()
         os.rename(tmp_name, self.path)
 
-    # def copy_from_archive(self, otherArchive: ZipArchiver) -> bool:
-    #     """Replace the current zip with one copied from another archive"""
-    #     try:
-    #         with py7zr.SevenZipFile(self.path, "w") as zout:
-    #             for fname in otherArchive.get_archive_filename_list():
-    #                 if data := otherArchive.read_archive_file(fname):
-    #                     zout.writestr(data, fname)
-    #     except Exception as e:
-    #         logger.warning("Error while copying to %s: %s", self.path, e)
-    #         return False
-    #     else:
-    #         return True
+    def copy_from_archive(self, other_archive) -> bool:
+        """Replace the current zip with one copied from another archive"""
+        try:
+            with py7zr.SevenZipFile(self.path, "w") as zout:
+                for fname in other_archive.get_archive_filename_list():
+                    if data := other_archive.read_archive_file(fname):
+                        zout.writestr(data, fname)
+        except Exception as e:
+            logger.warning("Error while copying to %s: %s", self.path, e)
+            return False
+        else:
+            return True
 
 
 # ------------------------------------------------------------------
@@ -227,6 +227,9 @@ class UnknownArchiver:
 
     def get_archive_filename_list(self) -> List[str]:
         return []
+
+    def copy_from_archive(self) -> bool:
+        return False
 
 
 # ------------------------------------------------------------------
@@ -484,3 +487,11 @@ class ComicArchive:
         metadata.is_empty = False
 
         return metadata
+
+    def export_as_cb7(self, new_7zip_filename: Path) -> bool:
+        if self.archive_type == self.ArchiveType.zip:
+            zip_archiver = SevenZipArchiver(new_7zip_filename)
+        else:
+            return False
+
+        return zip_archiver.copy_from_archive(self.archiver)
