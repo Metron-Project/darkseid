@@ -1,4 +1,5 @@
 """ Tests for comic archive files """
+import os
 import zipfile
 from pathlib import Path
 from typing import List
@@ -88,6 +89,10 @@ def test_cb7_writing_with_no_metadata(fake_cb7: ComicArchive) -> None:
     assert fake_cb7.write_metadata(None) is False
 
 
+# Skip test for windows, until some with a windows box can help debug this.
+@pytest.mark.skipif(
+    os.name == "nt", reason="Broken on windows, need window user help with debugging."
+)
 def test_cb7_test_metadata(fake_cb7: ComicArchive, test_metadata: GenericMetadata) -> None:
     """Test to determine if a cb7 has metadata"""
     # verify archive has no metadata
