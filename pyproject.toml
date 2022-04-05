@@ -37,6 +37,7 @@ natsort = "^8.0.0"
 # Optional dependencies
 sphinx-rtd-theme = {version="^0.5.2", optional=true}
 sphinxcontrib-napoleon = {version="^0.7", optional=true}
+py7zr = "^0.18.3"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.9.2"
@@ -64,7 +65,7 @@ multi_line_output = 3
 line_length = 95
 default_section = "THIRDPARTY"
 known_first_party = []
-known_third_party = ["PIL", "natsort", "pytest"]
+known_third_party = ["PIL", "natsort", "py7zr", "pytest"]
 
 [tool.poetry.urls]
 "Homepage" = "https://github.com/bpepple/darkseid"
