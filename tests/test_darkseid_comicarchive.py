@@ -149,6 +149,12 @@ def test_cb7_apply_file_info_to_metadata(fake_cb7: ComicArchive) -> None:
     assert test_md.page_count == "5"
 
 
+def test_cb7_export_to_cb7(tmp_path: Path, fake_cb7: ComicArchive) -> None:
+    """Test that trying to exporting to same format doesn't work."""
+    fake_export = tmp_path / "foobar_1.cb7"
+    assert fake_cb7.export_as_cb7(fake_export) is False
+
+
 # ------------------------------------------------------------------
 def test_zip_file_exists(fake_cbz: ComicArchive) -> None:
     """Test function that determines if a file is a zip file"""
@@ -236,3 +242,11 @@ def test_archive_apply_file_info_to_metadata(fake_cbz: ComicArchive) -> None:
     fake_cbz.apply_archive_info_to_metadata(test_md)
     # TODO: Need to test calculate page sizes
     assert test_md.page_count == "4"
+
+
+def test_archive_export_to_cb7(tmp_path, fake_cbz: ComicArchive) -> None:
+    fn = tmp_path / "fake_export.cb7"
+    assert fake_cbz.export_as_cb7(fn) is True
+    ca = ComicArchive(fn)
+    assert ca.is_sevenzip() is True
+    assert ca.get_number_of_pages() == 4
