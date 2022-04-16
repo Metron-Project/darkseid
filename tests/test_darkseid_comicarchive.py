@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 
+import py7zr
 import pytest
 
 from darkseid.comicarchive import ComicArchive
@@ -26,6 +27,11 @@ def test_metadata() -> GenericMetadata:
     return meta_data
 
 
+def test_cb7_file_exists(fake_cb7: ComicArchive) -> None:
+    """Test function to determine archive is a 7zip file"""
+    assert fake_cb7.is_sevenzip() is True
+
+
 def test_cb7_number_of_pages(fake_cb7: ComicArchive) -> None:
     """Test to determine number of pages in a cb7"""
     assert fake_cb7.get_number_of_pages() == 5
@@ -45,19 +51,27 @@ def test_cb7_writing_with_no_metadata(fake_cb7: ComicArchive) -> None:
 @pytest.mark.skipif(
     os.name == "nt", reason="Need someone with a Windows box to help with debugging."
 )
-def test_cb7_test_metadata(fake_cb7: ComicArchive, test_metadata: GenericMetadata) -> None:
+def test_cb7_test_metadata(tmp_path: Path, test_metadata: GenericMetadata) -> None:
     """Test to determine if a cb7 has metadata"""
+
+    # Create cb7 archive/
+    z_file: Path = tmp_path / "Captain Science v1 #001 (2000).cb7"
+    with py7zr.SevenZipFile(z_file, "w") as cb7:
+        cb7.writeall(IMG_DIR)
+
+    ca = ComicArchive(z_file)
+
     # verify archive has no metadata
-    res = fake_cb7.has_metadata()
+    res = ca.has_metadata()
     assert res is False
 
     # now let's test that we can write some
-    write_result = fake_cb7.write_metadata(test_metadata)
+    write_result = ca.write_metadata(test_metadata)
     assert write_result is True
-    assert fake_cb7.has_metadata() is True
+    assert ca.has_metadata() is True
 
     # Verify what was written
-    new_md = fake_cb7.read_metadata()
+    new_md = ca.read_metadata()
     assert new_md.series == test_metadata.series
     assert new_md.issue == test_metadata.issue
     assert new_md.title == test_metadata.title
@@ -65,8 +79,8 @@ def test_cb7_test_metadata(fake_cb7: ComicArchive, test_metadata: GenericMetadat
     assert new_md.volume == test_metadata.volume
 
     # now remove what was just written
-    fake_cb7.remove_metadata()
-    assert fake_cb7.has_metadata() is False
+    ca.remove_metadata()
+    assert ca.has_metadata() is False
 
 
 def test_removing_metadata_on_cb7_wo_metadata(fake_cb7: ComicArchive) -> None:

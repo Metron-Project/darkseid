@@ -34,7 +34,7 @@ def fake_overlay_metadata():
 
 @pytest.fixture(scope="session")
 def fake_cb7() -> ComicArchive:
-    return ComicArchive(ARCHIVE_PATH)
+    return ComicArchive(CB7_PATH)
 
 
 @pytest.fixture(scope="session")
