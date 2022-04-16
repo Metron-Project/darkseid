@@ -12,10 +12,10 @@ CONTENT = "content"
 
 
 PAGE_TMPL = str(IMG_DIR / "CaptainScience#1_{page_num}.jpg")
-PAGE_THIRTY_SIX = PAGE_TMPL.format(page_num="36")
+PAGE_FIVE = PAGE_TMPL.format(page_num="05")
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def test_metadata() -> GenericMetadata:
     meta_data = GenericMetadata()
     meta_data.series = "Aquaman"
@@ -24,11 +24,6 @@ def test_metadata() -> GenericMetadata:
     meta_data.notes = "Test comment"
     meta_data.volume = "1"
     return meta_data
-
-
-def test_cb7_file_exists(fake_cb7: ComicArchive) -> None:
-    """Test function to determine archive is a 7zip file"""
-    assert fake_cb7.is_sevenzip() is True
 
 
 def test_cb7_number_of_pages(fake_cb7: ComicArchive) -> None:
@@ -86,7 +81,7 @@ def test_removing_metadata_on_cb7_wo_metadata(fake_cb7: ComicArchive) -> None:
 def test_cb7_get_random_page(fake_cb7: ComicArchive) -> None:
     """Test to set if a page from a comic archive can be retrieved"""
     page = fake_cb7.get_page(4)
-    with open(PAGE_THIRTY_SIX, "rb") as cif:
+    with open(PAGE_FIVE, "rb") as cif:
         image = cif.read()
     assert image == page
 
@@ -96,8 +91,6 @@ def test_cb7_metadata_from_filename(fake_cb7: ComicArchive) -> None:
     test_md = fake_cb7.metadata_from_filename()
     assert test_md.series == "Captain Science"
     assert test_md.issue == "1"
-    assert test_md.volume == "1"
-    assert test_md.year == "2000"
 
 
 def test_cb7_apply_file_info_to_metadata(fake_cb7: ComicArchive) -> None:
@@ -106,12 +99,6 @@ def test_cb7_apply_file_info_to_metadata(fake_cb7: ComicArchive) -> None:
     fake_cb7.apply_archive_info_to_metadata(test_md)
     # TODO: Need to test calculate page sizes
     assert test_md.page_count == "5"
-
-
-def test_cb7_export_to_cb7(tmp_path: Path, fake_cb7: ComicArchive) -> None:
-    """Test that trying to exporting to same format doesn't work."""
-    fake_export = tmp_path / "foobar_1.cb7"
-    assert fake_cb7.export_as_cb7(fake_export) is False
 
 
 # ------------------------------------------------------------------
@@ -133,7 +120,7 @@ def test_whether_text_file_is_comic_archive(tmp_path: Path) -> None:
     assert ca.seems_to_be_a_comic_archive() is False
 
 
-def test_archive_number_of_pages(fake_cbz: ComicArchive) -> None:
+def test_archive_number_of_pages(fake_cbz) -> None:
     """Test to determine number of pages in a comic archive"""
     assert fake_cbz.get_number_of_pages() == 5
 
@@ -183,7 +170,7 @@ def test_removing_metadata_on_comic_wo_metadata(fake_cbz: ComicArchive) -> None:
 def test_cbz_get_random_page(fake_cbz: ComicArchive) -> None:
     """Test to set if a page from a comic archive can be retrieved"""
     page = fake_cbz.get_page(4)
-    with open(PAGE_THIRTY_SIX, "rb") as cif:
+    with open(PAGE_FIVE, "rb") as cif:
         image = cif.read()
     assert image == page
 
@@ -191,10 +178,8 @@ def test_cbz_get_random_page(fake_cbz: ComicArchive) -> None:
 def test_archive_metadata_from_filename(fake_cbz: ComicArchive) -> None:
     """Test to get metadata from comic archives filename"""
     test_md = fake_cbz.metadata_from_filename()
-    assert test_md.series == "Aquaman"
+    assert test_md.series == "Captain Science"
     assert test_md.issue == "1"
-    assert test_md.volume == "1"
-    assert test_md.year == "1994"
 
 
 def test_archive_apply_file_info_to_metadata(fake_cbz: ComicArchive) -> None:
