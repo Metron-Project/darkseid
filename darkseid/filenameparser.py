@@ -179,14 +179,14 @@ class FileNameParser:
 
         # search for volume number
         if match := re.search(r"(.+)([vV]|[Vv][oO][Ll]\.?\s?)(\d+)\s*$", series):
-            series = match.group(1)
-            volume = match.group(3)
+            series = match[1]
+            volume = match[3]
 
         # if a volume wasn't found, see if the last word is a year in parentheses
         # since that's a common way to designate the volume
         if volume == "":
             if match := re.search(r"(\()(\d{4})(-(\d{4}|)|)(\))", last_word):
-                volume = match.group(2)
+                volume = match[2]
 
         series = series.strip()
 
