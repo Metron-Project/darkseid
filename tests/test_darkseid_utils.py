@@ -1,20 +1,17 @@
 from pathlib import Path
 
+import pytest
+
 from darkseid import utils
 
-
-def test_remove_articles():
-    txt = "The Champions & Inhumans"
-    expected_result = "Champions Inhumans"
-    result = utils.remove_articles(txt)
-    assert result == expected_result
+from .test_params import test_articles
 
 
-def test_removes_articles_that_contain_no_articles():
-    txt = "Justice League"
-    expected_result = "Justice League"
-    result = utils.remove_articles(txt)
-    assert result == expected_result
+@pytest.mark.parametrize("test_string,reason,expected", test_articles)
+def test_file_name_for_articles(test_string, reason, expected):
+    result = utils.remove_articles(test_string)
+
+    assert result == expected
 
 
 def test_list_to_string():

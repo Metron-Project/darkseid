@@ -4,10 +4,10 @@ import pytest
 
 from darkseid.filenameparser import FileNameParser
 
-from .fake_filenames import fnames
+from .test_params import test_file_names
 
 
-@pytest.mark.parametrize("filename,reason,expected", fnames)
+@pytest.mark.parametrize("filename,reason,expected", test_file_names)
 def test_file_name_parser(filename, reason, expected):
     p = FileNameParser()
     p.parse_filename(Path(filename))

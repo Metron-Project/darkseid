@@ -1,6 +1,12 @@
 import pytest
 
-fnames = [
+test_articles = [
+    pytest.param("The Champions & Inhumans", "Test string with '&'", "Champions Inhumans"),
+    pytest.param("Justice League", "Test string with no articles", "Justice League"),
+    pytest.param("The X-Men", "Test string with leading 'The'", "X-Men"),
+]
+
+test_file_names = [
     pytest.param(
         "Batman '89 (2021) (Webrip) (The Last Kryptonian-DCP).cbr",
         "year in title without issue",
