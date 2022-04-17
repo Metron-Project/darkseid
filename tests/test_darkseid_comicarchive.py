@@ -9,22 +9,9 @@ from darkseid.comicarchive import ComicArchive
 from darkseid.genericmetadata import GenericMetadata
 from tests.conftest import IMG_DIR
 
-CONTENT = "content"
-
-
+# Uses to test image bytes
 PAGE_TMPL = str(IMG_DIR / "CaptainScience#1_{page_num}.jpg")
 PAGE_FIVE = PAGE_TMPL.format(page_num="05")
-
-
-@pytest.fixture(scope="module")
-def test_metadata() -> GenericMetadata:
-    meta_data = GenericMetadata()
-    meta_data.series = "Aquaman"
-    meta_data.issue = "0"
-    meta_data.title = "A Crash of Symbols"
-    meta_data.notes = "Test comment"
-    meta_data.volume = "1"
-    return meta_data
 
 
 def test_cb7_file_exists(fake_cb7: ComicArchive) -> None:
@@ -51,7 +38,7 @@ def test_cb7_writing_with_no_metadata(fake_cb7: ComicArchive) -> None:
 @pytest.mark.skipif(
     os.name == "nt", reason="Need someone with a Windows box to help with debugging."
 )
-def test_cb7_test_metadata(tmp_path: Path, test_metadata: GenericMetadata) -> None:
+def test_cb7_test_metadata(tmp_path: Path, fake_metadata: GenericMetadata) -> None:
     """Test to determine if a cb7 has metadata"""
 
     # Create cb7 archive/
@@ -66,17 +53,15 @@ def test_cb7_test_metadata(tmp_path: Path, test_metadata: GenericMetadata) -> No
     assert res is False
 
     # now let's test that we can write some
-    write_result = ca.write_metadata(test_metadata)
+    write_result = ca.write_metadata(fake_metadata)
     assert write_result is True
     assert ca.has_metadata() is True
 
     # Verify what was written
     new_md = ca.read_metadata()
-    assert new_md.series == test_metadata.series
-    assert new_md.issue == test_metadata.issue
-    assert new_md.title == test_metadata.title
-    assert new_md.notes == test_metadata.notes
-    assert new_md.volume == test_metadata.volume
+    assert new_md.series == fake_metadata.series
+    assert new_md.issue == fake_metadata.issue
+    assert new_md.title == fake_metadata.title
 
     # now remove what was just written
     ca.remove_metadata()
@@ -149,23 +134,21 @@ def test_archive_writing_with_no_metadata(fake_cbz: ComicArchive) -> None:
     assert fake_cbz.write_metadata(None) is False
 
 
-def test_archive_test_metadata(fake_cbz: ComicArchive, test_metadata: GenericMetadata) -> None:
+def test_archive_test_metadata(fake_cbz: ComicArchive, fake_metadata: GenericMetadata) -> None:
     """Test to determine if a comic archive has metadata"""
     # verify archive has no metadata
     assert fake_cbz.has_metadata() is False
 
     # now let's test that we can write some
-    write_result = fake_cbz.write_metadata(test_metadata)
+    write_result = fake_cbz.write_metadata(fake_metadata)
     assert write_result is True
     assert fake_cbz.has_metadata() is True
 
     # Verify what was written
     new_md = fake_cbz.read_metadata()
-    assert new_md.series == test_metadata.series
-    assert new_md.issue == test_metadata.issue
-    assert new_md.title == test_metadata.title
-    assert new_md.notes == test_metadata.notes
-    assert new_md.volume == test_metadata.volume
+    assert new_md.series == fake_metadata.series
+    assert new_md.issue == fake_metadata.issue
+    assert new_md.title == fake_metadata.title
 
     # now remove what was just written
     fake_cbz.remove_metadata()
