@@ -8,13 +8,13 @@ from .test_params import test_articles
 
 
 @pytest.mark.parametrize("test_string,reason,expected", test_articles)
-def test_file_name_for_articles(test_string, reason, expected):
+def test_file_name_for_articles(test_string: str, reason: str, expected: str) -> None:
     result = utils.remove_articles(test_string)
 
     assert result == expected
 
 
-def test_list_to_string():
+def test_list_to_string() -> None:
     thislist = ["apple", "banana", "cherry"]
     expected_result = "apple; banana; cherry"
 
@@ -22,7 +22,7 @@ def test_list_to_string():
     assert result == expected_result
 
 
-def test_unique_name(tmp_path):
+def test_unique_name(tmp_path: Path) -> None:
     d = tmp_path / "test"
     d.mkdir()
     new_file = d / "Test.cbz"
@@ -48,7 +48,7 @@ def test_recursive_list_with_file(tmp_path: Path) -> None:
     assert result == expected_result
 
 
-def test_recursive_list_with_directory(tmp_path):
+def test_recursive_list_with_directory(tmp_path: Path) -> None:
     temp_dir = tmp_path / "recursive"
     temp_dir.mkdir()
 
