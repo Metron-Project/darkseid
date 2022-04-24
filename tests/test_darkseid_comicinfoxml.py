@@ -1,8 +1,11 @@
 """ Tests for ComicInfo Tags """
 import pytest
+from lxml import etree
 
 from darkseid.comicinfoxml import ComicInfoXml
 from darkseid.genericmetadata import GenericMetadata
+
+from .conftest import CI_XSD
 
 
 @pytest.fixture()
@@ -22,6 +25,15 @@ def test_meta_data():
     return meta_data
 
 
+def validate(xml_path: str, xsd_path: str) -> bool:
+
+    xmlschema_doc = etree.parse(xsd_path)
+    xmlschema = etree.XMLSchema(xmlschema_doc)
+
+    xml_doc = etree.parse(xml_path)
+    return xmlschema.validate(xml_doc)
+
+
 def test_metadata_from_xml(test_meta_data):
     """Simple test of creating the ComicInfo"""
     res = ComicInfoXml().string_from_metadata(test_meta_data)
@@ -36,6 +48,7 @@ def test_meta_write_to_file(test_meta_data, tmp_path):
     # Read the contents of the file just written.
     # TODO: Verify the data.
     assert tmp_file.read_text() is not None
+    assert validate(tmp_file, CI_XSD) is True
 
 
 def test_read_from_file(test_meta_data, tmp_path):
