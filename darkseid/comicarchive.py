@@ -397,11 +397,13 @@ class ComicArchive:
 
     def write_metadata(self, metadata: Optional[GenericMetadata]) -> bool:
         """Write the metadata to the archive"""
-
         if metadata is None:
             return False
         self.apply_archive_info_to_metadata(metadata, calc_page_sizes=True)
-        md_string = ComicInfoXml().string_from_metadata(metadata)
+        if raw_cix := self.read_raw_metadata():
+            md_string = ComicInfoXml().string_from_metadata(metadata, raw_cix.encode("utf-8"))
+        else:
+            md_string = ComicInfoXml().string_from_metadata(metadata)
         write_success = self.archiver.write_archive_file(self.ci_xml_filename, md_string)
         return self._successful_write(write_success, True, metadata)
 

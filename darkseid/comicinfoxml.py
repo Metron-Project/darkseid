@@ -64,8 +64,8 @@ class ComicInfoXml:
         tree = ET.ElementTree(ET.fromstring(string))
         return self.convert_xml_to_metadata(tree)
 
-    def string_from_metadata(self, metadata: GenericMetadata) -> str:
-        tree = self.convert_metadata_to_xml(metadata)
+    def string_from_metadata(self, metadata: GenericMetadata, xml=None) -> str:
+        tree = self.convert_metadata_to_xml(metadata, xml)
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
 
     def _indent(self, elem: ET.Element, level: int = 0) -> None:
@@ -83,13 +83,21 @@ class ComicInfoXml:
         elif level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
 
-    def convert_metadata_to_xml(self, metadata: GenericMetadata) -> ET.ElementTree:
-        # build a tree structure
-        root = ET.Element("ComicInfo")
-        root.attrib["xmlns:xsi"] = "https://www.w3.org/2001/XMLSchema-instance"
-        root.attrib["xmlns:xsd"] = "https://www.w3.org/2001/XMLSchema"
-        # helper func
+    def _get_root(self, xml) -> ET.Element:
+        if xml:
+            root = ET.ElementTree(ET.fromstring(xml)).getroot()
+        else:
+            # build a tree structure
+            root = ET.Element("ComicInfo")
+            root.attrib["xmlns:xsi"] = "https://www.w3.org/2001/XMLSchema-instance"
+            root.attrib["xmlns:xsd"] = "https://www.w3.org/2001/XMLSchema"
 
+        return root
+
+    def convert_metadata_to_xml(self, metadata: GenericMetadata, xml=None) -> ET.ElementTree:
+        root = self._get_root(xml)
+
+        # helper func
         def assign(cix_entry: str, md_entry: Optional[Union[str, int]]) -> None:
             if md_entry is not None and md_entry:
                 et_entry = root.find(cix_entry)
@@ -274,8 +282,10 @@ class ComicInfoXml:
 
         return metadata
 
-    def write_to_external_file(self, filename: str, metadata: GenericMetadata) -> None:
-        tree = self.convert_metadata_to_xml(metadata)
+    def write_to_external_file(
+        self, filename: str, metadata: GenericMetadata, xml=None
+    ) -> None:
+        tree = self.convert_metadata_to_xml(metadata, xml)
         tree.write(filename, encoding="utf-8", xml_declaration=True)
 
     def read_from_external_file(self, filename: str) -> GenericMetadata:
