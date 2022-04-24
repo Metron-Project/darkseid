@@ -73,7 +73,7 @@ class ComicInfoXml:
         tree_str = ET.tostring(tree.getroot()).decode()
         return header + tree_str
 
-    def indent(self, elem: ET.Element, level: int = 0) -> None:
+    def _indent(self, elem: ET.Element, level: int = 0) -> None:
         # for making the XML output readable
         i = "\n" + level * "  "
         if elem:
@@ -82,7 +82,7 @@ class ComicInfoXml:
             if not elem.tail or not elem.tail.strip():
                 elem.tail = i
             for elem in elem:
-                self.indent(elem, level + 1)
+                self._indent(elem, level + 1)
             if not elem.tail or not elem.tail.strip():
                 elem.tail = i
         elif level and (not elem.tail or not elem.tail.strip()):
@@ -198,7 +198,7 @@ class ComicInfoXml:
             page_node.attrib = dict(sorted(page_dict.items()))
 
         # self pretty-print
-        self.indent(root)
+        self._indent(root)
 
         # wrap it in an ElementTree instance, and save as XML
         tree = ET.ElementTree(root)
