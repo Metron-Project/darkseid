@@ -5,7 +5,7 @@
 
 
 import xml.etree.ElementTree as ET
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from . import utils
 from .genericmetadata import GenericMetadata
@@ -95,9 +95,17 @@ class ComicInfoXml:
         root.attrib["xmlns:xsd"] = "https://www.w3.org/2001/XMLSchema"
         # helper func
 
-        def assign(cix_entry: str, md_entry: Optional[str]) -> None:
-            if md_entry is not None:
-                ET.SubElement(root, cix_entry).text = f"{md_entry}"
+        def assign(cix_entry: str, md_entry: Optional[Union[str, int]]) -> None:
+            if md_entry is not None and md_entry:
+                et_entry = root.find(cix_entry)
+                if et_entry is not None:
+                    et_entry.text = str(md_entry)
+                else:
+                    ET.SubElement(root, cix_entry).text = str(md_entry)
+            else:
+                et_entry = root.find(cix_entry)
+                if et_entry is not None:
+                    et_entry.clear()
 
         assign("Title", metadata.title)
         assign("Series", metadata.series)
@@ -151,33 +159,13 @@ class ComicInfoXml:
                 credit_editor_list.append(credit["person"].replace(",", ""))
 
         # second, convert each list to string, and add to XML struct
-        if len(credit_writer_list) > 0:
-            node = ET.SubElement(root, "Writer")
-            node.text = utils.list_to_string(credit_writer_list)
-
-        if len(credit_penciller_list) > 0:
-            node = ET.SubElement(root, "Penciller")
-            node.text = utils.list_to_string(credit_penciller_list)
-
-        if len(credit_inker_list) > 0:
-            node = ET.SubElement(root, "Inker")
-            node.text = utils.list_to_string(credit_inker_list)
-
-        if len(credit_colorist_list) > 0:
-            node = ET.SubElement(root, "Colorist")
-            node.text = utils.list_to_string(credit_colorist_list)
-
-        if len(credit_letterer_list) > 0:
-            node = ET.SubElement(root, "Letterer")
-            node.text = utils.list_to_string(credit_letterer_list)
-
-        if len(credit_cover_list) > 0:
-            node = ET.SubElement(root, "CoverArtist")
-            node.text = utils.list_to_string(credit_cover_list)
-
-        if len(credit_editor_list) > 0:
-            node = ET.SubElement(root, "Editor")
-            node.text = utils.list_to_string(credit_editor_list)
+        assign("Writer", utils.list_to_string(credit_writer_list))
+        assign("Penciller", utils.list_to_string(credit_penciller_list))
+        assign("Inker", utils.list_to_string(credit_inker_list))
+        assign("Colorist", utils.list_to_string(credit_colorist_list))
+        assign("Letterer", utils.list_to_string(credit_letterer_list))
+        assign("CoverArtist", utils.list_to_string(credit_cover_list))
+        assign("Editor", utils.list_to_string(credit_editor_list))
 
         assign("Publisher", metadata.publisher)
         assign("Imprint", metadata.imprint)
