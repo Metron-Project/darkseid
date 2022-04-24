@@ -59,16 +59,6 @@ class ComicInfoXml:
         "supervising editor",
     ]
 
-    def get_parseable_credits(self) -> List[str]:
-        parsable_credits = list(self.writer_synonyms)
-        parsable_credits.extend(self.penciller_synonyms)
-        parsable_credits.extend(self.inker_synonyms)
-        parsable_credits.extend(self.colorist_synonyms)
-        parsable_credits.extend(self.letterer_synonyms)
-        parsable_credits.extend(self.cover_synonyms)
-        parsable_credits.extend(self.editor_synonyms)
-        return parsable_credits
-
     def metadata_from_string(self, string: str) -> GenericMetadata:
 
         tree = ET.ElementTree(ET.fromstring(string))
