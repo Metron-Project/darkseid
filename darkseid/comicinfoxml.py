@@ -61,17 +61,12 @@ class ComicInfoXml:
     ]
 
     def metadata_from_string(self, string: str) -> GenericMetadata:
-
         tree = ET.ElementTree(ET.fromstring(string))
         return self.convert_xml_to_metadata(tree)
 
     def string_from_metadata(self, metadata: GenericMetadata) -> str:
-
-        header = '<?xml version="1.0"?>\n'
-
         tree = self.convert_metadata_to_xml(metadata)
-        tree_str = ET.tostring(tree.getroot()).decode()
-        return header + tree_str
+        return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
 
     def _indent(self, elem: ET.Element, level: int = 0) -> None:
         # for making the XML output readable
@@ -89,7 +84,6 @@ class ComicInfoXml:
             elem.tail = i
 
     def convert_metadata_to_xml(self, metadata: GenericMetadata) -> ET.ElementTree:
-
         # build a tree structure
         root = ET.Element("ComicInfo")
         root.attrib["xmlns:xsi"] = "https://www.w3.org/2001/XMLSchema-instance"
@@ -206,7 +200,6 @@ class ComicInfoXml:
 
     @classmethod
     def convert_xml_to_metadata(cls, tree: ET.ElementTree) -> GenericMetadata:
-
         root = tree.getroot()
 
         if root.tag != "ComicInfo":
@@ -282,12 +275,9 @@ class ComicInfoXml:
         return metadata
 
     def write_to_external_file(self, filename: str, metadata: GenericMetadata) -> None:
-
         tree = self.convert_metadata_to_xml(metadata)
-        # ET.dump(tree)
-        tree.write(filename, encoding="utf-8")
+        tree.write(filename, encoding="utf-8", xml_declaration=True)
 
     def read_from_external_file(self, filename: str) -> GenericMetadata:
-
         tree = ET.parse(filename)
         return self.convert_xml_to_metadata(tree)
