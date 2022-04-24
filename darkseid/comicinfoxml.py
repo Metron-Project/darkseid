@@ -7,8 +7,9 @@
 import xml.etree.ElementTree as ET
 from typing import List, Optional, Union
 
-from . import utils
+from .utils import xlate, list_to_string
 from .genericmetadata import GenericMetadata
+from .issuestring import IssueString
 
 
 class ComicInfoXml:
@@ -159,13 +160,13 @@ class ComicInfoXml:
                 credit_editor_list.append(credit["person"].replace(",", ""))
 
         # second, convert each list to string, and add to XML struct
-        assign("Writer", utils.list_to_string(credit_writer_list))
-        assign("Penciller", utils.list_to_string(credit_penciller_list))
-        assign("Inker", utils.list_to_string(credit_inker_list))
-        assign("Colorist", utils.list_to_string(credit_colorist_list))
-        assign("Letterer", utils.list_to_string(credit_letterer_list))
-        assign("CoverArtist", utils.list_to_string(credit_cover_list))
-        assign("Editor", utils.list_to_string(credit_editor_list))
+        assign("Writer", list_to_string(credit_writer_list))
+        assign("Penciller", list_to_string(credit_penciller_list))
+        assign("Inker", list_to_string(credit_inker_list))
+        assign("Colorist", list_to_string(credit_colorist_list))
+        assign("Letterer", list_to_string(credit_letterer_list))
+        assign("CoverArtist", list_to_string(credit_cover_list))
+        assign("Editor", list_to_string(credit_editor_list))
 
         assign("Publisher", metadata.publisher)
         assign("Imprint", metadata.imprint)
@@ -175,8 +176,7 @@ class ComicInfoXml:
         assign("LanguageISO", metadata.language)
         assign("Format", metadata.format)
         assign("AgeRating", metadata.maturity_rating)
-        if metadata.black_and_white is not None and metadata.black_and_white:
-            ET.SubElement(root, "BlackAndWhite").text = "Yes"
+        assign("BlackAndWhite", "Yes" if metadata.black_and_white else None)
         assign("Manga", metadata.manga)
         assign("Characters", metadata.characters)
         assign("Teams", metadata.teams)
@@ -205,43 +205,43 @@ class ComicInfoXml:
         if root.tag != "ComicInfo":
             raise ValueError("Metadata is not ComicInfo format")
 
+        def get(name):
+            tag = root.find(name)
+            if tag is None:
+                return None
+            return tag.text
+
         metadata = GenericMetadata()
+        metadata.series = xlate(get("Series"))
+        metadata.title = xlate(get("Title"))
+        metadata.issue = IssueString(xlate(get("Number"))).as_string()
+        metadata.issue_count = xlate(get("Count"), True)
+        metadata.volume = xlate(get("Volume"), True)
+        metadata.alternate_series = xlate(get("AlternateSeries"))
+        metadata.alternate_number = IssueString(xlate(get("AlternateNumber"))).as_string()
+        metadata.alternate_count = xlate(get("AlternateCount"), True)
+        metadata.comments = xlate(get("Summary"))
+        metadata.notes = xlate(get("Notes"))
+        metadata.year = xlate(get("Year"), True)
+        metadata.month = xlate(get("Month"), True)
+        metadata.day = xlate(get("Day"), True)
+        metadata.publisher = xlate(get("Publisher"))
+        metadata.imprint = xlate(get("Imprint"))
+        metadata.genre = xlate(get("Genre"))
+        metadata.web_link = xlate(get("Web"))
+        metadata.language = xlate(get("LanguageISO"))
+        metadata.format = xlate(get("Format"))
+        metadata.manga = xlate(get("Manga"))
+        metadata.characters = xlate(get("Characters"))
+        metadata.teams = xlate(get("Teams"))
+        metadata.locations = xlate(get("Locations"))
+        metadata.page_count = xlate(get("PageCount"), True)
+        metadata.scan_info = xlate(get("ScanInformation"))
+        metadata.story_arc = xlate(get("StoryArc"))
+        metadata.series_group = xlate(get("SeriesGroup"))
+        metadata.maturity_rating = xlate(get("AgeRating"))
 
-        # Helper function
-        def xlate(tag: str) -> Optional[str]:
-            node = root.find(tag)
-            return node.text if node is not None else None
-
-        metadata.series = xlate("Series")
-        metadata.title = xlate("Title")
-        metadata.issue = xlate("Number")
-        metadata.issue_count = xlate("Count")
-        metadata.volume = xlate("Volume")
-        metadata.alternate_series = xlate("AlternateSeries")
-        metadata.alternate_number = xlate("AlternateNumber")
-        metadata.alternate_count = xlate("AlternateCount")
-        metadata.comments = xlate("Summary")
-        metadata.notes = xlate("Notes")
-        metadata.year = xlate("Year")
-        metadata.month = xlate("Month")
-        metadata.day = xlate("Day")
-        metadata.publisher = xlate("Publisher")
-        metadata.imprint = xlate("Imprint")
-        metadata.genre = xlate("Genre")
-        metadata.web_link = xlate("Web")
-        metadata.language = xlate("LanguageISO")
-        metadata.format = xlate("Format")
-        metadata.manga = xlate("Manga")
-        metadata.characters = xlate("Characters")
-        metadata.teams = xlate("Teams")
-        metadata.locations = xlate("Locations")
-        metadata.page_count = xlate("PageCount")
-        metadata.scan_info = xlate("ScanInformation")
-        metadata.story_arc = xlate("StoryArc")
-        metadata.series_group = xlate("SeriesGroup")
-        metadata.maturity_rating = xlate("AgeRating")
-
-        tmp = xlate("BlackAndWhite")
+        tmp = xlate(get("BlackAndWhite"))
         metadata.black_and_white = False
         if tmp is not None and tmp.lower() in ["yes", "true", "1"]:
             metadata.black_and_white = True

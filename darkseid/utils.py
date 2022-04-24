@@ -2,6 +2,7 @@
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2019 Brian Pepple
 
+from collections import defaultdict
 import itertools
 from pathlib import Path
 from typing import List
@@ -90,3 +91,19 @@ def unique_file(file_name: Path) -> Path:
         file_name = file_name.parent / f"{original_stem} ({i}){file_name.suffix}"
 
     return file_name
+
+
+def xlate(data, is_int=False):
+    if data is None or data == "":
+        return None
+    if is_int:
+        i = str(data).translate(
+            defaultdict(lambda: None, zip((ord(c) for c in "1234567890"), "1234567890"))
+        )
+        if i == "0":
+            return "0"
+        if not i:
+            return None
+        return int(i)
+
+    return str(data)
