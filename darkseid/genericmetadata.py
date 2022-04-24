@@ -9,9 +9,9 @@ possible, however lossy it might be
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2020 Brian Pepple
 
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple, TypedDict
 
-from . import utils
+from .utils import list_to_string
 
 
 class PageType:
@@ -34,6 +34,22 @@ class PageType:
     Deleted = "Deleted"
 
 
+class ImageMetadata(TypedDict, total=False):
+    Type: str
+    Bookmark: str
+    DoublePage: bool
+    Image: int
+    ImageSize: str
+    ImageHeight: str
+    ImageWidth: str
+
+
+class CreditMetadata(TypedDict):
+    person: str
+    role: str
+    primary: bool
+
+
 class GenericMetadata:
     def __init__(self) -> None:
 
@@ -44,11 +60,11 @@ class GenericMetadata:
         self.issue: Optional[str] = None
         self.title: Optional[str] = None
         self.publisher: Optional[str] = None
-        self.month: Optional[str] = None
-        self.year: Optional[str] = None
-        self.day: Optional[str] = None
-        self.issue_count: Optional[str] = None
-        self.volume: Optional[str] = None
+        self.month: Optional[int] = None
+        self.year: Optional[int] = None
+        self.day: Optional[int] = None
+        self.issue_count: Optional[int] = None
+        self.volume: Optional[int] = None
         self.genre: Optional[str] = None
         self.language: Optional[str] = None  # 2 letter iso code
         self.comments: Optional[str] = None  # use same way as Summary in CIX
@@ -59,14 +75,14 @@ class GenericMetadata:
 
         self.alternate_series: Optional[str] = None
         self.alternate_number: Optional[str] = None
-        self.alternate_count: Optional[str] = None
+        self.alternate_count: Optional[int] = None
         self.imprint: Optional[str] = None
         self.notes: Optional[str] = None
         self.web_link: Optional[str] = None
         self.format: Optional[str] = None
         self.manga: Optional[str] = None
         self.black_and_white: Optional[bool] = None
-        self.page_count: Optional[str] = None
+        self.page_count: Optional[int] = None
         self.maturity_rating: Optional[str] = None
 
         self.story_arc: Optional[str] = None
@@ -77,9 +93,9 @@ class GenericMetadata:
         self.teams: Optional[str] = None
         self.locations: Optional[str] = None
 
-        self.credits: List[Dict[str, str]] = []
+        self.credits: List[CreditMetadata] = []
         self.tags: List[str] = []
-        self.pages: List[Dict[str, str]] = []
+        self.pages: List[ImageMetadata] = []
 
     def overlay(self, new_md: "GenericMetadata") -> None:
         """Overlay a metadata object on this one
@@ -88,48 +104,49 @@ class GenericMetadata:
         to this one.
         """
 
-        def assign_str(cur: str, new: Optional[str]) -> None:
+        def assign(cur, new) -> None:
             if new is not None:
-                setattr(self, cur, new)
-
-        def assign_bool(cur: str, new: Optional[bool]) -> None:
-            if new is not None:
-                setattr(self, cur, new)
+                if isinstance(new, str) and len(new) == 0:
+                    setattr(self, cur, None)
+                else:
+                    setattr(self, cur, new)
 
         if not new_md.is_empty:
             self.is_empty = False
 
-        assign_str("series", new_md.series)
-        assign_str("issue", new_md.issue)
-        assign_str("issue_count", new_md.issue_count)
-        assign_str("title", new_md.title)
-        assign_str("publisher", new_md.publisher)
-        assign_str("day", new_md.day)
-        assign_str("month", new_md.month)
-        assign_str("year", new_md.year)
-        assign_str("volume", new_md.volume)
-        assign_str("volume_count", new_md.volume_count)
-        assign_str("genre", new_md.genre)
-        assign_str("language", new_md.language)
-        assign_str("country", new_md.country)
-        assign_str("critical_rating", new_md.critical_rating)
-        assign_str("alternate_series", new_md.alternate_series)
-        assign_str("alternate_number", new_md.alternate_number)
-        assign_str("alternate_count", new_md.alternate_count)
-        assign_str("imprint", new_md.imprint)
-        assign_str("web_link", new_md.web_link)
-        assign_str("format", new_md.format)
-        assign_str("manga", new_md.manga)
-        assign_bool("black_and_white", new_md.black_and_white)
-        assign_str("maturity_rating", new_md.maturity_rating)
-        assign_str("story_arc", new_md.story_arc)
-        assign_str("series_group", new_md.series_group)
-        assign_str("scan_info", new_md.scan_info)
-        assign_str("characters", new_md.characters)
-        assign_str("teams", new_md.teams)
-        assign_str("locations", new_md.locations)
-        assign_str("comments", new_md.comments)
-        assign_str("notes", new_md.notes)
+        assign("series", new_md.series)
+        assign("issue", new_md.issue)
+        assign("issue_count", new_md.issue_count)
+        assign("title", new_md.title)
+        assign("publisher", new_md.publisher)
+        assign("day", new_md.day)
+        assign("month", new_md.month)
+        assign("year", new_md.year)
+        assign("volume", new_md.volume)
+        assign("volume_count", new_md.volume_count)
+        assign("genre", new_md.genre)
+        assign("language", new_md.language)
+        assign("country", new_md.country)
+        assign("critical_rating", new_md.critical_rating)
+        assign("alternate_series", new_md.alternate_series)
+        assign("alternate_number", new_md.alternate_number)
+        assign("alternate_count", new_md.alternate_count)
+        assign("imprint", new_md.imprint)
+        assign("web_link", new_md.web_link)
+        assign("format", new_md.format)
+        assign("manga", new_md.manga)
+        assign("black_and_white", new_md.black_and_white)
+        assign("maturity_rating", new_md.maturity_rating)
+        assign("story_arc", new_md.story_arc)
+        assign("series_group", new_md.series_group)
+        assign("scan_info", new_md.scan_info)
+        assign("characters", new_md.characters)
+        assign("teams", new_md.teams)
+        assign("locations", new_md.locations)
+        assign("comments", new_md.comments)
+        assign("notes", new_md.notes)
+
+        self.overlay_credits(new_md.credits)
 
         # TODO
 
@@ -138,17 +155,22 @@ class GenericMetadata:
 
         # For now, go the easy route, where any overlay
         # value wipes out the whole list
-        def assign_list(cur: str, new: List[str]) -> None:
-            setattr(self, cur, new)
-
-        def assign_list_pages(cur: str, new: List[Dict[str, str]]) -> None:
-            setattr(self, cur, new)
-
         if len(new_md.tags) > 0:
-            assign_list("tags", new_md.tags)
+            assign("tags", new_md.tags)
 
         if len(new_md.pages) > 0:
-            assign_list_pages("pages", new_md.pages)
+            assign("pages", new_md.pages)
+
+    def overlay_credits(self, new_credits: List[CreditMetadata]) -> None:
+        for c in new_credits:
+            # Remove credit role if person is blank
+            if c["person"] == "":
+                for r in reversed(self.credits):
+                    if r["role"].lower() == c["role"].lower():
+                        self.credits.remove(r)
+            else:
+                primary = bool("primary" in c and c["primary"])
+                self.add_credit(c["person"], c["role"], primary)
 
     def set_default_page_list(self, count: int) -> None:
         # generate a default page list, with the first page marked as the cover
@@ -175,10 +197,21 @@ class GenericMetadata:
 
         return coverlist
 
-    def add_credit(self, person: str, role: str) -> None:
+    def add_credit(self, person: str, role: str, primary: bool = False) -> None:
 
-        credit: Dict[str, str] = {"person": person, "role": role}
-        self.credits.append(credit)
+        credit: CreditMetadata = {"person": person, "role": role, "primary": primary}
+
+        # look to see if it's not already there...
+        found = False
+        for c in self.credits:
+            if c["person"].lower() == person.lower() and c["role"].lower() == role.lower():
+                # no need to add it. just adjust the "primary" flag as needed
+                c["primary"] = primary
+                found = True
+                break
+
+        if not found:
+            self.credits.append(credit)
 
     def __str__(self) -> str:
         vals: List[Tuple[str, str]] = []
@@ -226,7 +259,13 @@ class GenericMetadata:
         add_attr_string("comments")
         add_attr_string("notes")
 
-        add_string("tags", utils.list_to_string(self.tags))
+        add_string("tags", list_to_string(self.tags))
+
+        for c in self.credits:
+            primary = ""
+            if "primary" in c and c["primary"]:
+                primary = " [P]"
+            add_string("credit", c["role"] + ": " + c["person"] + primary)
 
         # find the longest field name
         flen = 0
