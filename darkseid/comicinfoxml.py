@@ -7,9 +7,9 @@
 import xml.etree.ElementTree as ET
 from typing import List, Optional, Union
 
-from .utils import xlate, list_to_string
 from .genericmetadata import GenericMetadata
 from .issuestring import IssueString
+from .utils import list_to_string, xlate
 
 
 class ComicInfoXml:

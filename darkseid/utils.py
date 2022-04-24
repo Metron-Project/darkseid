@@ -2,8 +2,8 @@
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2019 Brian Pepple
 
-from collections import defaultdict
 import itertools
+from collections import defaultdict
 from pathlib import Path
 from typing import List
 
