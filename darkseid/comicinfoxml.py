@@ -184,11 +184,18 @@ class ComicInfoXml:
         assign("ScanInformation", metadata.scan_info)
 
         #  loop and add the page entries under pages node
-        if len(metadata.pages) > 0:
+        pages_node = root.find("Pages")
+        if pages_node is not None:
+            pages_node.clear()
+        else:
             pages_node = ET.SubElement(root, "Pages")
-            for page_dict in metadata.pages:
-                page_node = ET.SubElement(pages_node, "Page")
-                page_node.attrib = page_dict
+
+        for page_dict in metadata.pages:
+            page = page_dict
+            if "Image" in page:
+                page["Image"] = str(page["Image"])
+            page_node = ET.SubElement(pages_node, "Page")
+            page_node.attrib = dict(sorted(page_dict.items()))
 
         # self pretty-print
         self.indent(root)
@@ -266,8 +273,9 @@ class ComicInfoXml:
         pages_node = root.find("Pages")
         if pages_node is not None:
             for page in pages_node:
+                if "Image" in page.attrib:
+                    page.attrib["Image"] = int(page.attrib["Image"])
                 metadata.pages.append(page.attrib)
-                # print page.attrib
 
         metadata.is_empty = False
 

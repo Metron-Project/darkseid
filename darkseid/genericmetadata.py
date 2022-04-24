@@ -175,7 +175,7 @@ class GenericMetadata:
     def set_default_page_list(self, count: int) -> None:
         # generate a default page list, with the first page marked as the cover
         for i in range(count):
-            page_dict = {"Image": str(i)}
+            page_dict = ImageMetadata(Image=i)
             if i == 0:
                 page_dict["Type"] = PageType.FrontCover
             self.pages.append(page_dict)
@@ -187,9 +187,9 @@ class GenericMetadata:
     def get_cover_page_index_list(self) -> List[int]:
         # return a list of archive page indices of cover pages
         coverlist = [
-            int(page["Image"])
-            for page in self.pages
-            if "Type" in page and page["Type"] == PageType.FrontCover
+            int(p["Image"])
+            for p in self.pages
+            if "Type" in p and p["Type"] == PageType.FrontCover
         ]
 
         if not coverlist:
