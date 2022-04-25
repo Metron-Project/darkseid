@@ -1,5 +1,6 @@
 """ Tests for comic archive files """
 import os
+import zipfile
 from pathlib import Path
 
 import py7zr
@@ -101,6 +102,24 @@ def test_cb7_apply_file_info_to_metadata(fake_cb7: ComicArchive) -> None:
 
 
 # ------------------------------------------------------------------
+def test_archive_from_img_dir(tmp_path: Path, fake_metadata: GenericMetadata) -> None:
+    z_file: Path = tmp_path / "Aquaman v1 #001 (of 08) (1994).cbz"
+    with zipfile.ZipFile(z_file, "w") as zf:
+        for p in IMG_DIR.iterdir():
+            zf.write(p)
+
+    ca = ComicArchive(z_file)
+    test_md = GenericMetadata()
+    test_md.set_default_page_list(ca.get_number_of_pages())
+    test_md.overlay(fake_metadata)
+    ca.write_metadata(test_md)
+    res = ca.read_metadata()
+    assert res.page_count == 5
+    assert res.series == fake_metadata.series
+    assert res.issue == fake_metadata.issue
+    assert res.title == fake_metadata.title
+
+
 def test_zip_file_exists(fake_cbz: ComicArchive) -> None:
     """Test function that determines if a file is a zip file"""
     assert fake_cbz.is_zip() is True

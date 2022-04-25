@@ -51,6 +51,7 @@ pre-commit = "^2.14.0"
 pyupgrade = "^2.29.0"
 tox = "^3.24.4"
 pytest-xdist = "^2.5.0"
+lxml = "^4.8.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -66,7 +67,7 @@ multi_line_output = 3
 line_length = 95
 default_section = "THIRDPARTY"
 known_first_party = []
-known_third_party = ["PIL", "natsort", "py7zr", "pytest"]
+known_third_party = ["PIL", "lxml", "natsort", "py7zr", "pytest"]
 
 [tool.poetry.urls]
 "Homepage" = "https://github.com/bpepple/darkseid"

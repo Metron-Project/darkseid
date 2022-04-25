@@ -5,10 +5,11 @@
 
 
 import xml.etree.ElementTree as ET
-from typing import List, Optional
+from typing import List, Optional, Union
 
-from . import utils
 from .genericmetadata import GenericMetadata
+from .issuestring import IssueString
+from .utils import list_to_string, xlate
 
 
 class ComicInfoXml:
@@ -59,30 +60,15 @@ class ComicInfoXml:
         "supervising editor",
     ]
 
-    def get_parseable_credits(self) -> List[str]:
-        parsable_credits = list(self.writer_synonyms)
-        parsable_credits.extend(self.penciller_synonyms)
-        parsable_credits.extend(self.inker_synonyms)
-        parsable_credits.extend(self.colorist_synonyms)
-        parsable_credits.extend(self.letterer_synonyms)
-        parsable_credits.extend(self.cover_synonyms)
-        parsable_credits.extend(self.editor_synonyms)
-        return parsable_credits
-
     def metadata_from_string(self, string: str) -> GenericMetadata:
-
         tree = ET.ElementTree(ET.fromstring(string))
         return self.convert_xml_to_metadata(tree)
 
-    def string_from_metadata(self, metadata: GenericMetadata) -> str:
+    def string_from_metadata(self, metadata: GenericMetadata, xml=None) -> str:
+        tree = self.convert_metadata_to_xml(metadata, xml)
+        return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
 
-        header = '<?xml version="1.0"?>\n'
-
-        tree = self.convert_metadata_to_xml(metadata)
-        tree_str = ET.tostring(tree.getroot()).decode()
-        return header + tree_str
-
-    def indent(self, elem: ET.Element, level: int = 0) -> None:
+    def _indent(self, elem: ET.Element, level: int = 0) -> None:
         # for making the XML output readable
         i = "\n" + level * "  "
         if elem:
@@ -91,23 +77,38 @@ class ComicInfoXml:
             if not elem.tail or not elem.tail.strip():
                 elem.tail = i
             for elem in elem:
-                self.indent(elem, level + 1)
+                self._indent(elem, level + 1)
             if not elem.tail or not elem.tail.strip():
                 elem.tail = i
         elif level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
 
-    def convert_metadata_to_xml(self, metadata: GenericMetadata) -> ET.ElementTree:
+    def _get_root(self, xml) -> ET.Element:
+        if xml:
+            root = ET.ElementTree(ET.fromstring(xml)).getroot()
+        else:
+            # build a tree structure
+            root = ET.Element("ComicInfo")
+            root.attrib["xmlns:xsi"] = "https://www.w3.org/2001/XMLSchema-instance"
+            root.attrib["xmlns:xsd"] = "https://www.w3.org/2001/XMLSchema"
 
-        # build a tree structure
-        root = ET.Element("ComicInfo")
-        root.attrib["xmlns:xsi"] = "https://www.w3.org/2001/XMLSchema-instance"
-        root.attrib["xmlns:xsd"] = "https://www.w3.org/2001/XMLSchema"
+        return root
+
+    def convert_metadata_to_xml(self, metadata: GenericMetadata, xml=None) -> ET.ElementTree:
+        root = self._get_root(xml)
+
         # helper func
-
-        def assign(cix_entry: str, md_entry: Optional[str]) -> None:
-            if md_entry is not None:
-                ET.SubElement(root, cix_entry).text = f"{md_entry}"
+        def assign(cix_entry: str, md_entry: Optional[Union[str, int]]) -> None:
+            if md_entry is not None and md_entry:
+                et_entry = root.find(cix_entry)
+                if et_entry is not None:
+                    et_entry.text = str(md_entry)
+                else:
+                    ET.SubElement(root, cix_entry).text = str(md_entry)
+            else:
+                et_entry = root.find(cix_entry)
+                if et_entry is not None:
+                    et_entry.clear()
 
         assign("Title", metadata.title)
         assign("Series", metadata.series)
@@ -161,33 +162,13 @@ class ComicInfoXml:
                 credit_editor_list.append(credit["person"].replace(",", ""))
 
         # second, convert each list to string, and add to XML struct
-        if len(credit_writer_list) > 0:
-            node = ET.SubElement(root, "Writer")
-            node.text = utils.list_to_string(credit_writer_list)
-
-        if len(credit_penciller_list) > 0:
-            node = ET.SubElement(root, "Penciller")
-            node.text = utils.list_to_string(credit_penciller_list)
-
-        if len(credit_inker_list) > 0:
-            node = ET.SubElement(root, "Inker")
-            node.text = utils.list_to_string(credit_inker_list)
-
-        if len(credit_colorist_list) > 0:
-            node = ET.SubElement(root, "Colorist")
-            node.text = utils.list_to_string(credit_colorist_list)
-
-        if len(credit_letterer_list) > 0:
-            node = ET.SubElement(root, "Letterer")
-            node.text = utils.list_to_string(credit_letterer_list)
-
-        if len(credit_cover_list) > 0:
-            node = ET.SubElement(root, "CoverArtist")
-            node.text = utils.list_to_string(credit_cover_list)
-
-        if len(credit_editor_list) > 0:
-            node = ET.SubElement(root, "Editor")
-            node.text = utils.list_to_string(credit_editor_list)
+        assign("Writer", list_to_string(credit_writer_list))
+        assign("Penciller", list_to_string(credit_penciller_list))
+        assign("Inker", list_to_string(credit_inker_list))
+        assign("Colorist", list_to_string(credit_colorist_list))
+        assign("Letterer", list_to_string(credit_letterer_list))
+        assign("CoverArtist", list_to_string(credit_cover_list))
+        assign("Editor", list_to_string(credit_editor_list))
 
         assign("Publisher", metadata.publisher)
         assign("Imprint", metadata.imprint)
@@ -197,8 +178,7 @@ class ComicInfoXml:
         assign("LanguageISO", metadata.language)
         assign("Format", metadata.format)
         assign("AgeRating", metadata.maturity_rating)
-        if metadata.black_and_white is not None and metadata.black_and_white:
-            ET.SubElement(root, "BlackAndWhite").text = "Yes"
+        assign("BlackAndWhite", "Yes" if metadata.black_and_white else None)
         assign("Manga", metadata.manga)
         assign("Characters", metadata.characters)
         assign("Teams", metadata.teams)
@@ -206,14 +186,21 @@ class ComicInfoXml:
         assign("ScanInformation", metadata.scan_info)
 
         #  loop and add the page entries under pages node
-        if len(metadata.pages) > 0:
+        pages_node = root.find("Pages")
+        if pages_node is not None:
+            pages_node.clear()
+        else:
             pages_node = ET.SubElement(root, "Pages")
-            for page_dict in metadata.pages:
-                page_node = ET.SubElement(pages_node, "Page")
-                page_node.attrib = page_dict
+
+        for page_dict in metadata.pages:
+            page = page_dict
+            if "Image" in page:
+                page["Image"] = str(page["Image"])
+            page_node = ET.SubElement(pages_node, "Page")
+            page_node.attrib = dict(sorted(page_dict.items()))
 
         # self pretty-print
-        self.indent(root)
+        self._indent(root)
 
         # wrap it in an ElementTree instance, and save as XML
         tree = ET.ElementTree(root)
@@ -221,49 +208,48 @@ class ComicInfoXml:
 
     @classmethod
     def convert_xml_to_metadata(cls, tree: ET.ElementTree) -> GenericMetadata:
-
         root = tree.getroot()
 
         if root.tag != "ComicInfo":
             raise ValueError("Metadata is not ComicInfo format")
 
+        def get(name):
+            tag = root.find(name)
+            if tag is None:
+                return None
+            return tag.text
+
         metadata = GenericMetadata()
+        metadata.series = xlate(get("Series"))
+        metadata.title = xlate(get("Title"))
+        metadata.issue = IssueString(xlate(get("Number"))).as_string()
+        metadata.issue_count = xlate(get("Count"), True)
+        metadata.volume = xlate(get("Volume"), True)
+        metadata.alternate_series = xlate(get("AlternateSeries"))
+        metadata.alternate_number = IssueString(xlate(get("AlternateNumber"))).as_string()
+        metadata.alternate_count = xlate(get("AlternateCount"), True)
+        metadata.comments = xlate(get("Summary"))
+        metadata.notes = xlate(get("Notes"))
+        metadata.year = xlate(get("Year"), True)
+        metadata.month = xlate(get("Month"), True)
+        metadata.day = xlate(get("Day"), True)
+        metadata.publisher = xlate(get("Publisher"))
+        metadata.imprint = xlate(get("Imprint"))
+        metadata.genre = xlate(get("Genre"))
+        metadata.web_link = xlate(get("Web"))
+        metadata.language = xlate(get("LanguageISO"))
+        metadata.format = xlate(get("Format"))
+        metadata.manga = xlate(get("Manga"))
+        metadata.characters = xlate(get("Characters"))
+        metadata.teams = xlate(get("Teams"))
+        metadata.locations = xlate(get("Locations"))
+        metadata.page_count = xlate(get("PageCount"), True)
+        metadata.scan_info = xlate(get("ScanInformation"))
+        metadata.story_arc = xlate(get("StoryArc"))
+        metadata.series_group = xlate(get("SeriesGroup"))
+        metadata.maturity_rating = xlate(get("AgeRating"))
 
-        # Helper function
-        def xlate(tag: str) -> Optional[str]:
-            node = root.find(tag)
-            return node.text if node is not None else None
-
-        metadata.series = xlate("Series")
-        metadata.title = xlate("Title")
-        metadata.issue = xlate("Number")
-        metadata.issue_count = xlate("Count")
-        metadata.volume = xlate("Volume")
-        metadata.alternate_series = xlate("AlternateSeries")
-        metadata.alternate_number = xlate("AlternateNumber")
-        metadata.alternate_count = xlate("AlternateCount")
-        metadata.comments = xlate("Summary")
-        metadata.notes = xlate("Notes")
-        metadata.year = xlate("Year")
-        metadata.month = xlate("Month")
-        metadata.day = xlate("Day")
-        metadata.publisher = xlate("Publisher")
-        metadata.imprint = xlate("Imprint")
-        metadata.genre = xlate("Genre")
-        metadata.web_link = xlate("Web")
-        metadata.language = xlate("LanguageISO")
-        metadata.format = xlate("Format")
-        metadata.manga = xlate("Manga")
-        metadata.characters = xlate("Characters")
-        metadata.teams = xlate("Teams")
-        metadata.locations = xlate("Locations")
-        metadata.page_count = xlate("PageCount")
-        metadata.scan_info = xlate("ScanInformation")
-        metadata.story_arc = xlate("StoryArc")
-        metadata.series_group = xlate("SeriesGroup")
-        metadata.maturity_rating = xlate("AgeRating")
-
-        tmp = xlate("BlackAndWhite")
+        tmp = xlate(get("BlackAndWhite"))
         metadata.black_and_white = False
         if tmp is not None and tmp.lower() in ["yes", "true", "1"]:
             metadata.black_and_white = True
@@ -288,20 +274,20 @@ class ComicInfoXml:
         pages_node = root.find("Pages")
         if pages_node is not None:
             for page in pages_node:
+                if "Image" in page.attrib:
+                    page.attrib["Image"] = int(page.attrib["Image"])
                 metadata.pages.append(page.attrib)
-                # print page.attrib
 
         metadata.is_empty = False
 
         return metadata
 
-    def write_to_external_file(self, filename: str, metadata: GenericMetadata) -> None:
-
-        tree = self.convert_metadata_to_xml(metadata)
-        # ET.dump(tree)
-        tree.write(filename, encoding="utf-8")
+    def write_to_external_file(
+        self, filename: str, metadata: GenericMetadata, xml=None
+    ) -> None:
+        tree = self.convert_metadata_to_xml(metadata, xml)
+        tree.write(filename, encoding="utf-8", xml_declaration=True)
 
     def read_from_external_file(self, filename: str) -> GenericMetadata:
-
         tree = ET.parse(filename)
         return self.convert_xml_to_metadata(tree)
