@@ -1,5 +1,5 @@
 """ Tests for comic archive files """
-import os
+import sys
 import zipfile
 from pathlib import Path
 
@@ -36,9 +36,7 @@ def test_cb7_writing_with_no_metadata(fake_cb7: ComicArchive) -> None:
 
 
 # Skip test for windows, until some with a windows box can help debug this.
-@pytest.mark.skipif(
-    os.name == "nt", reason="Need someone with a Windows box to help with debugging."
-)
+@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_cb7_test_metadata(tmp_path: Path, fake_metadata: GenericMetadata) -> None:
     """Test to determine if a cb7 has metadata"""
 
@@ -215,6 +213,8 @@ def test_archive_apply_file_info_to_metadata(fake_cbz: ComicArchive) -> None:
     assert test_md.page_count == "5"
 
 
+# Skip test for windows, until some with a windows box can help debug this.
+@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_archive_export_to_cb7(tmp_path, fake_cbz: ComicArchive) -> None:
     fn = tmp_path / "fake_export.cb7"
     assert fake_cbz.export_as_cb7(fn) is True
