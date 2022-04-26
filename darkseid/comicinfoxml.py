@@ -64,7 +64,9 @@ class ComicInfoXml:
         tree = ET.ElementTree(ET.fromstring(string))
         return self.convert_xml_to_metadata(tree)
 
-    def string_from_metadata(self, metadata: GenericMetadata, xml=None) -> str:
+    def string_from_metadata(
+        self, metadata: GenericMetadata, xml: Optional[any] = None
+    ) -> str:
         tree = self.convert_metadata_to_xml(metadata, xml)
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
 
@@ -108,7 +110,7 @@ class ComicInfoXml:
             else:
                 et_entry = root.find(cix_entry)
                 if et_entry is not None:
-                    et_entry.clear()
+                    root.remove(et_entry)
 
         assign("Title", metadata.title)
         assign("Series", metadata.series)
