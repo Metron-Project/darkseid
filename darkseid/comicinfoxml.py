@@ -256,20 +256,20 @@ class ComicInfoXml:
         if tmp is not None and tmp.lower() in ["yes", "true", "1"]:
             metadata.black_and_white = True
         # Now extract the credit info
-        for credit_node in root:
+        for n in root:
             if (
-                credit_node.tag == "Writer"
-                or credit_node.tag == "Penciller"
-                or credit_node.tag == "Inker"
-                or credit_node.tag == "Colorist"
-                or credit_node.tag == "Letterer"
-                or credit_node.tag == "Editor"
-            ) and credit_node.text is not None:
-                for name in credit_node.text.split(","):
-                    metadata.add_credit(name.strip(), credit_node.tag)
+                n.tag == "Writer"
+                or n.tag == "Penciller"
+                or n.tag == "Inker"
+                or n.tag == "Colorist"
+                or n.tag == "Letterer"
+                or n.tag == "Editor"
+            ) and n.text is not None:
+                for name in n.text.split(","):
+                    metadata.add_credit(name.strip(), n.tag)
 
-            if credit_node.tag == "CoverArtist" and credit_node.text is not None:
-                for name in credit_node.text.split(","):
+            if n.tag == "CoverArtist" and n.text is not None:
+                for name in n.text.split(","):
                     metadata.add_credit(name.strip(), "Cover")
 
         # parse page data now
