@@ -18,6 +18,16 @@ def fake_metadata():
     meta_data.series = "Aquaman"
     meta_data.issue = "0"
     meta_data.title = "A Crash of Symbols"
+    meta_data.publisher = "DC Comics"
+    meta_data.year = 1994
+    meta_data.month = 12
+    meta_data.day = 1
+    meta_data.volume = 1
+    meta_data.story_arc = "Final Crisis"
+    meta_data.characters = "Aquaman; Mera; Garth"
+    meta_data.teams = "Justice League; Teen Titans"
+    meta_data.comments = "Just some sample metadata."
+    meta_data.black_and_white = True
     meta_data.is_empty = False
 
     return meta_data

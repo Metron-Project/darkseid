@@ -118,6 +118,15 @@ def test_archive_from_img_dir(tmp_path: Path, fake_metadata: GenericMetadata) ->
     assert res.series == fake_metadata.series
     assert res.issue == fake_metadata.issue
     assert res.title == fake_metadata.title
+    assert res.year == fake_metadata.year
+    assert res.month == fake_metadata.month
+    assert res.day == fake_metadata.day
+    assert res.volume == fake_metadata.volume
+    assert res.story_arc == fake_metadata.story_arc
+    assert res.characters == fake_metadata.characters
+    assert res.teams == fake_metadata.teams
+    assert res.black_and_white == fake_metadata.black_and_white
+    assert res.comments == fake_metadata.comments
 
 
 def test_zip_file_exists(fake_cbz: ComicArchive) -> None:

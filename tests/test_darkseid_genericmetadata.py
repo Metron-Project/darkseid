@@ -8,7 +8,22 @@ COVER = "Cover"
 
 
 def test_metadata_print_str(fake_metadata):
-    assert str(fake_metadata) == "series: Aquaman\nissue:  0\ntitle:  A Crash of Symbols\n"
+    expect_res = (
+        "series:          Aquaman\n"
+        "issue:           0\n"
+        "title:           A Crash of Symbols\n"
+        "publisher:       DC Comics\n"
+        "year:            1994\n"
+        "month:           12\n"
+        "day:             1\n"
+        "volume:          1\n"
+        "black_and_white: True\n"
+        "story_arc:       Final Crisis\n"
+        "characters:      Aquaman; Mera; Garth\n"
+        "teams:           Justice League; Teen Titans\n"
+        "comments:        Just some sample metadata.\n"
+    )
+    assert str(fake_metadata) == expect_res
 
 
 def test_no_metadata_print_str():
