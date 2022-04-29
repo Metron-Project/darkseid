@@ -122,6 +122,7 @@ class SevenZipArchiver:
         self.path = path
 
     def read_archive_file(self, archive_file: str):
+        """Read the contents of a comic archive"""
         data = ""
         try:
             with py7zr.SevenZipFile(self.path, "r") as zf:
@@ -140,6 +141,7 @@ class SevenZipArchiver:
         return data
 
     def remove_archive_file(self, archive_file: str) -> bool:
+        """Returns a boolean when attempting to remove a file from an archive"""
         try:
             self._rebuild_seven_zipfile([archive_file])
         except py7zr.Bad7zFile:
@@ -161,6 +163,7 @@ class SevenZipArchiver:
             return False
 
     def get_archive_filename_list(self) -> List[str]:
+        """Returns a list of the filenames in an archive"""
         try:
             with py7zr.SevenZipFile(self.path, "r") as zf:
                 namelist = zf.getnames()
@@ -491,6 +494,7 @@ class ComicArchive:
         return metadata
 
     def export_as_cb7(self, new_7zip_filename: Path) -> bool:
+        """Export CBZ archive to CB7 format."""
         if self.archive_type == self.ArchiveType.zip:
             zip_archiver = SevenZipArchiver(new_7zip_filename)
         else:
