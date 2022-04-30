@@ -50,7 +50,6 @@ seed-isort-config = "^2.2.0"
 pre-commit = "^2.14.0"
 pyupgrade = "^2.29.0"
 tox = "^3.24.4"
-pytest-xdist = "^2.5.0"
 lxml = "^4.8.0"
 
 [build-system]
@@ -83,4 +82,4 @@ source = ["darkseid"]
 show_missing = true
 
 [tool.pytest.ini_options]
-addopts = ["--cov", "-n 3"]
+addopts = ["--cov"]
