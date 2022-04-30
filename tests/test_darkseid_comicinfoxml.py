@@ -1,4 +1,6 @@
 """ Tests for ComicInfo Tags """
+from pathlib import Path
+
 import pytest
 from lxml import etree
 
@@ -15,11 +17,14 @@ def test_meta_data():
     meta_data.issue = "1"
     meta_data.year = 1993
     meta_data.day = 15
+    meta_data.month = 4
+    meta_data.volume = 3
     meta_data.add_credit("Peter David", "Writer")
     meta_data.add_credit("Martin Egeland", "Penciller")
     meta_data.add_credit("Martin Egeland", "Cover")
     meta_data.add_credit("Kevin Dooley", "Editor")
     meta_data.add_credit("Howard Shum", "Inker")
+    meta_data.add_credit("Howard Shum", "Cover")
     meta_data.add_credit("Tom McCraw", "Colorist")
     meta_data.add_credit("Dan Nakrosis", "Letterer")
     return meta_data
@@ -34,14 +39,14 @@ def validate(xml_path: str, xsd_path: str) -> bool:
     return xmlschema.validate(xml_doc)
 
 
-def test_metadata_from_xml(test_meta_data):
+def test_metadata_from_xml(test_meta_data: GenericMetadata) -> None:
     """Simple test of creating the ComicInfo"""
     res = ComicInfoXml().string_from_metadata(test_meta_data)
     # TODO: add more asserts to verify data.
     assert res is not None
 
 
-def test_meta_write_to_file(test_meta_data, tmp_path):
+def test_meta_write_to_file(test_meta_data: GenericMetadata, tmp_path: Path) -> None:
     """Test of writing the metadata to a file"""
     tmp_file = tmp_path / "test-write.xml"
     ComicInfoXml().write_to_external_file(tmp_file, test_meta_data)
@@ -51,7 +56,7 @@ def test_meta_write_to_file(test_meta_data, tmp_path):
     assert validate(tmp_file, CI_XSD) is True
 
 
-def test_read_from_file(test_meta_data, tmp_path):
+def test_read_from_file(test_meta_data: GenericMetadata, tmp_path: Path) -> None:
     """Test to read in the data from a file"""
     tmp_file = tmp_path / "test-read.xml"
     # Write metadata to file
@@ -65,3 +70,4 @@ def test_read_from_file(test_meta_data, tmp_path):
     assert new_md.year == test_meta_data.year
     assert new_md.month == test_meta_data.month
     assert new_md.day == test_meta_data.day
+    assert new_md.credits[0] == test_meta_data.credits[0]

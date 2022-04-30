@@ -5,6 +5,7 @@
 
 
 import xml.etree.ElementTree as ET
+from re import split
 from typing import List, Optional, Union
 
 from .genericmetadata import GenericMetadata
@@ -69,6 +70,11 @@ class ComicInfoXml:
     ) -> str:
         tree = self.convert_metadata_to_xml(metadata, xml)
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
+
+    @classmethod
+    def _split_sting(cls, string: str, delimiters: List[str]) -> List[str]:
+        pattern = r"|".join(delimiters)
+        return split(pattern, string)
 
     def _indent(self, elem: ET.Element, level: int = 0) -> None:
         # for making the XML output readable
@@ -208,8 +214,7 @@ class ComicInfoXml:
         tree = ET.ElementTree(root)
         return tree
 
-    @classmethod
-    def convert_xml_to_metadata(cls, tree: ET.ElementTree) -> GenericMetadata:
+    def convert_xml_to_metadata(self, tree: ET.ElementTree) -> GenericMetadata:
         root = tree.getroot()
 
         if root.tag != "ComicInfo":
@@ -265,11 +270,11 @@ class ComicInfoXml:
                 or n.tag == "Letterer"
                 or n.tag == "Editor"
             ) and n.text is not None:
-                for name in n.text.split(","):
+                for name in self._split_sting(n.text, [",", ";"]):
                     metadata.add_credit(name.strip(), n.tag)
 
             if n.tag == "CoverArtist" and n.text is not None:
-                for name in n.text.split(","):
+                for name in self._split_sting(n.text, [",", ";"]):
                     metadata.add_credit(name.strip(), "Cover")
 
         # parse page data now
