@@ -270,11 +270,11 @@ class ComicInfoXml:
                 or n.tag == "Letterer"
                 or n.tag == "Editor"
             ) and n.text is not None:
-                for name in self._split_sting(n.text, [",", ";"]):
+                for name in self._split_sting(n.text, [";"]):
                     metadata.add_credit(name.strip(), n.tag)
 
             if n.tag == "CoverArtist" and n.text is not None:
-                for name in self._split_sting(n.text, [",", ";"]):
+                for name in self._split_sting(n.text, [";"]):
                     metadata.add_credit(name.strip(), "Cover")
 
         # parse page data now
