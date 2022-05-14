@@ -36,5 +36,4 @@ string_test_values = {
 
 @pytest.mark.parametrize("issue, expected, pad", string_test_values)
 def test_issue_string_monsters_unleashed(issue, expected, pad):
-    val = IssueString("1.MU").as_string(3)
     assert IssueString(issue).as_string(pad) == expected
