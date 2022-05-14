@@ -1,51 +1,40 @@
+import pytest
 from darkseid.issuestring import IssueString
 
-
-def test_issue_string_pad():
-    val = IssueString("1").as_string(pad=3)
-    assert val == "001"
-
-
-def test_issue_float():
-    val = IssueString("1½").as_float()
-    assert val == 1.5
-
-
-def test_issue_float_half():
-    val = IssueString("½").as_float()
-    assert val == 0.5
+float_test_values = {
+    ("1½", 1.5),
+    ("½", 0.5),
+    ("0.5", 0.5),
+    ("0", 0.0),
+    ("1", 1.0),
+    ("22.BEY", 22.0),
+    ("22A", 22.0),
+    ("22-A", 22.0),
+}
 
 
-def test_issue_verify_float():
-    val = IssueString("1.5").as_float()
-    assert val == 1.5
+@pytest.mark.parametrize("issue, expected", float_test_values)
+def test_float_strings(issue, expected):
+    assert IssueString(issue).as_float() == expected
 
 
-def test_issue_string_no_value_as_int():
-    val = IssueString("").as_int()
-    assert val is None
+int_test_values = {("1", 1), ("1.5", 1), ("", None)}
 
 
-def test_issue_int():
-    val = IssueString("1").as_int()
-    assert val == 1
+@pytest.mark.parametrize("issue, expected", int_test_values)
+def test_issue_int(issue, expected):
+    assert IssueString(issue).as_int() == expected
 
 
-def test_issue_float_as_int():
-    val = IssueString("1.5").as_int()
-    assert val == 1
+string_test_values = {
+    ("1", "001", 3),
+    ("1.MU", "001.MU", 3),
+    ("-1", "-001", 3),
+    ("Test", "Test", 0),
+}
 
 
-def test_issue_string_monsters_unleashed():
+@pytest.mark.parametrize("issue, expected, pad", string_test_values)
+def test_issue_string_monsters_unleashed(issue, expected, pad):
     val = IssueString("1.MU").as_string(3)
-    assert val == "001.MU"
-
-
-def test_issue_string_minus_one():
-    val = IssueString("-1").as_string(3)
-    assert val == "-001"
-
-
-def test_issue_string_none_value():
-    val = IssueString("Test").as_string()
-    assert val == "Test"
+    assert IssueString(issue).as_string(pad) == expected
