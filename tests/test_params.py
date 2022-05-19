@@ -58,7 +58,8 @@ test_file_names = [
         },
     ),
     (
-        "Aquaman 80th Anniversary 100-Page Super Spectacular (2021) 001 (2021) (Digital) (BlackManta-Empire).cbz",
+        "Aquaman 80th Anniversary 100-Page Super Spectacular (2021) 001 "
+        "(2021) (Digital) (BlackManta-Empire).cbz",
         "numbers in series",
         {
             "issue": "1",
