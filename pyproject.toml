@@ -16,7 +16,6 @@ classifiers=[
     "Development Status :: 5 - Production/Stable",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Natural Language :: English",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Topic :: Software Development :: Libraries",
@@ -30,7 +29,7 @@ classifiers=[
 keywords=["comics", "comic", "metadata", "tagging", "tagger"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 Pillow = "^9.0.0"
 natsort = "^8.0.0"
 
@@ -40,10 +39,12 @@ sphinxcontrib-napoleon = {version="^0.7", optional=true}
 py7zr = "^0.18.3"
 
 [tool.poetry.dev-dependencies]
-flake8 = "^3.9.2"
+flake8 = "^4.0.0"
+flake8-bugbear = "^22.4.25"
 black = "^21.7b0"
-pytest = "^6.2.4"
+pytest = "^7.0.0"
 pytest-cov = "^2.12.1"
+pytest-flake8 = "^1.1.1"
 pylint = "^2.10.2"
 isort = "^5.9.3"
 seed-isort-config = "^2.2.0"
@@ -58,7 +59,8 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 95
-target-version = [ "py38",]
+target-version = [ "py39",]
+exclude = "/(.git|.mypy_cache|.pytest_cache|.venv|__pycache__|dist|node_modules|test-results|typings)/"
 
 [tool.isort]
 profile = "black"
@@ -77,9 +79,42 @@ docs = ["sphinx-rtd-theme", "sphinxcontrib-napoleon"]
 
 [tool.coverage.run]
 source = ["darkseid"]
+branch = true
+concurrency = ["multiprocessing"]
+omit = [
+  ".git/*",
+  ".mypy_cache/*",
+  ".pytest_cache/*",
+  ".venv/*",
+  "*__pycache__*",
+  "dist/*",
+  "node_modules/*",
+  "tests/*",
+  "test-results/*",
+  "typings/*"
+]
+
+[tool.pytest.ini_options]
+addopts = """
+  -ra
+  --strict-markers
+  --cov
+  --cov-report=html
+  --cov-report=term
+  --flake8
+  --ignore=.git
+  --ignore=.pytest_cache
+  --ignore=.venv
+  --ignore=dist
+  --ignore=node_modules
+  --ignore=test-results
+  --ignore=typings
+  --ignore-glob=*__pycache__*
+  -p no:warnings
+"""
 
 [tool.coverage.report]
 show_missing = true
 
-[tool.pytest.ini_options]
-addopts = ["--cov"]
+[tool.coverage.html]
+directory = "test-results/coverage"
