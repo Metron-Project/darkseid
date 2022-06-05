@@ -6,13 +6,17 @@ from pathlib import Path
 import py7zr
 import pytest
 
-from darkseid.comicarchive import ComicArchive
+from darkseid.comicarchive import ComicArchive, UnknownArchiver
 from darkseid.genericmetadata import GenericMetadata
 from tests.conftest import IMG_DIR
 
 # Uses to test image bytes
 PAGE_TMPL = str(IMG_DIR / "CaptainScience#1_{page_num}.jpg")
 PAGE_FIVE = PAGE_TMPL.format(page_num="05")
+
+#######
+# CB7 #
+#######
 
 
 def test_cb7_file_exists(fake_cb7: ComicArchive) -> None:
@@ -99,7 +103,9 @@ def test_cb7_apply_file_info_to_metadata(fake_cb7: ComicArchive) -> None:
     assert test_md.page_count == "5"
 
 
-# ------------------------------------------------------------------
+#######
+# CBZ #
+#######
 def test_archive_from_img_dir(tmp_path: Path, fake_metadata: GenericMetadata) -> None:
     z_file: Path = tmp_path / "Aquaman v1 #001 (of 08) (1994).cbz"
     with zipfile.ZipFile(z_file, "w") as zf:
@@ -145,7 +151,7 @@ def test_whether_text_file_is_comic_archive(tmp_path: Path) -> None:
     assert ca.seems_to_be_a_comic_archive() is False
 
 
-def test_archive_number_of_pages(fake_cbz) -> None:
+def test_archive_number_of_pages(fake_cbz: ComicArchive) -> None:
     """Test to determine number of pages in a comic archive"""
     assert fake_cbz.get_number_of_pages() == 5
 
@@ -221,3 +227,19 @@ def test_archive_export_to_cb7(tmp_path, fake_cbz: ComicArchive) -> None:
     ca = ComicArchive(fn)
     assert ca.is_sevenzip() is True
     assert ca.get_number_of_pages() == 5
+
+
+###########
+# Unknown #
+###########
+
+
+def test_unknown_archive(tmp_path: Path) -> None:
+    fn = tmp_path / "unknown"
+    fn2 = tmp_path / "other"
+    ca = UnknownArchiver(fn)
+    oa = UnknownArchiver(fn2)
+    txt_fn = "test.txt"
+    assert ca.get_filename_list() == []
+    assert ca.remove_file(txt_fn) is False
+    assert ca.copy_from_archive(oa) is False
