@@ -196,6 +196,7 @@ def test_removing_metadata_on_comic_wo_metadata(fake_cbz: ComicArchive) -> None:
     assert fake_cbz.remove_metadata() is True
 
 
+@pytest.mark.skipif(sys.platform in ["win32"], reason="Skip Windows.")
 def test_cbz_get_random_page(fake_cbz: ComicArchive) -> None:
     """Test to set if a page from a comic archive can be retrieved"""
     page = fake_cbz.get_page(4)
@@ -211,6 +212,7 @@ def test_archive_metadata_from_filename(fake_cbz: ComicArchive) -> None:
     assert test_md.issue == "1"
 
 
+@pytest.mark.skipif(sys.platform in ["win32"], reason="Skip Windows.")
 def test_archive_apply_file_info_to_metadata(fake_cbz: ComicArchive) -> None:
     """Test to apply archive info to the generic metadata"""
     test_md = GenericMetadata()
