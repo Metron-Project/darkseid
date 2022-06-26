@@ -30,10 +30,10 @@ jobs:
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
             sudo apt-get -y install unrar
-         else
-              echo "$RUNNER_OS not supported"
-              exit 1
-         fi
+          else
+            echo "$RUNNER_OS not supported"
+            exit 1
+          fi
       - name: Setup python
         uses: actions/setup-python@v2
         with:
