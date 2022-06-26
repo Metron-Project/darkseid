@@ -32,7 +32,6 @@ jobs:
             sudo apt-get -y install unrar
           else
             echo "$RUNNER_OS not supported"
-            exit 1
           fi
       - name: Setup python
         uses: actions/setup-python@v2
