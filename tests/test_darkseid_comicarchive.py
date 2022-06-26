@@ -232,6 +232,8 @@ def test_archive_export_to_cb7(tmp_path, fake_cbz: ComicArchive) -> None:
 #######
 # CBR #
 #######
+# Skip test for Windows and MacOS.
+@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_rar_file_exists(fake_rar: ComicArchive) -> None:
     """Test function that determines if a file is a rar file"""
     assert fake_rar.is_zip() is False
@@ -239,11 +241,15 @@ def test_rar_file_exists(fake_rar: ComicArchive) -> None:
     assert fake_rar.is_rar() is True
 
 
+# Skip test for Windows and MacOS.
+@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_rar_is_writable(fake_rar: ComicArchive) -> None:
     """Test to determine if rar archive is writable"""
     assert fake_rar.is_writable() is False
 
 
+# Skip test for Windows and MacOS.
+@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_rar_read_metadata(fake_rar: ComicArchive) -> None:
     """Test to read a rar files metadata"""
     md = fake_rar.read_metadata()
@@ -253,6 +259,8 @@ def test_rar_read_metadata(fake_rar: ComicArchive) -> None:
     assert md.page_count == 36
 
 
+# Skip test for Windows and MacOS.
+@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_rar_metadata_from_filename(fake_rar: ComicArchive) -> None:
     """Test to get metadata from comic archives filename"""
     test_md = fake_rar.metadata_from_filename()
@@ -260,11 +268,15 @@ def test_rar_metadata_from_filename(fake_rar: ComicArchive) -> None:
     assert test_md.issue == "1"
 
 
+# Skip test for Windows and MacOS.
+@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_rar_number_of_pages(fake_rar: ComicArchive) -> None:
     """Test to determine number of pages in a comic archive"""
     assert fake_rar.get_number_of_pages() == 36
 
 
+# Skip test for Windows and MacOS.
+@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_rar_get_random_page(fake_rar: ComicArchive) -> None:
     """Test to set if a page from a comic archive can be retrieved"""
     page = fake_rar.get_page(4)
@@ -273,6 +285,8 @@ def test_rar_get_random_page(fake_rar: ComicArchive) -> None:
     assert image == page
 
 
+# Skip test for Windows and MacOS.
+@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_rar_export_to_zip(tmp_path, fake_rar: ComicArchive) -> None:
     fn = tmp_path / "fake_export.cbz"
     assert fake_rar.export_as_zip(fn) is True
