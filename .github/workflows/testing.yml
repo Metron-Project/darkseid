@@ -33,6 +33,7 @@ jobs:
           else
             echo "$RUNNER_OS not supported"
           fi
+        shell: bash
       - name: Setup python
         uses: actions/setup-python@v2
         with:
