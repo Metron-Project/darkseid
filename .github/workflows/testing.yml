@@ -24,8 +24,18 @@ jobs:
       #----------------------------------------------
       #       check-out repo and set-up python
       #----------------------------------------------
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install unrar
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            sudo apt-get -y install unrar
+          else
+            echo "$RUNNER_OS not supported"
+          fi
+        shell: bash
+      - name: Setup python
+        uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       #----------------------------------------------

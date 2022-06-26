@@ -15,6 +15,14 @@ jobs:
       #       check-out repo and set-up python
       #----------------------------------------------
       - uses: actions/checkout@master
+      - name: Install unrar
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            sudo apt-get -y install unrar
+          else
+            echo "$RUNNER_OS not supported"
+          fi
+        shell: bash
       - name: Setup Python
         uses: actions/setup-python@master
         with:

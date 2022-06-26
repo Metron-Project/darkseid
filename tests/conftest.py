@@ -10,6 +10,7 @@ IMG_DIR = TEST_FILES_PATH / "Captain_Science_001"
 ARCHIVE_PATH = TEST_FILES_PATH / "Captain Science #001.cbz"
 CB7_PATH = TEST_FILES_PATH / "Captain Science #001.cb7"
 CI_XSD = TEST_FILES_PATH / "ComicInfo.xsd"
+RAR_PATH = TEST_FILES_PATH / "Captain Science #001-cix-cbi.cbr"
 
 
 @pytest.fixture(scope="session")
@@ -51,3 +52,8 @@ def fake_cb7() -> ComicArchive:
 @pytest.fixture(scope="session")
 def fake_cbz() -> ComicArchive:
     return ComicArchive(ARCHIVE_PATH)
+
+
+@pytest.fixture(scope="session")
+def fake_rar() -> ComicArchive:
+    return ComicArchive(RAR_PATH)
