@@ -711,6 +711,14 @@ optional = false
 python-versions = ">=3.5"
 
 [[package]]
+name = "rarfile"
+version = "4.0"
+description = "RAR archive reader for Python"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "requests"
 version = "2.27.1"
 description = "Python HTTP for Humans."
@@ -1020,7 +1028,7 @@ docs = ["sphinx-rtd-theme", "sphinxcontrib-napoleon"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "1455eac6cfc24ea6f785ae27965b082564d213b89ccefad0aeaf706afffa30dc"
+content-hash = "a23a3628b96db3b2e22029b90b3ce9abb88f798c94c51c8affd716d9d628c96a"
 
 [metadata.files]
 alabaster = [
@@ -1895,6 +1903,10 @@ pyzstd = [
     {file = "pyzstd-0.15.2-pp38-pypy38_pp73-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:f45220443598b6567cb0072354f886f9fdc861f309a8a87d89ab86e59bbff833"},
     {file = "pyzstd-0.15.2-pp38-pypy38_pp73-win_amd64.whl", hash = "sha256:a5fff428ed8d055fbf22dbd06b2804b3f4d9d857c4be30c5e0ae9efd4b0573b2"},
     {file = "pyzstd-0.15.2.tar.gz", hash = "sha256:eda9d2874a8f3823eea882125f304620f592693b3af0101c484bfc75726c8c59"},
+]
+rarfile = [
+    {file = "rarfile-4.0-py3-none-any.whl", hash = "sha256:1094869119012f95c31a6f22cc3a9edbdca61861b805241116adbe2d737b68f8"},
+    {file = "rarfile-4.0.tar.gz", hash = "sha256:67548769229c5bda0827c1663dce3f54644f9dbfba4ae86d4da2b2afd3e602a1"},
 ]
 requests = [
     {file = "requests-2.27.1-py2.py3-none-any.whl", hash = "sha256:f22fa1e554c9ddfd16e6e41ac79759e17be9e492b3587efa038054674760e72d"},
