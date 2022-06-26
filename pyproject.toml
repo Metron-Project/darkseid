@@ -32,12 +32,12 @@ keywords=["comics", "comic", "metadata", "tagging", "tagger"]
 python = "^3.9"
 Pillow = "^9.0.0"
 natsort = "^8.0.0"
+py7zr = "^0.18.3"
+rarfile = "^4.0"
 
 # Optional dependencies
 sphinx-rtd-theme = {version="^0.5.2", optional=true}
 sphinxcontrib-napoleon = {version="^0.7", optional=true}
-py7zr = "^0.18.3"
-rarfile = "^4.0"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^4.0.0"
