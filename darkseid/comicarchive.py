@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, List, Optional, cast
 
 import py7zr
+import rarfile
 from natsort import natsorted, ns
 from PIL import Image
 
@@ -43,6 +44,44 @@ class UnknownArchiver:
         return []
 
     def copy_from_archive(self, other_archive: "UnknownArchiver") -> bool:
+        return False
+
+
+# ------------------------------------------------------------------
+class RarArchiver:
+    """Rar implementation"""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+
+    def read_file(self, archive_file: str) -> bytes:
+        """Read the contents of a comic archive"""
+        archive = rarfile.RarFile(self.path)
+        try:
+            return archive.read(archive_file)
+        except rarfile.RarCannotExec as e:
+            logger.error(f"Error reading rar archive [{e}]: {self.path} :: {archive_file}")
+            raise rarfile.RarCannotExec from e
+
+    def remove_file(self) -> bool:
+        """Rar files are read-only, so we return False."""
+        return False
+
+    def write_file(self) -> bool:
+        """Rar files are read-only, so we return False."""
+        return False
+
+    def get_filename_list(self) -> List[str]:
+        """Returns a list of the filenames in an archive"""
+        archive = rarfile.RarFile(self.path)
+        try:
+            return sorted(archive.namelist())
+        except rarfile.RarCannotExec as e:
+            logger.error(f"Error reading rar archive [{e}]: {self.path}")
+            raise rarfile.RarCannotExec from e
+
+    def copy_from_archive(self) -> bool:
+        """Rar files are read-only, so we return False."""
         return False
 
 
@@ -124,6 +163,19 @@ class ZipArchiver:
             return True
         except (zipfile.BadZipfile, OSError) as e:
             logger.error(f"Error rebuilding zip file [{e}]: {self.path}")
+            return False
+
+    def copy_from_archive(self, other_archive: UnknownArchiver) -> bool:
+        """Replace the current zip with one copied from another archive"""
+        try:
+            with zipfile.ZipFile(self.path, mode="w", allowZip64=True) as zout:
+                for filename in other_archive.get_filename_list():
+                    data = other_archive.read_file(filename)
+                    if data is not None:
+                        zout.writestr(filename, data)
+            return True
+        except Exception as e:
+            logger.warning(f"Error while copying to {self.path}: {e}")
             return False
 
 
@@ -217,7 +269,7 @@ class ComicArchive:
     class ArchiveType:
         """Types of archives supported. Currently only .cbz and .cb7"""
 
-        zip, sevenzip, unknown = list(range(3))
+        zip, sevenzip, rar, unknown = list(range(4))
 
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -234,6 +286,9 @@ class ComicArchive:
         elif self.zip_test():
             self.archive_type: int = self.ArchiveType.zip
             self.archiver = ZipArchiver(self.path)
+        elif self.rar_test():
+            self.archive_type: int = self.ArchiveType.rar
+            self.archiver = RarArchiver(self.path)
         else:
             self.archive_type = self.ArchiveType.unknown
             self.archiver = UnknownArchiver(self.path)
@@ -245,6 +300,10 @@ class ComicArchive:
         self.page_list = None
         self.metadata = None
 
+    def rar_test(self) -> bool:
+        """Test whether an archive is a rar file"""
+        return rarfile.is_rarfile(self.path)
+
     def sevenzip_test(self) -> bool:
         """Tests whether an archive is a sevenzipfile"""
         return py7zr.is_7zfile(self.path)
@@ -253,6 +312,10 @@ class ComicArchive:
         """Tests whether an archive is a zipfile"""
 
         return zipfile.is_zipfile(self.path)
+
+    def is_rar(self) -> bool:
+        """Returns a boolean as to whether an archive is a rarfile."""
+        return self.archive_type == self.ArchiveType.rar
 
     def is_sevenzip(self) -> bool:
         """Returns a boolean as to whether an archive is a sevenzipfile"""
@@ -269,12 +332,18 @@ class ComicArchive:
         if self.archive_type == self.ArchiveType.unknown:
             return False
 
+        if self.is_rar():
+            return False
+
         return bool(os.access(self.path, os.W_OK))
 
     def seems_to_be_a_comic_archive(self) -> bool:
         """Returns a boolean as to whether the file is a comic archive"""
 
-        return bool((self.is_zip() or self.is_sevenzip()) and (self.get_number_of_pages() > 0))
+        return bool(
+            (self.is_zip() or self.is_sevenzip() or self.is_rar())
+            and (self.get_number_of_pages() > 0)
+        )
 
     def get_page(self, index: int) -> Optional[bytes]:
         """Returns an image(page) from an archive"""
@@ -467,9 +536,19 @@ class ComicArchive:
 
     def export_as_cb7(self, new_7zip_filename: Path) -> bool:
         """Export CBZ archive to CB7 format."""
+        if self.archive_type == self.ArchiveType.sevenzip:
+            # nothing to do, we're already a 7zip
+            return True
+
+        zip_archiver = SevenZipArchiver(new_7zip_filename)
+
+        return zip_archiver.copy_from_archive(self.archiver)
+
+    def export_as_zip(self, zipfilename: Path) -> bool:
         if self.archive_type == self.ArchiveType.zip:
-            zip_archiver = SevenZipArchiver(new_7zip_filename)
-        else:
-            return False
+            # nothing to do, we're already a zip
+            return True
+
+        zip_archiver = ZipArchiver(zipfilename)
 
         return zip_archiver.copy_from_archive(self.archiver)
