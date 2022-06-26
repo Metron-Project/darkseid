@@ -24,8 +24,13 @@ jobs:
       #----------------------------------------------
       #       check-out repo and set-up python
       #----------------------------------------------
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install unrar
+        run: |
+          sudo apt-get -y install unrar
+      - name: Setup python
+        uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       #----------------------------------------------
