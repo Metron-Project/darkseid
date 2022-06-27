@@ -23,7 +23,7 @@ copyright = "2021, Brian Pepple"
 author = "Brian Pepple"
 
 # The full version, including alpha/beta/rc tags
-release = "1.2.3"
+release = "1.2.4"
 
 
 # -- General configuration ---------------------------------------------------
