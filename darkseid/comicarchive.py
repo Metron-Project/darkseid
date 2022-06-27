@@ -58,8 +58,10 @@ class RarArchiver:
     def read_file(self, archive_file: str) -> bytes:
         """Read the contents of a comic archive"""
         try:
-            archive = rarfile.RarFile(self.path)
-            return archive.read(archive_file)
+            data = bytes()
+            with rarfile.RarFile(self.path) as rf:
+                data = rf.read(archive_file)
+            return data
         except rarfile.RarCannotExec as e:
             raise RarError(e) from e
 
@@ -74,8 +76,10 @@ class RarArchiver:
     def get_filename_list(self) -> List[str]:
         """Returns a list of the filenames in an archive"""
         try:
-            archive = rarfile.RarFile(self.path)
-            return sorted(archive.namelist())
+            fn_list = []
+            with rarfile.RarFile(self.path) as rf:
+                fn_list = sorted(rf.namelist())
+            return fn_list
         except rarfile.RarCannotExec as e:
             raise RarError(e) from e
 
