@@ -116,7 +116,7 @@ class ZipArchiver:
         # another solution can be found
         files = self.get_filename_list()
         if archive_file in files:
-            self.rebuild([archive_file])
+            self._rebuild_zipfile([archive_file])
 
         try:
             # now just add the archive file as a new one
