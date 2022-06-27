@@ -175,6 +175,9 @@ class ZipArchiver:
                         zout.writestr(filename, data)
             return True
         except Exception as e:
+            # Remove any partial files created
+            if self.path.exists():
+                self.path.unlink()
             logger.warning(f"Error while copying to {self.path}: {e}")
             return False
 
@@ -255,6 +258,9 @@ class SevenZipArchiver:
                         zout.writestr(data, fname)
             return True
         except Exception as e:
+            # Remove any partial files created
+            if self.path.exists():
+                self.path.unlink()
             logger.warning(f"Error while copying to {self.path}: {e}")
             return False
 
