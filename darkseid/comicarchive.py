@@ -17,9 +17,10 @@ import rarfile
 from natsort import natsorted, ns
 from PIL import Image
 
-from .comicinfoxml import ComicInfoXml
-from .filenameparser import FileNameParser
-from .genericmetadata import GenericMetadata
+from darkseid.comicinfoxml import ComicInfoXml
+from darkseid.exceptions import RarError
+from darkseid.filenameparser import FileNameParser
+from darkseid.genericmetadata import GenericMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ class RarArchiver:
             archive = rarfile.RarFile(self.path)
             return archive.read(archive_file)
         except rarfile.RarCannotExec as e:
-            logger.error(f"Error reading rar archive [{e}]: {self.path} :: {archive_file}")
+            raise RarError(e) from e
 
     def remove_file(self) -> bool:
         """Rar files are read-only, so we return False."""
@@ -76,7 +77,7 @@ class RarArchiver:
             archive = rarfile.RarFile(self.path)
             return sorted(archive.namelist())
         except rarfile.RarCannotExec as e:
-            logger.error(f"Error reading rar archive [{e}]: {self.path}")
+            raise RarError(e) from e
 
     def copy_from_archive(self) -> bool:
         """Rar files are read-only, so we return False."""
