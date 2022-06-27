@@ -38,11 +38,13 @@ def test_recursive_list_with_file(tmp_path: Path) -> None:
     temp_cb7.write_text("blah")
     temp_file = tmp_path / "test.cbz"
     temp_file.write_text("foo")
+    temp_cbr = tmp_path / "fugazi.cbr"
+    temp_cbr.write_text("You are not what you own")
     # The following file should be *excluded* from results
     temp_txt = tmp_path / "fail.txt"
     temp_txt.write_text("yikes")
 
-    expected_result = [temp_cb7, temp_file]
+    expected_result = [temp_cb7, temp_cbr, temp_file]
     result = utils.get_recursive_filelist([tmp_path])
 
     assert result == expected_result
