@@ -61,7 +61,6 @@ class RarArchiver:
             return archive.read(archive_file)
         except rarfile.RarCannotExec as e:
             logger.error(f"Error reading rar archive [{e}]: {self.path} :: {archive_file}")
-            raise rarfile.RarCannotExec from e
 
     def remove_file(self) -> bool:
         """Rar files are read-only, so we return False."""
@@ -78,7 +77,6 @@ class RarArchiver:
             return sorted(archive.namelist())
         except rarfile.RarCannotExec as e:
             logger.error(f"Error reading rar archive [{e}]: {self.path}")
-            raise rarfile.RarCannotExec from e
 
     def copy_from_archive(self) -> bool:
         """Rar files are read-only, so we return False."""
