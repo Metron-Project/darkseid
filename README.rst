@@ -32,14 +32,14 @@ Installing the latest version from Github:
 
 .. code:: bash
 
-    $ git clone https://github.com/bpepple/darkseid
+    $ git clone https://github.com/Metron-Project/darkseid
     $ cd darkseid
     $ python setup.py install
 
 Bugs/Requests
 -------------
 
-Please use the `GitHub issue tracker <https://github.com/bpepple/darkseid/issues>`_ to submit bugs or request features.
+Please use the `GitHub issue tracker <https://github.com/Metron-Project/darkseid/issues>`_ to submit bugs or request features.
 
 License
 -------

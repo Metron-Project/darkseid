@@ -72,8 +72,8 @@ known_first_party = []
 known_third_party = ["PIL", "lxml", "natsort", "py7zr", "pytest", "rarfile"]
 
 [tool.poetry.urls]
-"Homepage" = "https://github.com/bpepple/darkseid"
-"Bug Tracker" = "https://github.com/bpepple/darkseid/issues"
+"Homepage" = "https://github.com/Metron-Project/darkseid"
+"Bug Tracker" = "https://github.com/Metron-Project/darkseid/issues"
 
 [tool.poetry.extras]
 docs = ["sphinx-rtd-theme", "sphinxcontrib-napoleon"]
