@@ -15,10 +15,19 @@ def test_meta_data():
     meta_data = GenericMetadata()
     meta_data.series = "Aquaman"
     meta_data.issue = "1"
+    meta_data.stories = ["Foo", "Bar"]
     meta_data.year = 1993
     meta_data.day = 15
     meta_data.month = 4
     meta_data.volume = 3
+    meta_data.characters = ["Aquaman", "Mera", "Garth"]
+    meta_data.teams = ["Atlanteans", "Justice League"]
+    meta_data.locations = ["Atlantis", "Metropolis"]
+    meta_data.genres = ["Super-Hero"]
+    meta_data.story_arcs = ["Crisis on Infinite Earths", "Death of Aquagirl"]
+    meta_data.black_and_white = True
+    meta_data.age_rating = "MA15+"
+    meta_data.manga = "YesAndRightToLeft"
     meta_data.add_credit("Peter David", "Writer")
     meta_data.add_credit("Martin Egeland", "Penciller")
     meta_data.add_credit("Martin Egeland", "Cover")
@@ -50,10 +59,32 @@ def test_meta_write_to_file(test_meta_data: GenericMetadata, tmp_path: Path) -> 
     """Test of writing the metadata to a file"""
     tmp_file = tmp_path / "test-write.xml"
     ComicInfoXml().write_to_external_file(tmp_file, test_meta_data)
-    # Read the contents of the file just written.
-    # TODO: Verify the data.
     assert tmp_file.read_text() is not None
     assert validate(tmp_file, CI_XSD) is True
+
+
+def test_invalid_age_write_to_file(tmp_path: Path) -> None:
+    """Test writing of invalid age rating value to a file."""
+    bad_metadata = GenericMetadata(age_rating="MA 15+")
+    tmp_file = tmp_path / "test-age-write.xml"
+    ci = ComicInfoXml()
+    ci.write_to_external_file(tmp_file, bad_metadata)
+    result_md = ci.read_from_external_file(tmp_file)
+    assert tmp_file.read_text() is not None
+    assert validate(tmp_file, CI_XSD) is True
+    assert result_md.age_rating == "Unknown"
+
+
+def test_invalid_manga_write_to_file(tmp_path: Path) -> None:
+    """Test writing of invalid manga value to a file."""
+    bad_metadata = GenericMetadata(manga="Foo Bar")
+    tmp_file = tmp_path / "test-manga-write.xml"
+    ci = ComicInfoXml()
+    ci.write_to_external_file(tmp_file, bad_metadata)
+    result_md = ci.read_from_external_file(tmp_file)
+    assert tmp_file.read_text() is not None
+    assert validate(tmp_file, CI_XSD) is True
+    assert result_md.manga == "Unknown"
 
 
 def test_read_from_file(test_meta_data: GenericMetadata, tmp_path: Path) -> None:
@@ -67,7 +98,13 @@ def test_read_from_file(test_meta_data: GenericMetadata, tmp_path: Path) -> None
     assert new_md is not None
     assert new_md.series == test_meta_data.series
     assert new_md.issue == test_meta_data.issue
+    assert new_md.stories == test_meta_data.stories
     assert new_md.year == test_meta_data.year
     assert new_md.month == test_meta_data.month
     assert new_md.day == test_meta_data.day
     assert new_md.credits[0] == test_meta_data.credits[0]
+    assert new_md.characters == test_meta_data.characters
+    assert new_md.teams == test_meta_data.teams
+    assert new_md.story_arcs == test_meta_data.story_arcs
+    assert new_md.locations == test_meta_data.locations
+    assert new_md.black_and_white == test_meta_data.black_and_white

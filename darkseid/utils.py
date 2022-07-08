@@ -5,7 +5,7 @@
 import itertools
 from collections import defaultdict
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 
 def get_recursive_filelist(pathlist: List[Path]) -> List[Path]:
@@ -36,6 +36,18 @@ def list_to_string(list_of_strings: List[str]) -> str:
     :type list_of_strings: list of str
     """
     return "; ".join(map(str, list_of_strings))
+
+
+def string_to_list(string: Optional[str] = None) -> List[str]:
+    """
+    Function takes a string and converts it to a list.
+    For example: "apple; banana; cherry" is changed to ["apple", "banana", "cherry"]
+
+    :param string: A string.
+    :type string: str
+    """
+    if string is not None:
+        return [x.strip() for x in string.split(";")]
 
 
 def remove_articles(text: str) -> str:
