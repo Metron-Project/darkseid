@@ -15,6 +15,26 @@ from .utils import list_to_string, string_to_list, xlate
 
 class ComicInfoXml:
 
+    ci_age_ratings = [
+        "Unknown",
+        "Adults Only 18+",
+        "Early Childhood",
+        "Everyone",
+        "Everyone 10+",
+        "G",
+        "Kids to Adults",
+        "M",
+        "MA15+",
+        "Mature 17+",
+        "PG",
+        "R18+",
+        "Rating Pending",
+        "Teen",
+        "X18+",
+    ]
+
+    ci_manga = ["Unknown", "Yes", "No", "YesAndRightToLeft"]
+
     writer_synonyms: List[str] = [
         "writer",
         "plotter",
@@ -86,6 +106,16 @@ class ComicInfoXml:
             root.attrib["xmlns:xsd"] = "https://www.w3.org/2001/XMLSchema"
 
         return root
+
+    @classmethod
+    def validate_age_rating(cls, val: Optional[str] = None) -> Optional[str]:
+        if val is not None:
+            return "Unknown" if val not in cls.ci_age_ratings else val
+
+    @classmethod
+    def validate_manga(cls, val: Optional[str] = None) -> Optional[str]:
+        if val is not None:
+            return "Unknown" if val not in cls.ci_manga else val
 
     def convert_metadata_to_xml(self, metadata: GenericMetadata, xml=None) -> ET.ElementTree:
         root = self._get_root(xml)
@@ -169,14 +199,14 @@ class ComicInfoXml:
         assign("PageCount", metadata.page_count)
         assign("LanguageISO", metadata.language)
         assign("Format", metadata.format)
-        assign("AgeRating", metadata.maturity_rating)
         assign("BlackAndWhite", "Yes" if metadata.black_and_white else None)
-        assign("Manga", metadata.manga)
+        assign("Manga", self.validate_manga(metadata.manga))
         assign("Characters", list_to_string(metadata.characters))
         assign("Teams", list_to_string(metadata.teams))
         assign("Locations", list_to_string(metadata.locations))
-        assign("StoryArc", list_to_string(metadata.story_arcs))
         assign("ScanInformation", metadata.scan_info)
+        assign("StoryArc", list_to_string(metadata.story_arcs))
+        assign("AgeRating", self.validate_age_rating(metadata.age_rating))
 
         #  loop and add the page entries under pages node
         pages_node = root.find("Pages")
@@ -239,7 +269,7 @@ class ComicInfoXml:
         metadata.scan_info = xlate(get("ScanInformation"))
         metadata.story_arcs = string_to_list(xlate(get("StoryArc")))
         metadata.series_group = xlate(get("SeriesGroup"))
-        metadata.maturity_rating = xlate(get("AgeRating"))
+        metadata.age_rating = xlate(get("AgeRating"))
 
         tmp = xlate(get("BlackAndWhite"))
         metadata.black_and_white = False

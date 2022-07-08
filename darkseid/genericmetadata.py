@@ -85,7 +85,7 @@ class GenericMetadata:
     manga: Optional[str] = None
     black_and_white: Optional[bool] = None
     page_count: Optional[int] = None
-    maturity_rating: Optional[str] = None
+    age_rating: Optional[str] = None
 
     story_arcs: List[str] = field(default_factory=list)
     series_group: Optional[str] = None
@@ -146,7 +146,7 @@ class GenericMetadata:
         assign("format", new_md.format)
         assign("manga", new_md.manga)
         assign("black_and_white", new_md.black_and_white)
-        assign("maturity_rating", new_md.maturity_rating)
+        assign("age_rating", new_md.age_rating)
         if len(new_md.story_arcs) > 0:
             assign("story_arcs", new_md.story_arcs)
         assign("series_group", new_md.series_group)
@@ -261,7 +261,7 @@ class GenericMetadata:
 
         if self.black_and_white:
             add_attr_string("black_and_white")
-        add_attr_string("maturity_rating")
+        add_attr_string("age_rating")
         if self.story_arcs:
             add_attr_string("story_arcs")
         add_attr_string("series_group")
