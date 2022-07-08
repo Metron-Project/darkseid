@@ -6,9 +6,9 @@
 
 import xml.etree.ElementTree as ET
 from re import split
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union, cast
 
-from .genericmetadata import GenericMetadata
+from .genericmetadata import GenericMetadata, ImageMetadata
 from .issuestring import IssueString
 from .utils import list_to_string, string_to_list, xlate
 
@@ -266,9 +266,10 @@ class ComicInfoXml:
         pages_node = root.find("Pages")
         if pages_node is not None:
             for page in pages_node:
-                if "Image" in page.attrib:
-                    page.attrib["Image"] = int(page.attrib["Image"])
-                metadata.pages.append(page.attrib)
+                p: dict[str, Any] = page.attrib
+                if "Image" in p:
+                    p["Image"] = int(p["Image"])
+                metadata.pages.append(cast(ImageMetadata, p))
 
         metadata.is_empty = False
 
