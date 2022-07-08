@@ -45,7 +45,8 @@ class ImageMetadata(TypedDict, total=False):
     ImageWidth: str
 
 
-class CreditMetadata(TypedDict):
+@dataclass
+class CreditMetadata:
     person: str
     role: str
     primary: bool
