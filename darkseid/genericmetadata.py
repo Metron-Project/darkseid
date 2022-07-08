@@ -9,6 +9,7 @@ possible, however lossy it might be
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2020 Brian Pepple
 
+from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, TypedDict
 
 from .utils import list_to_string
@@ -50,52 +51,58 @@ class CreditMetadata(TypedDict):
     primary: bool
 
 
+@dataclass
 class GenericMetadata:
-    def __init__(self) -> None:
 
-        self.is_empty: bool = True
-        self.tag_origin: Optional[str] = None
+    is_empty: bool = True
+    tag_origin: Optional[str] = None
 
-        self.series: Optional[str] = None
-        self.issue: Optional[str] = None
-        self.stories: List[str] = []
-        self.publisher: Optional[str] = None
-        self.month: Optional[int] = None
-        self.year: Optional[int] = None
-        self.day: Optional[int] = None
-        self.issue_count: Optional[int] = None
-        self.volume: Optional[int] = None
-        self.genres: List[str] = []
-        self.language: Optional[str] = None  # 2 letter iso code
-        self.comments: Optional[str] = None  # use same way as Summary in CIX
+    series: Optional[str] = None
+    issue: Optional[str] = None
+    stories: List[str] = field(default_factory=list)
+    publisher: Optional[str] = None
+    month: Optional[int] = None
+    year: Optional[int] = None
+    day: Optional[int] = None
+    issue_count: Optional[int] = None
+    volume: Optional[int] = None
+    genres: List[str] = field(default_factory=list)
+    language: Optional[str] = None  # 2 letter iso code
+    comments: Optional[str] = None  # use same way as Summary in CIX
 
-        self.volume_count: Optional[str] = None
-        self.critical_rating: Optional[str] = None
-        self.country: Optional[str] = None
+    volume_count: Optional[str] = None
+    critical_rating: Optional[str] = None
+    country: Optional[str] = None
 
-        self.alternate_series: Optional[str] = None
-        self.alternate_number: Optional[str] = None
-        self.alternate_count: Optional[int] = None
-        self.imprint: Optional[str] = None
-        self.notes: Optional[str] = None
-        self.web_link: Optional[str] = None
-        self.format: Optional[str] = None
-        self.manga: Optional[str] = None
-        self.black_and_white: Optional[bool] = None
-        self.page_count: Optional[int] = None
-        self.maturity_rating: Optional[str] = None
+    alternate_series: Optional[str] = None
+    alternate_number: Optional[str] = None
+    alternate_count: Optional[int] = None
+    imprint: Optional[str] = None
+    notes: Optional[str] = None
+    web_link: Optional[str] = None
+    format: Optional[str] = None
+    manga: Optional[str] = None
+    black_and_white: Optional[bool] = None
+    page_count: Optional[int] = None
+    maturity_rating: Optional[str] = None
 
-        self.story_arcs: List[str] = []
-        self.series_group: Optional[str] = None
-        self.scan_info: Optional[str] = None
+    story_arcs: List[str] = field(default_factory=list)
+    series_group: Optional[str] = None
+    scan_info: Optional[str] = None
 
-        self.characters: List[str] = []
-        self.teams: List[str] = []
-        self.locations: List[str] = []
+    characters: List[str] = field(default_factory=list)
+    teams: List[str] = field(default_factory=list)
+    locations: List[str] = field(default_factory=list)
 
-        self.credits: List[CreditMetadata] = []
-        self.tags: List[str] = []
-        self.pages: List[ImageMetadata] = []
+    credits: List[CreditMetadata] = field(default_factory=list)
+    tags: List[str] = field(default_factory=list)
+    pages: List[ImageMetadata] = field(default_factory=list)
+
+    def __post_init__(self):
+        for key, value in self.__dict__.items():
+            if value and key != "is_empty":
+                self.is_empty = False
+                break
 
     def overlay(self, new_md: "GenericMetadata") -> None:
         """Overlay a metadata object on this one
