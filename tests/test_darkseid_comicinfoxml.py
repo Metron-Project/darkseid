@@ -15,10 +15,17 @@ def test_meta_data():
     meta_data = GenericMetadata()
     meta_data.series = "Aquaman"
     meta_data.issue = "1"
+    meta_data.stories = ["Foo", "Bar"]
     meta_data.year = 1993
     meta_data.day = 15
     meta_data.month = 4
     meta_data.volume = 3
+    meta_data.characters = ["Aquaman", "Mera", "Garth"]
+    meta_data.teams = ["Atlanteans", "Justice League"]
+    meta_data.locations = ["Atlantis", "Metropolis"]
+    meta_data.genres = ["Super-Hero"]
+    meta_data.story_arcs = ["Crisis on Infinite Earths", "Death of Aquagirl"]
+    meta_data.black_and_white = True
     meta_data.add_credit("Peter David", "Writer")
     meta_data.add_credit("Martin Egeland", "Penciller")
     meta_data.add_credit("Martin Egeland", "Cover")
@@ -67,7 +74,13 @@ def test_read_from_file(test_meta_data: GenericMetadata, tmp_path: Path) -> None
     assert new_md is not None
     assert new_md.series == test_meta_data.series
     assert new_md.issue == test_meta_data.issue
+    assert new_md.stories == test_meta_data.stories
     assert new_md.year == test_meta_data.year
     assert new_md.month == test_meta_data.month
     assert new_md.day == test_meta_data.day
     assert new_md.credits[0] == test_meta_data.credits[0]
+    assert new_md.characters == test_meta_data.characters
+    assert new_md.teams == test_meta_data.teams
+    assert new_md.story_arcs == test_meta_data.story_arcs
+    assert new_md.locations == test_meta_data.locations
+    assert new_md.black_and_white == test_meta_data.black_and_white

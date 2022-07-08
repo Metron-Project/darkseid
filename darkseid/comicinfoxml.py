@@ -10,7 +10,7 @@ from typing import List, Optional, Union
 
 from .genericmetadata import GenericMetadata
 from .issuestring import IssueString
-from .utils import list_to_string, xlate
+from .utils import list_to_string, string_to_list, xlate
 
 
 class ComicInfoXml:
@@ -103,14 +103,13 @@ class ComicInfoXml:
                 if et_entry is not None:
                     root.remove(et_entry)
 
-        assign("Title", metadata.title)
+        assign("Title", list_to_string(metadata.stories))
         assign("Series", metadata.series)
         assign("Number", metadata.issue)
         assign("Count", metadata.issue_count)
         assign("Volume", metadata.volume)
         assign("AlternateSeries", metadata.alternate_series)
         assign("AlternateNumber", metadata.alternate_number)
-        assign("StoryArc", metadata.story_arc)
         assign("SeriesGroup", metadata.series_group)
         assign("AlternateCount", metadata.alternate_count)
         assign("Summary", metadata.comments)
@@ -165,7 +164,7 @@ class ComicInfoXml:
 
         assign("Publisher", metadata.publisher)
         assign("Imprint", metadata.imprint)
-        assign("Genre", metadata.genre)
+        assign("Genre", list_to_string(metadata.genres))
         assign("Web", metadata.web_link)
         assign("PageCount", metadata.page_count)
         assign("LanguageISO", metadata.language)
@@ -173,9 +172,10 @@ class ComicInfoXml:
         assign("AgeRating", metadata.maturity_rating)
         assign("BlackAndWhite", "Yes" if metadata.black_and_white else None)
         assign("Manga", metadata.manga)
-        assign("Characters", metadata.characters)
-        assign("Teams", metadata.teams)
-        assign("Locations", metadata.locations)
+        assign("Characters", list_to_string(metadata.characters))
+        assign("Teams", list_to_string(metadata.teams))
+        assign("Locations", list_to_string(metadata.locations))
+        assign("StoryArc", list_to_string(metadata.story_arcs))
         assign("ScanInformation", metadata.scan_info)
 
         #  loop and add the page entries under pages node
@@ -213,7 +213,7 @@ class ComicInfoXml:
 
         metadata = GenericMetadata()
         metadata.series = xlate(get("Series"))
-        metadata.title = xlate(get("Title"))
+        metadata.stories = string_to_list(xlate(get("Title")))
         metadata.issue = IssueString(xlate(get("Number"))).as_string()
         metadata.issue_count = xlate(get("Count"), True)
         metadata.volume = xlate(get("Volume"), True)
@@ -227,17 +227,17 @@ class ComicInfoXml:
         metadata.day = xlate(get("Day"), True)
         metadata.publisher = xlate(get("Publisher"))
         metadata.imprint = xlate(get("Imprint"))
-        metadata.genre = xlate(get("Genre"))
+        metadata.genres = string_to_list(xlate(get("Genre")))
         metadata.web_link = xlate(get("Web"))
         metadata.language = xlate(get("LanguageISO"))
         metadata.format = xlate(get("Format"))
         metadata.manga = xlate(get("Manga"))
-        metadata.characters = xlate(get("Characters"))
-        metadata.teams = xlate(get("Teams"))
-        metadata.locations = xlate(get("Locations"))
+        metadata.characters = string_to_list(xlate(get("Characters")))
+        metadata.teams = string_to_list(xlate(get("Teams")))
+        metadata.locations = string_to_list(xlate(get("Locations")))
         metadata.page_count = xlate(get("PageCount"), True)
         metadata.scan_info = xlate(get("ScanInformation"))
-        metadata.story_arc = xlate(get("StoryArc"))
+        metadata.story_arcs = string_to_list(xlate(get("StoryArc")))
         metadata.series_group = xlate(get("SeriesGroup"))
         metadata.maturity_rating = xlate(get("AgeRating"))
 

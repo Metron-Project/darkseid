@@ -58,14 +58,14 @@ class GenericMetadata:
 
         self.series: Optional[str] = None
         self.issue: Optional[str] = None
-        self.title: Optional[str] = None
+        self.stories: List[str] = []
         self.publisher: Optional[str] = None
         self.month: Optional[int] = None
         self.year: Optional[int] = None
         self.day: Optional[int] = None
         self.issue_count: Optional[int] = None
         self.volume: Optional[int] = None
-        self.genre: Optional[str] = None
+        self.genres: List[str] = []
         self.language: Optional[str] = None  # 2 letter iso code
         self.comments: Optional[str] = None  # use same way as Summary in CIX
 
@@ -85,13 +85,13 @@ class GenericMetadata:
         self.page_count: Optional[int] = None
         self.maturity_rating: Optional[str] = None
 
-        self.story_arc: Optional[str] = None
+        self.story_arcs: List[str] = []
         self.series_group: Optional[str] = None
         self.scan_info: Optional[str] = None
 
-        self.characters: Optional[str] = None
-        self.teams: Optional[str] = None
-        self.locations: Optional[str] = None
+        self.characters: List[str] = []
+        self.teams: List[str] = []
+        self.locations: List[str] = []
 
         self.credits: List[CreditMetadata] = []
         self.tags: List[str] = []
@@ -117,14 +117,16 @@ class GenericMetadata:
         assign("series", new_md.series)
         assign("issue", new_md.issue)
         assign("issue_count", new_md.issue_count)
-        assign("title", new_md.title)
+        if len(new_md.stories) > 0:
+            assign("stories", new_md.stories)
         assign("publisher", new_md.publisher)
         assign("day", new_md.day)
         assign("month", new_md.month)
         assign("year", new_md.year)
         assign("volume", new_md.volume)
         assign("volume_count", new_md.volume_count)
-        assign("genre", new_md.genre)
+        if len(new_md.genres) > 0:
+            assign("genre", new_md.genres)
         assign("language", new_md.language)
         assign("country", new_md.country)
         assign("critical_rating", new_md.critical_rating)
@@ -137,21 +139,20 @@ class GenericMetadata:
         assign("manga", new_md.manga)
         assign("black_and_white", new_md.black_and_white)
         assign("maturity_rating", new_md.maturity_rating)
-        assign("story_arc", new_md.story_arc)
+        if len(new_md.story_arcs) > 0:
+            assign("story_arcs", new_md.story_arcs)
         assign("series_group", new_md.series_group)
         assign("scan_info", new_md.scan_info)
-        assign("characters", new_md.characters)
-        assign("teams", new_md.teams)
-        assign("locations", new_md.locations)
+        if len(new_md.characters) > 0:
+            assign("characters", new_md.characters)
+        if len(new_md.teams) > 0:
+            assign("teams", new_md.teams)
+        if len(new_md.locations) > 0:
+            assign("locations", new_md.locations)
         assign("comments", new_md.comments)
         assign("notes", new_md.notes)
 
         self.overlay_credits(new_md.credits)
-
-        # TODO
-
-        # not sure if the tags and pages should broken down, or treated
-        # as whole lists....
 
         # For now, go the easy route, where any overlay
         # value wipes out the whole list
@@ -215,6 +216,7 @@ class GenericMetadata:
 
     def __str__(self) -> str:
         vals: List[Tuple[str, str]] = []
+
         if self.is_empty:
             return "No metadata"
 
@@ -228,14 +230,16 @@ class GenericMetadata:
         add_attr_string("series")
         add_attr_string("issue")
         add_attr_string("issue_count")
-        add_attr_string("title")
+        if self.stories:
+            add_attr_string("stories")
         add_attr_string("publisher")
         add_attr_string("year")
         add_attr_string("month")
         add_attr_string("day")
         add_attr_string("volume")
         add_attr_string("volume_count")
-        add_attr_string("genre")
+        if self.genres:
+            add_attr_string("genres")
         add_attr_string("language")
         add_attr_string("country")
         add_attr_string("critical_rating")
@@ -250,12 +254,16 @@ class GenericMetadata:
         if self.black_and_white:
             add_attr_string("black_and_white")
         add_attr_string("maturity_rating")
-        add_attr_string("story_arc")
+        if self.story_arcs:
+            add_attr_string("story_arcs")
         add_attr_string("series_group")
         add_attr_string("scan_info")
-        add_attr_string("characters")
-        add_attr_string("teams")
-        add_attr_string("locations")
+        if self.characters:
+            add_attr_string("characters")
+        if self.teams:
+            add_attr_string("teams")
+        if self.locations:
+            add_attr_string("locations")
         add_attr_string("comments")
         add_attr_string("notes")
 
