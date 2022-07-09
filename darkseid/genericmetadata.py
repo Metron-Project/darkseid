@@ -80,6 +80,7 @@ class GenericMetadata:
     store_date: Optional[date] = None
     issue_count: Optional[int] = None
     volume: Optional[int] = None
+    collection_title: Optional[str] = None
     genres: List[str] = field(default_factory=list)
     language: Optional[str] = None  # 2 letter iso code
     comments: Optional[str] = None  # use same way as Summary in CIX
@@ -146,6 +147,7 @@ class GenericMetadata:
         assign("store_date", new_md.store_date)
         assign("volume", new_md.volume)
         assign("volume_count", new_md.volume_count)
+        assign("collection_title", new_md.collection_title)
         if len(new_md.genres) > 0:
             assign("genre", new_md.genres)
         assign("language", new_md.language)
@@ -258,6 +260,7 @@ class GenericMetadata:
         add_attr_string("store_date")
         add_attr_string("volume")
         add_attr_string("volume_count")
+        add_attr_string("collection_title")
         if self.genres:
             add_attr_string("genres")
         add_attr_string("language")
