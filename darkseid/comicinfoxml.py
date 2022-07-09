@@ -5,6 +5,7 @@
 
 
 import xml.etree.ElementTree as ET
+from datetime import date
 from re import split
 from typing import Any, List, Optional, Union, cast
 
@@ -144,9 +145,10 @@ class ComicInfoXml:
         assign("AlternateCount", metadata.alternate_count)
         assign("Summary", metadata.comments)
         assign("Notes", metadata.notes)
-        assign("Year", metadata.year)
-        assign("Month", metadata.month)
-        assign("Day", metadata.day)
+        if metadata.cover_date is not None:
+            assign("Year", metadata.cover_date.year)
+            assign("Month", metadata.cover_date.month)
+            assign("Day", metadata.cover_date.day)
 
         # need to specially process the credits, since they are structured
         # differently than CIX
@@ -252,9 +254,13 @@ class ComicInfoXml:
         metadata.alternate_count = xlate(get("AlternateCount"), True)
         metadata.comments = xlate(get("Summary"))
         metadata.notes = xlate(get("Notes"))
-        metadata.year = xlate(get("Year"), True)
-        metadata.month = xlate(get("Month"), True)
-        metadata.day = xlate(get("Day"), True)
+        # Cover Year
+        tmp_year = xlate(get("Year"), True)
+        tmp_month = xlate(get("Month"), True)
+        tmp_day = xlate(get("Day"), True)
+        if tmp_year is not None and tmp_month is not None and tmp_day is not None:
+            metadata.cover_date = date(tmp_year, tmp_month, tmp_day)
+
         metadata.publisher = xlate(get("Publisher"))
         metadata.imprint = xlate(get("Imprint"))
         metadata.genres = string_to_list(xlate(get("Genre")))

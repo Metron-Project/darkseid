@@ -101,9 +101,7 @@ def test_read_from_file(test_meta_data: GenericMetadata, tmp_path: Path) -> None
     assert new_md.series.name == test_meta_data.series.name
     assert new_md.issue == test_meta_data.issue
     assert new_md.stories == test_meta_data.stories
-    assert new_md.year == test_meta_data.year
-    assert new_md.month == test_meta_data.month
-    assert new_md.day == test_meta_data.day
+    assert new_md.cover_date == test_meta_data.cover_date
     assert new_md.credits[0] == test_meta_data.credits[0]
     assert new_md.characters == test_meta_data.characters
     assert new_md.teams == test_meta_data.teams

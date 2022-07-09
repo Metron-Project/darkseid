@@ -1,3 +1,4 @@
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -19,9 +20,7 @@ def fake_metadata():
     meta_data.issue = "0"
     meta_data.stories = ["A Crash of Symbols"]
     meta_data.publisher = "DC Comics"
-    meta_data.year = 1994
-    meta_data.month = 12
-    meta_data.day = 1
+    meta_data.cover_date = date(1994, 12, 1)
     meta_data.volume = 1
     meta_data.story_arcs = ["Final Crisis"]
     meta_data.characters = ["Aquaman", "Mera", "Garth"]
@@ -36,10 +35,7 @@ def fake_metadata():
 @pytest.fixture(scope="session")
 def fake_overlay_metadata():
     overlay_md = GenericMetadata(series=SeriesMetadata("Aquaman"))
-    overlay_md.year = "1994"
-    overlay_md.month = "10"
-    overlay_md.day = "1"
-
+    overlay_md.cover_date = date(1994, 10, 1)
     return overlay_md
 
 

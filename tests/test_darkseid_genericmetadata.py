@@ -1,3 +1,5 @@
+from datetime import date
+
 from darkseid.genericmetadata import GenericMetadata
 
 MARTY = "Martin Egeland"
@@ -13,9 +15,7 @@ def test_metadata_print_str(fake_metadata):
         "issue:           0\n"
         "stories:         ['A Crash of Symbols']\n"
         "publisher:       DC Comics\n"
-        "year:            1994\n"
-        "month:           12\n"
-        "day:             1\n"
+        "cover_date:      1994-12-01\n"
         "volume:          1\n"
         "black_and_white: True\n"
         "story_arcs:      ['Final Crisis']\n"
@@ -36,9 +36,7 @@ def test_metadata_overlay(
     assert md.series.name == "Aquaman"
     assert md.issue == "0"
     assert md.stories == fake_metadata.stories
-    assert md.year == "1994"
-    assert md.month == "10"
-    assert md.day == "1"
+    assert md.cover_date == date(1994, 10, 1)
     assert md.characters == fake_metadata.characters
     assert md.story_arcs == fake_metadata.story_arcs
     assert md.teams == fake_metadata.teams

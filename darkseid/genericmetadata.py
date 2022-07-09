@@ -10,6 +10,7 @@ possible, however lossy it might be
 # Copyright 2020 Brian Pepple
 
 from dataclasses import dataclass, field
+from datetime import date
 from typing import List, Optional, Tuple, TypedDict
 
 from .utils import list_to_string
@@ -75,9 +76,8 @@ class GenericMetadata:
     issue: Optional[str] = None
     stories: List[str] = field(default_factory=list)
     publisher: Optional[str] = None
-    month: Optional[int] = None
-    year: Optional[int] = None
-    day: Optional[int] = None
+    cover_date: Optional[date] = None
+    store_date: Optional[date] = None
     issue_count: Optional[int] = None
     volume: Optional[int] = None
     genres: List[str] = field(default_factory=list)
@@ -142,9 +142,8 @@ class GenericMetadata:
         if len(new_md.stories) > 0:
             assign("stories", new_md.stories)
         assign("publisher", new_md.publisher)
-        assign("day", new_md.day)
-        assign("month", new_md.month)
-        assign("year", new_md.year)
+        assign("cover_date", new_md.cover_date)
+        assign("store_date", new_md.store_date)
         assign("volume", new_md.volume)
         assign("volume_count", new_md.volume_count)
         if len(new_md.genres) > 0:
@@ -255,9 +254,8 @@ class GenericMetadata:
         if self.stories:
             add_attr_string("stories")
         add_attr_string("publisher")
-        add_attr_string("year")
-        add_attr_string("month")
-        add_attr_string("day")
+        add_attr_string("cover_date")
+        add_attr_string("store_date")
         add_attr_string("volume")
         add_attr_string("volume_count")
         if self.genres:

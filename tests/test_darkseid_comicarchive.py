@@ -122,9 +122,7 @@ def test_archive_from_img_dir(tmp_path: Path, fake_metadata: GenericMetadata) ->
     assert res.series == fake_metadata.series
     assert res.issue == fake_metadata.issue
     assert res.stories == fake_metadata.stories
-    assert res.year == fake_metadata.year
-    assert res.month == fake_metadata.month
-    assert res.day == fake_metadata.day
+    assert res.cover_date == fake_metadata.cover_date
     assert res.volume == fake_metadata.volume
     assert res.story_arcs == fake_metadata.story_arcs
     assert res.characters == fake_metadata.characters
