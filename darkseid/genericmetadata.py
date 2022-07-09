@@ -53,12 +53,25 @@ class CreditMetadata:
 
 
 @dataclass
-class GenericMetadata:
+class SeriesMetadata:
+    name: str
+    sort_name: Optional[str] = None
+    type: Optional[str] = None
 
+
+@dataclass
+class InfoSourceMetadata:
+    source: str
+    id: int
+
+
+@dataclass
+class GenericMetadata:
     is_empty: bool = True
     tag_origin: Optional[str] = None
 
-    series: Optional[str] = None
+    info_source: Optional[InfoSourceMetadata] = None
+    series: Optional[SeriesMetadata] = None
     issue: Optional[str] = None
     stories: List[str] = field(default_factory=list)
     publisher: Optional[str] = None
@@ -123,6 +136,7 @@ class GenericMetadata:
             self.is_empty = False
 
         assign("series", new_md.series)
+        assign("info_source", new_md.info_source)
         assign("issue", new_md.issue)
         assign("issue_count", new_md.issue_count)
         if len(new_md.stories) > 0:

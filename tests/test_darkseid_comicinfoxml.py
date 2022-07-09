@@ -5,7 +5,7 @@ import pytest
 from lxml import etree
 
 from darkseid.comicinfoxml import ComicInfoXml
-from darkseid.genericmetadata import GenericMetadata
+from darkseid.genericmetadata import GenericMetadata, SeriesMetadata
 
 from .conftest import CI_XSD
 
@@ -13,7 +13,7 @@ from .conftest import CI_XSD
 @pytest.fixture()
 def test_meta_data():
     meta_data = GenericMetadata()
-    meta_data.series = "Aquaman"
+    meta_data.series = SeriesMetadata("Aquaman")
     meta_data.issue = "1"
     meta_data.stories = ["Foo", "Bar"]
     meta_data.year = 1993
@@ -65,7 +65,8 @@ def test_meta_write_to_file(test_meta_data: GenericMetadata, tmp_path: Path) -> 
 
 def test_invalid_age_write_to_file(tmp_path: Path) -> None:
     """Test writing of invalid age rating value to a file."""
-    bad_metadata = GenericMetadata(age_rating="MA 15+")
+    aquaman = SeriesMetadata("Aquaman")
+    bad_metadata = GenericMetadata(series=aquaman, age_rating="MA 15+")
     tmp_file = tmp_path / "test-age-write.xml"
     ci = ComicInfoXml()
     ci.write_to_external_file(tmp_file, bad_metadata)
@@ -77,7 +78,8 @@ def test_invalid_age_write_to_file(tmp_path: Path) -> None:
 
 def test_invalid_manga_write_to_file(tmp_path: Path) -> None:
     """Test writing of invalid manga value to a file."""
-    bad_metadata = GenericMetadata(manga="Foo Bar")
+    aquaman = SeriesMetadata("Aquaman")
+    bad_metadata = GenericMetadata(series=aquaman, manga="Foo Bar")
     tmp_file = tmp_path / "test-manga-write.xml"
     ci = ComicInfoXml()
     ci.write_to_external_file(tmp_file, bad_metadata)
@@ -96,7 +98,7 @@ def test_read_from_file(test_meta_data: GenericMetadata, tmp_path: Path) -> None
     new_md = ComicInfoXml().read_from_external_file(tmp_file)
 
     assert new_md is not None
-    assert new_md.series == test_meta_data.series
+    assert new_md.series.name == test_meta_data.series.name
     assert new_md.issue == test_meta_data.issue
     assert new_md.stories == test_meta_data.stories
     assert new_md.year == test_meta_data.year

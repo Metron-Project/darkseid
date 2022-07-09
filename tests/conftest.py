@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from darkseid.comicarchive import ComicArchive
-from darkseid.genericmetadata import GenericMetadata
+from darkseid.genericmetadata import GenericMetadata, SeriesMetadata
 
 TEST_FILES_PATH = Path("tests/test_files")
 IMG_DIR = TEST_FILES_PATH / "Captain_Science_001"
@@ -15,8 +15,7 @@ RAR_PATH = TEST_FILES_PATH / "Captain Science #001-cix-cbi.cbr"
 
 @pytest.fixture(scope="session")
 def fake_metadata():
-    meta_data = GenericMetadata()
-    meta_data.series = "Aquaman"
+    meta_data = GenericMetadata(series=SeriesMetadata("Aquaman"))
     meta_data.issue = "0"
     meta_data.stories = ["A Crash of Symbols"]
     meta_data.publisher = "DC Comics"
@@ -36,7 +35,7 @@ def fake_metadata():
 
 @pytest.fixture(scope="session")
 def fake_overlay_metadata():
-    overlay_md = GenericMetadata()
+    overlay_md = GenericMetadata(series=SeriesMetadata("Aquaman"))
     overlay_md.year = "1994"
     overlay_md.month = "10"
     overlay_md.day = "1"

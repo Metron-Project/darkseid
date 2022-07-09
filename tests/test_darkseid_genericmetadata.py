@@ -9,7 +9,7 @@ COVER = "Cover"
 
 def test_metadata_print_str(fake_metadata):
     expect_res = (
-        "series:          Aquaman\n"
+        "series:          SeriesMetadata(name='Aquaman', sort_name=None, type=None)\n"
         "issue:           0\n"
         "stories:         ['A Crash of Symbols']\n"
         "publisher:       DC Comics\n"
@@ -26,11 +26,6 @@ def test_metadata_print_str(fake_metadata):
     assert str(fake_metadata) == expect_res
 
 
-def test_no_metadata_print_str():
-    m_data = GenericMetadata()
-    assert str(m_data) == "No metadata"
-
-
 def test_metadata_overlay(
     fake_metadata: GenericMetadata, fake_overlay_metadata: GenericMetadata
 ) -> None:
@@ -38,7 +33,7 @@ def test_metadata_overlay(
     # Fake overlay cover date info.
     md.overlay(fake_overlay_metadata)
 
-    assert md.series == "Aquaman"
+    assert md.series.name == "Aquaman"
     assert md.issue == "0"
     assert md.stories == fake_metadata.stories
     assert md.year == "1994"

@@ -255,7 +255,7 @@ def test_rar_is_writable(fake_rar: ComicArchive) -> None:
 def test_rar_read_metadata(fake_rar: ComicArchive) -> None:
     """Test to read a rar files metadata"""
     md = fake_rar.read_metadata()
-    assert md.series == "Captain Science"
+    assert md.series.name == "Captain Science"
     assert md.issue == "1"
     assert md.volume == 1950
     assert md.page_count == 36

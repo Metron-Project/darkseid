@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 from re import split
 from typing import Any, List, Optional, Union, cast
 
-from .genericmetadata import GenericMetadata, ImageMetadata
+from .genericmetadata import GenericMetadata, ImageMetadata, SeriesMetadata
 from .issuestring import IssueString
 from .utils import list_to_string, string_to_list, xlate
 
@@ -134,7 +134,7 @@ class ComicInfoXml:
                     root.remove(et_entry)
 
         assign("Title", list_to_string(metadata.stories))
-        assign("Series", metadata.series)
+        assign("Series", metadata.series.name)
         assign("Number", metadata.issue)
         assign("Count", metadata.issue_count)
         assign("Volume", metadata.volume)
@@ -242,7 +242,7 @@ class ComicInfoXml:
             return tag.text
 
         metadata = GenericMetadata()
-        metadata.series = xlate(get("Series"))
+        metadata.series = SeriesMetadata(name=xlate(get("Series")))
         metadata.stories = string_to_list(xlate(get("Title")))
         metadata.issue = IssueString(xlate(get("Number"))).as_string()
         metadata.issue_count = xlate(get("Count"), True)
