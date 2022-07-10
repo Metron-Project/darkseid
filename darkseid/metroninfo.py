@@ -4,7 +4,12 @@
 import xml.etree.ElementTree as ET
 from typing import List, Optional, Union
 
-from darkseid.genericmetadata import GenericMetadata, InfoSourceMetadata, SeriesMetadata
+from darkseid.genericmetadata import (
+    GenericMetadata,
+    InfoSourceMetadata,
+    PriceMetadata,
+    SeriesMetadata,
+)
 
 
 class MetronInfoXML:
@@ -101,14 +106,26 @@ class MetronInfoXML:
             id_entry.text = str(info.id)
             id_entry.attrib = {"source": info.source}
 
-        assign_info_source(metadata.info_source)
+        def assign_price(price: PriceMetadata) -> None:
+            price_entry = root.find("Price")
+            if price_entry is None:
+                price_entry = ET.SubElement(root, "Price")
+            else:
+                price_entry.clear()
+            price_entry.text = str(price.val)
+            price_entry.attrib = {"currency": price.currency}
+
+        if metadata.info_source:
+            assign_info_source(metadata.info_source)
         assign("Publisher", metadata.publisher)
-        assign_series(metadata.series)
+        assign_series(metadata.series)  # Should always have Series info.
         assign("Volume", metadata.volume)
         assign("CollectionTitle", metadata.collection_title)
         assign("Number", metadata.issue)
         assign_basic_children("Stories", "Story", metadata.stories)
         assign("Summary", metadata.comments)
+        if metadata.price:
+            assign_price(metadata.price)
         assign("CoverDate", metadata.cover_date)
         assign("StoreDate", metadata.store_date)
         assign("PageCount", metadata.page_count)
