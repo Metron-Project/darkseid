@@ -1,11 +1,17 @@
 """Test for MetronInfoXML """
 
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
-from darkseid.genericmetadata import GenericMetadata, InfoSourceMetadata, SeriesMetadata
+from darkseid.genericmetadata import (
+    GenericMetadata,
+    InfoSourceMetadata,
+    PriceMetadata,
+    SeriesMetadata,
+)
 from darkseid.metroninfo import MetronInfoXML
 
 
@@ -18,10 +24,10 @@ def test_meta_data() -> GenericMetadata:
     meta_data.collection_title = "The War of Atlantis"
     meta_data.issue = "1"
     meta_data.stories = ["Foo", "Bar"]
+    meta_data.price = PriceMetadata("dollar", Decimal("3.99"))
     meta_data.cover_date = date(1993, 4, 14)
     meta_data.store_date = date(1993, 2, 12)
     meta_data.volume = 3
-    # meta_data.price = PriceMetadata("dollar", Decimal("3.99"))
     meta_data.comments = "The First Issue!"
     meta_data.characters = ["Aquaman", "Mera", "Garth"]
     meta_data.teams = ["Atlanteans", "Justice League"]

@@ -11,6 +11,7 @@ possible, however lossy it might be
 
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import Decimal
 from typing import List, Optional, Tuple, TypedDict
 
 from .utils import list_to_string
@@ -67,6 +68,12 @@ class InfoSourceMetadata:
 
 
 @dataclass
+class PriceMetadata:
+    currency: str
+    val: Decimal
+
+
+@dataclass
 class GenericMetadata:
     is_empty: bool = True
     tag_origin: Optional[str] = None
@@ -76,6 +83,7 @@ class GenericMetadata:
     issue: Optional[str] = None
     stories: List[str] = field(default_factory=list)
     publisher: Optional[str] = None
+    price: Optional[PriceMetadata] = None
     cover_date: Optional[date] = None
     store_date: Optional[date] = None
     issue_count: Optional[int] = None
@@ -143,6 +151,7 @@ class GenericMetadata:
         if len(new_md.stories) > 0:
             assign("stories", new_md.stories)
         assign("publisher", new_md.publisher)
+        assign("price", new_md.price)
         assign("cover_date", new_md.cover_date)
         assign("store_date", new_md.store_date)
         assign("volume", new_md.volume)
@@ -256,6 +265,7 @@ class GenericMetadata:
         if self.stories:
             add_attr_string("stories")
         add_attr_string("publisher")
+        add_attr_string("price")
         add_attr_string("cover_date")
         add_attr_string("store_date")
         add_attr_string("volume")
