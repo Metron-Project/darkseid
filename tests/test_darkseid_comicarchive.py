@@ -232,6 +232,11 @@ def test_archive_export_to_cb7(tmp_path, fake_cbz: ComicArchive) -> None:
 #######
 # CBR #
 #######
+@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
+def test_rar_write(fake_rar: ComicArchive, fake_metadata: GenericMetadata) -> None:
+    assert fake_rar.write_metadata(fake_metadata) is False
+
+
 # Skip test for Windows and MacOS.
 @pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_rar_file_exists(fake_rar: ComicArchive) -> None:

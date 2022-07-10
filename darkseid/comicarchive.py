@@ -276,7 +276,7 @@ class ComicArchive:
     """Comic Archive implementation"""
 
     class ArchiveType:
-        """Types of archives supported. Currently only .cbz and .cb7"""
+        """Types of archives supported. Currently .cbr, .cbz, and .cb7"""
 
         zip, sevenzip, rar, unknown = list(range(4))
 
@@ -438,7 +438,7 @@ class ComicArchive:
 
     def write_metadata(self, metadata: Optional[GenericMetadata]) -> bool:
         """Write the metadata to the archive"""
-        if metadata is None:
+        if metadata is None or not self.is_writable():
             return False
         self.apply_archive_info_to_metadata(metadata, calc_page_sizes=True)
         if raw_cix := self.read_raw_metadata():
