@@ -58,7 +58,8 @@ class CreditMetadata:
 class SeriesMetadata:
     name: str
     sort_name: Optional[str] = None
-    type: Optional[str] = None
+    volume: Optional[int] = None
+    format: Optional[str] = None
 
 
 @dataclass
@@ -87,7 +88,6 @@ class GenericMetadata:
     cover_date: Optional[date] = None
     store_date: Optional[date] = None
     issue_count: Optional[int] = None
-    volume: Optional[int] = None
     collection_title: Optional[str] = None
     genres: List[str] = field(default_factory=list)
     language: Optional[str] = None  # 2 letter iso code
@@ -154,7 +154,7 @@ class GenericMetadata:
         assign("price", new_md.price)
         assign("cover_date", new_md.cover_date)
         assign("store_date", new_md.store_date)
-        assign("volume", new_md.volume)
+        assign("volume", new_md.series.volume)
         assign("volume_count", new_md.volume_count)
         assign("collection_title", new_md.collection_title)
         if len(new_md.genres) > 0:

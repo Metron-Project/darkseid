@@ -62,7 +62,7 @@ def test_cb7_test_metadata(tmp_path: Path, fake_metadata: GenericMetadata) -> No
 
     # Verify what was written
     new_md = ca.read_metadata()
-    assert new_md.series == fake_metadata.series
+    assert new_md.series.name == fake_metadata.series.name
     assert new_md.issue == fake_metadata.issue
     assert new_md.stories == fake_metadata.stories
 
@@ -119,7 +119,7 @@ def test_archive_from_img_dir(tmp_path: Path, fake_metadata: GenericMetadata) ->
     ca.write_metadata(test_md)
     res = ca.read_metadata()
     assert res.page_count == 5
-    assert res.series == fake_metadata.series
+    assert res.series.name == fake_metadata.series.name
     assert res.issue == fake_metadata.issue
     assert res.stories == fake_metadata.stories
     assert res.cover_date == fake_metadata.cover_date
@@ -176,7 +176,7 @@ def test_archive_test_metadata(fake_cbz: ComicArchive, fake_metadata: GenericMet
 
     # Verify what was written
     new_md = fake_cbz.read_metadata()
-    assert new_md.series == fake_metadata.series
+    assert new_md.series.name == fake_metadata.series.name
     assert new_md.issue == fake_metadata.issue
     assert new_md.stories == fake_metadata.stories
 
