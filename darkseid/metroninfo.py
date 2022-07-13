@@ -94,8 +94,10 @@ class MetronInfoXML:
             name_node.text = series.name
             sort_node = ET.SubElement(parent_node, "SortName")
             sort_node.text = series.sort_name
-            type_node = ET.SubElement(parent_node, "Type")
-            type_node.text = series.type
+            volume_node = ET.SubElement(parent_node, "Volume")
+            volume_node.text = str(metadata.series.volume)
+            type_node = ET.SubElement(parent_node, "Format")
+            type_node.text = series.format
 
         def assign_info_source(info: InfoSourceMetadata) -> None:
             id_entry = root.find("ID")
@@ -119,7 +121,6 @@ class MetronInfoXML:
             assign_info_source(metadata.info_source)
         assign("Publisher", metadata.publisher)
         assign_series(metadata.series)  # Should always have Series info.
-        assign("Volume", metadata.volume)
         assign("CollectionTitle", metadata.collection_title)
         assign("Number", metadata.issue)
         assign_basic_children("Stories", "Story", metadata.stories)

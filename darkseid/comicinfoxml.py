@@ -138,7 +138,7 @@ class ComicInfoXml:
         assign("Series", metadata.series.name)
         assign("Number", metadata.issue)
         assign("Count", metadata.issue_count)
-        assign("Volume", metadata.volume)
+        assign("Volume", metadata.series.volume)
         assign("AlternateSeries", metadata.alternate_series)
         assign("AlternateNumber", metadata.alternate_number)
         assign("SeriesGroup", metadata.series_group)

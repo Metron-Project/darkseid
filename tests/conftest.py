@@ -16,7 +16,8 @@ RAR_PATH = TEST_FILES_PATH / "Captain Science #001-cix-cbi.cbr"
 
 @pytest.fixture(scope="session")
 def fake_metadata():
-    meta_data = GenericMetadata(series=SeriesMetadata("Aquaman"))
+    meta_data = GenericMetadata()
+    meta_data.series = SeriesMetadata("Aquaman", "Aquaman", 1, "Series")
     meta_data.issue = "0"
     meta_data.stories = ["A Crash of Symbols"]
     meta_data.publisher = "DC Comics"
