@@ -57,7 +57,8 @@ class CreditMetadata:
 class SeriesMetadata:
     name: str
     sort_name: Optional[str] = None
-    type: Optional[str] = None
+    volume: Optional[int] = None
+    format: Optional[str] = None
 
 
 @dataclass
@@ -79,7 +80,6 @@ class GenericMetadata:
     cover_date: Optional[date] = None
     store_date: Optional[date] = None
     issue_count: Optional[int] = None
-    volume: Optional[int] = None
     genres: List[str] = field(default_factory=list)
     language: Optional[str] = None  # 2 letter iso code
     comments: Optional[str] = None  # use same way as Summary in CIX
@@ -94,7 +94,6 @@ class GenericMetadata:
     imprint: Optional[str] = None
     notes: Optional[str] = None
     web_link: Optional[str] = None
-    format: Optional[str] = None
     manga: Optional[str] = None
     black_and_white: Optional[bool] = None
     page_count: Optional[int] = None
@@ -144,7 +143,6 @@ class GenericMetadata:
         assign("publisher", new_md.publisher)
         assign("cover_date", new_md.cover_date)
         assign("store_date", new_md.store_date)
-        assign("volume", new_md.volume)
         assign("volume_count", new_md.volume_count)
         if len(new_md.genres) > 0:
             assign("genre", new_md.genres)
@@ -156,7 +154,6 @@ class GenericMetadata:
         assign("alternate_count", new_md.alternate_count)
         assign("imprint", new_md.imprint)
         assign("web_link", new_md.web_link)
-        assign("format", new_md.format)
         assign("manga", new_md.manga)
         assign("black_and_white", new_md.black_and_white)
         assign("age_rating", new_md.age_rating)
@@ -256,7 +253,6 @@ class GenericMetadata:
         add_attr_string("publisher")
         add_attr_string("cover_date")
         add_attr_string("store_date")
-        add_attr_string("volume")
         add_attr_string("volume_count")
         if self.genres:
             add_attr_string("genres")
@@ -268,7 +264,6 @@ class GenericMetadata:
         add_attr_string("alternate_count")
         add_attr_string("imprint")
         add_attr_string("web_link")
-        add_attr_string("format")
         add_attr_string("manga")
 
         if self.black_and_white:

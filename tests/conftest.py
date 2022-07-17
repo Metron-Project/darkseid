@@ -16,12 +16,12 @@ RAR_PATH = TEST_FILES_PATH / "Captain Science #001-cix-cbi.cbr"
 
 @pytest.fixture(scope="session")
 def fake_metadata():
-    meta_data = GenericMetadata(series=SeriesMetadata("Aquaman"))
+    meta_data = GenericMetadata()
+    meta_data.series = SeriesMetadata("Aquaman", "Aquaman", 1, "Annual")
     meta_data.issue = "0"
     meta_data.stories = ["A Crash of Symbols"]
     meta_data.publisher = "DC Comics"
     meta_data.cover_date = date(1994, 12, 1)
-    meta_data.volume = 1
     meta_data.story_arcs = ["Final Crisis"]
     meta_data.characters = ["Aquaman", "Mera", "Garth"]
     meta_data.teams = ["Justice League", "Teen Titans"]
@@ -34,7 +34,8 @@ def fake_metadata():
 
 @pytest.fixture(scope="session")
 def fake_overlay_metadata():
-    overlay_md = GenericMetadata(series=SeriesMetadata("Aquaman"))
+    overlay_md = GenericMetadata()
+    overlay_md.series = SeriesMetadata("Aquaman", "Aquaman", 1, "Annual")
     overlay_md.cover_date = date(1994, 10, 1)
     return overlay_md
 

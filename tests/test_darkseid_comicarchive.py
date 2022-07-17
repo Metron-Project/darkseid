@@ -62,7 +62,9 @@ def test_cb7_test_metadata(tmp_path: Path, fake_metadata: GenericMetadata) -> No
 
     # Verify what was written
     new_md = ca.read_metadata()
-    assert new_md.series == fake_metadata.series
+    assert new_md.series.name == fake_metadata.series.name
+    assert new_md.series.volume == fake_metadata.series.volume
+    assert new_md.series.format == fake_metadata.series.format
     assert new_md.issue == fake_metadata.issue
     assert new_md.stories == fake_metadata.stories
 
@@ -119,11 +121,12 @@ def test_archive_from_img_dir(tmp_path: Path, fake_metadata: GenericMetadata) ->
     ca.write_metadata(test_md)
     res = ca.read_metadata()
     assert res.page_count == 5
-    assert res.series == fake_metadata.series
+    assert res.series.name == fake_metadata.series.name
+    assert res.series.format == fake_metadata.series.format
+    assert res.series.volume == fake_metadata.series.volume
     assert res.issue == fake_metadata.issue
     assert res.stories == fake_metadata.stories
     assert res.cover_date == fake_metadata.cover_date
-    assert res.volume == fake_metadata.volume
     assert res.story_arcs == fake_metadata.story_arcs
     assert res.characters == fake_metadata.characters
     assert res.teams == fake_metadata.teams
@@ -176,7 +179,9 @@ def test_archive_test_metadata(fake_cbz: ComicArchive, fake_metadata: GenericMet
 
     # Verify what was written
     new_md = fake_cbz.read_metadata()
-    assert new_md.series == fake_metadata.series
+    assert new_md.series.name == fake_metadata.series.name
+    assert new_md.series.volume == fake_metadata.series.volume
+    assert new_md.series.format == fake_metadata.series.format
     assert new_md.issue == fake_metadata.issue
     assert new_md.stories == fake_metadata.stories
 
@@ -260,7 +265,7 @@ def test_rar_read_metadata(fake_rar: ComicArchive) -> None:
     md = fake_rar.read_metadata()
     assert md.series.name == "Captain Science"
     assert md.issue == "1"
-    assert md.volume == 1950
+    assert md.series.volume == 1950
     assert md.page_count == 36
 
 
