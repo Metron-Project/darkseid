@@ -1,4 +1,5 @@
 """ Tests for ComicInfo Tags """
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -13,13 +14,10 @@ from .conftest import CI_XSD
 @pytest.fixture()
 def test_meta_data():
     meta_data = GenericMetadata()
-    meta_data.series = SeriesMetadata("Aquaman")
+    meta_data.series = SeriesMetadata("Aquaman", "Aquaman", 3, "Annual")
     meta_data.issue = "1"
     meta_data.stories = ["Foo", "Bar"]
-    meta_data.year = 1993
-    meta_data.day = 15
-    meta_data.month = 4
-    meta_data.volume = 3
+    meta_data.cover_date = date(1993, 4, 15)
     meta_data.characters = ["Aquaman", "Mera", "Garth"]
     meta_data.teams = ["Atlanteans", "Justice League"]
     meta_data.locations = ["Atlantis", "Metropolis"]
