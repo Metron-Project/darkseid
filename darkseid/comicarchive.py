@@ -55,15 +55,17 @@ class RarArchiver:
     def __init__(self, path: Path) -> None:
         self.path = path
 
-    def read_file(self, archive_file: str) -> bytes:
+    def read_file(self, archive_file: str) -> Optional[bytes]:
         """Read the contents of a comic archive"""
         try:
-            data = bytes()
             with rarfile.RarFile(self.path) as rf:
-                data = rf.read(archive_file)
+                data: bytes = rf.read(archive_file)
             return data
         except rarfile.RarCannotExec as e:
             raise RarError(e) from e
+        except io.UnsupportedOperation:
+            """If rar directory doesn't contain any data, return None."""
+            return None
 
     def remove_file(self) -> bool:
         """Rar files are read-only, so we return False."""
