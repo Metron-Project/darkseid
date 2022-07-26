@@ -50,8 +50,8 @@ def test_metadata_credits(fake_metadata: GenericMetadata) -> None:
     ]
 
     md = fake_metadata
-    md.add_credit(PETER, WRITER, True)
-    md.add_credit(MARTY, PENCILLER)
-    md.add_credit(MARTY, COVER)
+    md.add_credit(CreditMetadata(PETER, WRITER, True))
+    md.add_credit(CreditMetadata(MARTY, PENCILLER))
+    md.add_credit(CreditMetadata(MARTY, COVER))
 
     assert md.credits == result

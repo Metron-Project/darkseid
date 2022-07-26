@@ -9,7 +9,7 @@ from datetime import date
 from re import split
 from typing import Any, List, Optional, Union, cast
 
-from .genericmetadata import GenericMetadata, ImageMetadata, SeriesMetadata
+from .genericmetadata import CreditMetadata, GenericMetadata, ImageMetadata, SeriesMetadata
 from .issuestring import IssueString
 from .utils import list_to_string, string_to_list, xlate
 
@@ -292,11 +292,11 @@ class ComicInfoXml:
                 or n.tag == "Editor"
             ) and n.text is not None:
                 for name in self._split_sting(n.text, [";"]):
-                    metadata.add_credit(name.strip(), n.tag)
+                    metadata.add_credit(CreditMetadata(name.strip(), n.tag))
 
             if n.tag == "CoverArtist" and n.text is not None:
                 for name in self._split_sting(n.text, [";"]):
-                    metadata.add_credit(name.strip(), "Cover")
+                    metadata.add_credit(CreditMetadata(name.strip(), "Cover"))
 
         # parse page data now
         pages_node = root.find("Pages")

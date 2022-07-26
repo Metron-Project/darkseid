@@ -1,18 +1,33 @@
 """ Tests for ComicInfo Tags """
 from datetime import date
 from pathlib import Path
+from typing import List
 
 import pytest
 from lxml import etree
 
 from darkseid.comicinfoxml import ComicInfoXml
-from darkseid.genericmetadata import GenericMetadata, SeriesMetadata
+from darkseid.genericmetadata import CreditMetadata, GenericMetadata, SeriesMetadata
 
 from .conftest import CI_XSD
 
 
+@pytest.fixture
+def test_credits() -> List[CreditMetadata]:
+    return [
+        CreditMetadata("Peter David", "Writer"),
+        CreditMetadata("Martin Egeland", "Penciller"),
+        CreditMetadata("Martin Egeland", "Cover"),
+        CreditMetadata("Kevin Dooley", "Editor"),
+        CreditMetadata("Howard Shum", "Inker"),
+        CreditMetadata("Howard Shum", "Cover"),
+        CreditMetadata("Tom McCraw", "Colorist"),
+        CreditMetadata("Dan Nakrosis", "Letterer"),
+    ]
+
+
 @pytest.fixture()
-def test_meta_data():
+def test_meta_data(test_credits: List[CreditMetadata]) -> GenericMetadata:
     meta_data = GenericMetadata()
     meta_data.series = SeriesMetadata("Aquaman", "Aquaman", 3, "Annual")
     meta_data.issue = "1"
@@ -26,14 +41,8 @@ def test_meta_data():
     meta_data.black_and_white = True
     meta_data.age_rating = "MA15+"
     meta_data.manga = "YesAndRightToLeft"
-    meta_data.add_credit("Peter David", "Writer")
-    meta_data.add_credit("Martin Egeland", "Penciller")
-    meta_data.add_credit("Martin Egeland", "Cover")
-    meta_data.add_credit("Kevin Dooley", "Editor")
-    meta_data.add_credit("Howard Shum", "Inker")
-    meta_data.add_credit("Howard Shum", "Cover")
-    meta_data.add_credit("Tom McCraw", "Colorist")
-    meta_data.add_credit("Dan Nakrosis", "Letterer")
+    for c in test_credits:
+        meta_data.add_credit(c)
     return meta_data
 
 

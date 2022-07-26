@@ -50,7 +50,7 @@ class ImageMetadata(TypedDict, total=False):
 class CreditMetadata:
     person: str
     role: str
-    primary: bool
+    primary: bool = False
 
 
 @dataclass
@@ -188,8 +188,8 @@ class GenericMetadata:
                     if r.role.lower() == c.role.lower():
                         self.credits.remove(r)
             else:
-                primary = bool("primary" in c and c.primary)
-                self.add_credit(c.person, c.role, primary)
+                c.primary = bool("primary" in c and c.primary)
+                self.add_credit(c)
 
     def set_default_page_list(self, count: int) -> None:
         # generate a default page list, with the first page marked as the cover
@@ -216,10 +216,7 @@ class GenericMetadata:
 
         return coverlist
 
-    def add_credit(self, person: str, role: str, primary: bool = False) -> None:
-
-        credit = CreditMetadata(person, role, primary)
-
+    def add_credit(self, credit: CreditMetadata) -> None:
         # look to see if it's not already there...
         found = False
         for c in self.credits:
