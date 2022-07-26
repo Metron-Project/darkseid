@@ -183,13 +183,13 @@ class GenericMetadata:
     def overlay_credits(self, new_credits: List[CreditMetadata]) -> None:
         for c in new_credits:
             # Remove credit role if person is blank
-            if c["person"] == "":
+            if c.person == "":
                 for r in reversed(self.credits):
-                    if r["role"].lower() == c["role"].lower():
+                    if r.role.lower() == c.role.lower():
                         self.credits.remove(r)
             else:
-                primary = bool("primary" in c and c["primary"])
-                self.add_credit(c["person"], c["role"], primary)
+                primary = bool("primary" in c and c.primary)
+                self.add_credit(c.person, c.role, primary)
 
     def set_default_page_list(self, count: int) -> None:
         # generate a default page list, with the first page marked as the cover
@@ -218,14 +218,17 @@ class GenericMetadata:
 
     def add_credit(self, person: str, role: str, primary: bool = False) -> None:
 
-        credit: CreditMetadata = {"person": person, "role": role, "primary": primary}
+        credit = CreditMetadata(person, role, primary)
 
         # look to see if it's not already there...
         found = False
         for c in self.credits:
-            if c["person"].lower() == person.lower() and c["role"].lower() == role.lower():
+            if (
+                c.person.lower() == credit.person.lower()
+                and c.role.lower() == credit.role.lower()
+            ):
                 # no need to add it. just adjust the "primary" flag as needed
-                c["primary"] = primary
+                c.primary = credit.primary
                 found = True
                 break
 
@@ -286,9 +289,9 @@ class GenericMetadata:
 
         for c in self.credits:
             primary = ""
-            if "primary" in c and c["primary"]:
+            if "primary" in c and c.primary:
                 primary = " [P]"
-            add_string("credit", c["role"] + ": " + c["person"] + primary)
+            add_string("credit", c.role + ": " + c.person + primary)
 
         # find the longest field name
         flen = 0

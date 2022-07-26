@@ -1,6 +1,6 @@
 from datetime import date
 
-from darkseid.genericmetadata import GenericMetadata
+from darkseid.genericmetadata import CreditMetadata, GenericMetadata
 
 MARTY = "Martin Egeland"
 PETER = "Peter David"
@@ -44,9 +44,9 @@ def test_metadata_overlay(
 
 def test_metadata_credits(fake_metadata: GenericMetadata) -> None:
     result = [
-        {"person": PETER, "role": WRITER, "primary": True},
-        {"person": MARTY, "role": PENCILLER, "primary": False},
-        {"person": MARTY, "role": COVER, "primary": False},
+        CreditMetadata(PETER, WRITER, True),
+        CreditMetadata(MARTY, PENCILLER, False),
+        CreditMetadata(MARTY, COVER, False),
     ]
 
     md = fake_metadata
