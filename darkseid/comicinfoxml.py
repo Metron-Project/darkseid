@@ -9,7 +9,13 @@ from datetime import date
 from re import split
 from typing import Any, List, Optional, Union, cast
 
-from .genericmetadata import CreditMetadata, GenericMetadata, ImageMetadata, SeriesMetadata
+from .genericmetadata import (
+    CreditMetadata,
+    GenericMetadata,
+    ImageMetadata,
+    RoleMetadata,
+    SeriesMetadata,
+)
 from .issuestring import IssueString
 from .utils import list_to_string, string_to_list, xlate
 
@@ -163,27 +169,27 @@ class ComicInfoXml:
         # first, loop thru credits, and build a list for each role that CIX
         # supports
         for credit in metadata.credits:
+            for r in credit.role:
+                if r.name.lower() in set(self.writer_synonyms):
+                    credit_writer_list.append(credit.person.replace(",", ""))
 
-            if credit.role.lower() in set(self.writer_synonyms):
-                credit_writer_list.append(credit.person.replace(",", ""))
+                if r.name.lower() in set(self.penciller_synonyms):
+                    credit_penciller_list.append(credit.person.replace(",", ""))
 
-            if credit.role.lower() in set(self.penciller_synonyms):
-                credit_penciller_list.append(credit.person.replace(",", ""))
+                if r.name.lower() in set(self.inker_synonyms):
+                    credit_inker_list.append(credit.person.replace(",", ""))
 
-            if credit.role.lower() in set(self.inker_synonyms):
-                credit_inker_list.append(credit.person.replace(",", ""))
+                if r.name.lower() in set(self.colorist_synonyms):
+                    credit_colorist_list.append(credit.person.replace(",", ""))
 
-            if credit.role.lower() in set(self.colorist_synonyms):
-                credit_colorist_list.append(credit.person.replace(",", ""))
+                if r.name.lower() in set(self.letterer_synonyms):
+                    credit_letterer_list.append(credit.person.replace(",", ""))
 
-            if credit.role.lower() in set(self.letterer_synonyms):
-                credit_letterer_list.append(credit.person.replace(",", ""))
+                if r.name.lower() in set(self.cover_synonyms):
+                    credit_cover_list.append(credit.person.replace(",", ""))
 
-            if credit.role.lower() in set(self.cover_synonyms):
-                credit_cover_list.append(credit.person.replace(",", ""))
-
-            if credit.role.lower() in set(self.editor_synonyms):
-                credit_editor_list.append(credit.person.replace(",", ""))
+                if r.name.lower() in set(self.editor_synonyms):
+                    credit_editor_list.append(credit.person.replace(",", ""))
 
         # second, convert each list to string, and add to XML struct
         assign("Writer", list_to_string(credit_writer_list))
@@ -292,11 +298,11 @@ class ComicInfoXml:
                 or n.tag == "Editor"
             ) and n.text is not None:
                 for name in self._split_sting(n.text, [";"]):
-                    metadata.add_credit(CreditMetadata(name.strip(), n.tag))
+                    metadata.add_credit(CreditMetadata(name.strip(), [RoleMetadata(n.tag)]))
 
             if n.tag == "CoverArtist" and n.text is not None:
                 for name in self._split_sting(n.text, [";"]):
-                    metadata.add_credit(CreditMetadata(name.strip(), "Cover"))
+                    metadata.add_credit(CreditMetadata(name.strip(), [RoleMetadata("Cover")]))
 
         # parse page data now
         pages_node = root.find("Pages")

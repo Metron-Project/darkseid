@@ -7,7 +7,12 @@ import pytest
 from lxml import etree
 
 from darkseid.comicinfoxml import ComicInfoXml
-from darkseid.genericmetadata import CreditMetadata, GenericMetadata, SeriesMetadata
+from darkseid.genericmetadata import (
+    CreditMetadata,
+    GenericMetadata,
+    RoleMetadata,
+    SeriesMetadata,
+)
 
 from .conftest import CI_XSD
 
@@ -15,14 +20,14 @@ from .conftest import CI_XSD
 @pytest.fixture
 def test_credits() -> List[CreditMetadata]:
     return [
-        CreditMetadata("Peter David", "Writer"),
-        CreditMetadata("Martin Egeland", "Penciller"),
-        CreditMetadata("Martin Egeland", "Cover"),
-        CreditMetadata("Kevin Dooley", "Editor"),
-        CreditMetadata("Howard Shum", "Inker"),
-        CreditMetadata("Howard Shum", "Cover"),
-        CreditMetadata("Tom McCraw", "Colorist"),
-        CreditMetadata("Dan Nakrosis", "Letterer"),
+        CreditMetadata("Peter David", [RoleMetadata("Writer")]),
+        CreditMetadata("Martin Egeland", [RoleMetadata("Penciller")]),
+        CreditMetadata("Martin Egeland", [RoleMetadata("Cover")]),
+        CreditMetadata("Kevin Dooley", [RoleMetadata("Editor")]),
+        CreditMetadata("Howard Shum", [RoleMetadata("Inker")]),
+        CreditMetadata("Howard Shum", [RoleMetadata("Cover")]),
+        CreditMetadata("Tom McCraw", [RoleMetadata("Colorist")]),
+        CreditMetadata("Dan Nakrosis", [RoleMetadata("Letterer")]),
     ]
 
 

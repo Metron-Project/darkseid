@@ -47,10 +47,16 @@ class ImageMetadata(TypedDict, total=False):
 
 
 @dataclass
+class RoleMetadata:
+    name: str
+    id: Optional[int] = None
+    primary: bool = False
+
+
+@dataclass
 class CreditMetadata:
     person: str
-    role: str
-    primary: bool = False
+    role: List[RoleMetadata]
 
 
 @dataclass
@@ -170,7 +176,8 @@ class GenericMetadata:
         assign("comments", new_md.comments)
         assign("notes", new_md.notes)
 
-        self.overlay_credits(new_md.credits)
+        if new_md.credits:
+            self.overlay_credits(new_md.credits)
 
         # For now, go the easy route, where any overlay
         # value wipes out the whole list
@@ -216,21 +223,32 @@ class GenericMetadata:
 
         return coverlist
 
-    def add_credit(self, credit: CreditMetadata) -> None:
-        # look to see if it's not already there...
-        found = False
-        for c in self.credits:
-            if (
-                c.person.lower() == credit.person.lower()
-                and c.role.lower() == credit.role.lower()
-            ):
-                # no need to add it. just adjust the "primary" flag as needed
-                c.primary = credit.primary
-                found = True
-                break
+    def _existing_credit(self, creator: str) -> Tuple[bool, Optional[int]]:
+        return (
+            next(
+                (
+                    (True, i)
+                    for i, existing in enumerate(self.credits)
+                    if creator.lower() == existing.person.lower()
+                ),
+                (False, None),
+            )
+            if self.credits
+            else (False, None)
+        )
 
-        if not found:
-            self.credits.append(credit)
+    def _role_exists(self, new_role: RoleMetadata, old_roles: List[RoleMetadata]) -> bool:
+        return any(role.name.lower() == new_role.name.lower() for role in old_roles)
+
+    def add_credit(self, new_credit: CreditMetadata) -> None:
+        exist, idx = self._existing_credit(new_credit.person)
+        if exist:
+            existing_credit: CreditMetadata = self.credits[idx]
+            for new_role in new_credit.role:
+                if not self._role_exists(new_role, existing_credit.role):
+                    existing_credit.role.append(new_role)
+        else:
+            self.credits.append(new_credit)
 
     def __str__(self) -> str:
         vals: List[Tuple[str, str]] = []
