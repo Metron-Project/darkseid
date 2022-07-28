@@ -1,6 +1,6 @@
 from datetime import date
 
-from darkseid.genericmetadata import CreditMetadata, GenericMetadata
+from darkseid.genericmetadata import CreditMetadata, GenericMetadata, RoleMetadata
 
 MARTY = "Martin Egeland"
 PETER = "Peter David"
@@ -44,14 +44,17 @@ def test_metadata_overlay(
 
 def test_metadata_credits(fake_metadata: GenericMetadata) -> None:
     result = [
-        CreditMetadata(PETER, WRITER, True),
-        CreditMetadata(MARTY, PENCILLER, False),
-        CreditMetadata(MARTY, COVER, False),
+        CreditMetadata(PETER, [RoleMetadata(WRITER, primary=True)]),
+        CreditMetadata(
+            MARTY, [RoleMetadata(PENCILLER), RoleMetadata(COVER), RoleMetadata("Inker")]
+        ),
     ]
 
     md = fake_metadata
-    md.add_credit(CreditMetadata(PETER, WRITER, True))
-    md.add_credit(CreditMetadata(MARTY, PENCILLER))
-    md.add_credit(CreditMetadata(MARTY, COVER))
+    md.add_credit(CreditMetadata(PETER, [RoleMetadata(WRITER, None, True)]))
+    md.add_credit(CreditMetadata(MARTY, [RoleMetadata(PENCILLER), RoleMetadata(COVER)]))
+    md.add_credit(CreditMetadata(MARTY, [RoleMetadata("Inker")]))
+    # Try to add role for creator a 2nd time
+    md.add_credit(CreditMetadata(MARTY, [RoleMetadata(PENCILLER)]))
 
     assert md.credits == result
