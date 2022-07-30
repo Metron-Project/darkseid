@@ -18,7 +18,7 @@ from .genericmetadata import (
     SeriesMetadata,
 )
 from .issuestring import IssueString
-from .utils import list_to_string, string_to_list, xlate
+from .utils import list_to_string, xlate
 
 
 class ComicInfoXml:
@@ -144,7 +144,7 @@ class ComicInfoXml:
         def get_resource_list(resource: List[GeneralResource]) -> str:
             return list_to_string([i.name for i in resource])
 
-        assign("Title", list_to_string(metadata.stories))
+        assign("Title", get_resource_list(metadata.stories))
         assign("Series", metadata.series.name)
         assign("Number", metadata.issue)
         assign("Count", metadata.issue_count)
@@ -260,7 +260,7 @@ class ComicInfoXml:
 
         metadata = GenericMetadata()
         metadata.series = SeriesMetadata(name=xlate(get("Series")))
-        metadata.stories = string_to_list(xlate(get("Title")))
+        metadata.stories = string_to_resource(xlate(get("Title")))
         metadata.issue = IssueString(xlate(get("Number"))).as_string()
         metadata.issue_count = xlate(get("Count"), True)
         metadata.series.volume = xlate(get("Volume"), True)

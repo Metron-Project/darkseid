@@ -19,7 +19,7 @@ def fake_metadata():
     meta_data = GenericMetadata()
     meta_data.series = SeriesMetadata("Aquaman", "Aquaman", 1, "Annual")
     meta_data.issue = "0"
-    meta_data.stories = ["A Crash of Symbols"]
+    meta_data.stories = [GeneralResource("A Crash of Symbols")]
     meta_data.publisher = "DC Comics"
     meta_data.cover_date = date(1994, 12, 1)
     meta_data.story_arcs = [GeneralResource("Final Crisis")]

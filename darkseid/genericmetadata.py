@@ -89,7 +89,7 @@ class GenericMetadata:
     info_source: Optional[InfoSourceMetadata] = None
     series: Optional[SeriesMetadata] = None
     issue: Optional[str] = None
-    stories: List[str] = field(default_factory=list)
+    stories: List[GeneralResource] = field(default_factory=list)
     publisher: Optional[str] = None
     cover_date: Optional[date] = None
     store_date: Optional[date] = None
@@ -119,10 +119,10 @@ class GenericMetadata:
 
     characters: List[GeneralResource] = field(default_factory=list)
     teams: List[GeneralResource] = field(default_factory=list)
-    locations: List[str] = field(default_factory=list)
+    locations: List[GeneralResource] = field(default_factory=list)
 
     credits: List[CreditMetadata] = field(default_factory=list)
-    tags: List[str] = field(default_factory=list)
+    tags: List[GeneralResource] = field(default_factory=list)
     pages: List[ImageMetadata] = field(default_factory=list)
 
     def __post_init__(self):
