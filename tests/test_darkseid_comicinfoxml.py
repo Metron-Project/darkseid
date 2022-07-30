@@ -9,6 +9,7 @@ from lxml import etree
 from darkseid.comicinfoxml import ComicInfoXml
 from darkseid.genericmetadata import (
     CreditMetadata,
+    GeneralResource,
     GenericMetadata,
     RoleMetadata,
     SeriesMetadata,
@@ -34,15 +35,24 @@ def test_credits() -> List[CreditMetadata]:
 @pytest.fixture()
 def test_meta_data(test_credits: List[CreditMetadata]) -> GenericMetadata:
     meta_data = GenericMetadata()
-    meta_data.series = SeriesMetadata("Aquaman", "Aquaman", 3, "Annual")
+    meta_data.series = SeriesMetadata(
+        "Aquaman", sort_name="Aquaman", volume=3, format="Annual"
+    )
     meta_data.issue = "1"
-    meta_data.stories = ["Foo", "Bar"]
+    meta_data.stories = [GeneralResource("Foo"), GeneralResource("Bar")]
     meta_data.cover_date = date(1993, 4, 15)
-    meta_data.characters = ["Aquaman", "Mera", "Garth"]
-    meta_data.teams = ["Atlanteans", "Justice League"]
-    meta_data.locations = ["Atlantis", "Metropolis"]
-    meta_data.genres = ["Super-Hero"]
-    meta_data.story_arcs = ["Crisis on Infinite Earths", "Death of Aquagirl"]
+    meta_data.characters = [
+        GeneralResource("Aquaman"),
+        GeneralResource("Mera"),
+        GeneralResource("Garth"),
+    ]
+    meta_data.teams = [GeneralResource("Atlanteans"), GeneralResource("Justice League")]
+    meta_data.locations = [GeneralResource("Atlantis"), GeneralResource("Metropolis")]
+    meta_data.genres = [GeneralResource("Super-Hero")]
+    meta_data.story_arcs = [
+        GeneralResource("Crisis on Infinite Earths"),
+        GeneralResource("Death of Aquagirl"),
+    ]
     meta_data.black_and_white = True
     meta_data.age_rating = "MA15+"
     meta_data.manga = "YesAndRightToLeft"
