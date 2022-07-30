@@ -80,7 +80,7 @@ class GenericMetadata:
     series: Optional[SeriesMetadata] = None
     issue: Optional[str] = None
     stories: List[GeneralResource] = field(default_factory=list)
-    publisher: Optional[str] = None
+    publisher: Optional[GeneralResource] = None
     cover_date: Optional[date] = None
     store_date: Optional[date] = None
     issue_count: Optional[int] = None

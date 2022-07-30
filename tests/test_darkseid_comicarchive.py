@@ -63,6 +63,7 @@ def test_cb7_test_metadata(tmp_path: Path, fake_metadata: GenericMetadata) -> No
     # Verify what was written
     new_md = ca.read_metadata()
     assert new_md.series.name == fake_metadata.series.name
+    assert new_md.publisher.name == fake_metadata.publisher.name
     assert new_md.series.volume == fake_metadata.series.volume
     assert new_md.series.format == fake_metadata.series.format
     assert new_md.issue == fake_metadata.issue

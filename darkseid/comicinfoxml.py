@@ -204,7 +204,8 @@ class ComicInfoXml:
         assign("CoverArtist", list_to_string(credit_cover_list))
         assign("Editor", list_to_string(credit_editor_list))
 
-        assign("Publisher", metadata.publisher)
+        if metadata.publisher:
+            assign("Publisher", metadata.publisher.name)
         assign("Imprint", metadata.imprint)
         assign("Genre", get_resource_list(metadata.genres))
         assign("Web", metadata.web_link)
@@ -276,7 +277,7 @@ class ComicInfoXml:
         if tmp_year is not None and tmp_month is not None and tmp_day is not None:
             metadata.cover_date = date(tmp_year, tmp_month, tmp_day)
 
-        metadata.publisher = xlate(get("Publisher"))
+        metadata.publisher = GeneralResource(xlate(get("Publisher")))
         metadata.imprint = xlate(get("Imprint"))
         metadata.genres = string_to_resource(xlate(get("Genre")))
         metadata.web_link = xlate(get("Web"))
