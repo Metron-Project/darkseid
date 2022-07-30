@@ -72,17 +72,11 @@ class CreditMetadata:
 
 
 @dataclass
-class InfoSourceMetadata:
-    source: str
-    id: int
-
-
-@dataclass
 class GenericMetadata:
     is_empty: bool = True
     tag_origin: Optional[str] = None
 
-    info_source: Optional[InfoSourceMetadata] = None
+    info_source: Optional[GeneralResource] = None
     series: Optional[SeriesMetadata] = None
     issue: Optional[str] = None
     stories: List[GeneralResource] = field(default_factory=list)
