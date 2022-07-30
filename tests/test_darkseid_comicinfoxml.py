@@ -35,7 +35,9 @@ def test_credits() -> List[CreditMetadata]:
 @pytest.fixture()
 def test_meta_data(test_credits: List[CreditMetadata]) -> GenericMetadata:
     meta_data = GenericMetadata()
-    meta_data.series = SeriesMetadata("Aquaman", "Aquaman", 3, "Annual")
+    meta_data.series = SeriesMetadata(
+        "Aquaman", sort_name="Aquaman", volume=3, format="Annual"
+    )
     meta_data.issue = "1"
     meta_data.stories = [GeneralResource("Foo"), GeneralResource("Bar")]
     meta_data.cover_date = date(1993, 4, 15)

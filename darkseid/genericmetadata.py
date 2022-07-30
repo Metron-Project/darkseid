@@ -47,10 +47,21 @@ class ImageMetadata(TypedDict, total=False):
 
 
 @dataclass
-class RoleMetadata:
+class GeneralResource:
     name: str
     id: Optional[int] = None
+
+
+@dataclass
+class RoleMetadata(GeneralResource):
     primary: bool = False
+
+
+@dataclass
+class SeriesMetadata(GeneralResource):
+    sort_name: Optional[str] = None
+    volume: Optional[int] = None
+    format: Optional[str] = None
 
 
 @dataclass
@@ -61,24 +72,9 @@ class CreditMetadata:
 
 
 @dataclass
-class SeriesMetadata:
-    name: str
-    sort_name: Optional[str] = None
-    volume: Optional[int] = None
-    format: Optional[str] = None
-    id: Optional[int] = None
-
-
-@dataclass
 class InfoSourceMetadata:
     source: str
     id: int
-
-
-@dataclass
-class GeneralResource:
-    name: str
-    id: Optional[int] = None
 
 
 @dataclass
