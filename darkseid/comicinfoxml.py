@@ -11,6 +11,7 @@ from typing import Any, List, Optional, Union, cast
 
 from .genericmetadata import (
     CreditMetadata,
+    GeneralResource,
     GenericMetadata,
     ImageMetadata,
     RoleMetadata,
@@ -140,6 +141,9 @@ class ComicInfoXml:
                 if et_entry is not None:
                     root.remove(et_entry)
 
+        def get_resource_list(resource: List[GeneralResource]) -> str:
+            return list_to_string([i.name for i in resource])
+
         assign("Title", list_to_string(metadata.stories))
         assign("Series", metadata.series.name)
         assign("Number", metadata.issue)
@@ -202,18 +206,18 @@ class ComicInfoXml:
 
         assign("Publisher", metadata.publisher)
         assign("Imprint", metadata.imprint)
-        assign("Genre", list_to_string(metadata.genres))
+        assign("Genre", get_resource_list(metadata.genres))
         assign("Web", metadata.web_link)
         assign("PageCount", metadata.page_count)
         assign("LanguageISO", metadata.language)
         assign("Format", metadata.series.format)
         assign("BlackAndWhite", "Yes" if metadata.black_and_white else None)
         assign("Manga", self.validate_manga(metadata.manga))
-        assign("Characters", list_to_string(metadata.characters))
-        assign("Teams", list_to_string(metadata.teams))
-        assign("Locations", list_to_string(metadata.locations))
+        assign("Characters", get_resource_list(metadata.characters))
+        assign("Teams", get_resource_list(metadata.teams))
+        assign("Locations", get_resource_list(metadata.locations))
         assign("ScanInformation", metadata.scan_info)
-        assign("StoryArc", list_to_string(metadata.story_arcs))
+        assign("StoryArc", get_resource_list(metadata.story_arcs))
         assign("AgeRating", self.validate_age_rating(metadata.age_rating))
 
         #  loop and add the page entries under pages node
@@ -249,6 +253,11 @@ class ComicInfoXml:
                 return None
             return tag.text
 
+        def string_to_resource(string: str) -> List[GeneralResource]:
+            if string is not None:
+                # TODO: Make the delimiter also check for ','
+                return [GeneralResource(x.strip()) for x in string.split(";")]
+
         metadata = GenericMetadata()
         metadata.series = SeriesMetadata(name=xlate(get("Series")))
         metadata.stories = string_to_list(xlate(get("Title")))
@@ -269,17 +278,17 @@ class ComicInfoXml:
 
         metadata.publisher = xlate(get("Publisher"))
         metadata.imprint = xlate(get("Imprint"))
-        metadata.genres = string_to_list(xlate(get("Genre")))
+        metadata.genres = string_to_resource(xlate(get("Genre")))
         metadata.web_link = xlate(get("Web"))
         metadata.language = xlate(get("LanguageISO"))
         metadata.series.format = xlate(get("Format"))
         metadata.manga = xlate(get("Manga"))
-        metadata.characters = string_to_list(xlate(get("Characters")))
-        metadata.teams = string_to_list(xlate(get("Teams")))
-        metadata.locations = string_to_list(xlate(get("Locations")))
+        metadata.characters = string_to_resource(xlate(get("Characters")))
+        metadata.teams = string_to_resource(xlate(get("Teams")))
+        metadata.locations = string_to_resource(xlate(get("Locations")))
         metadata.page_count = xlate(get("PageCount"), True)
         metadata.scan_info = xlate(get("ScanInformation"))
-        metadata.story_arcs = string_to_list(xlate(get("StoryArc")))
+        metadata.story_arcs = string_to_resource(xlate(get("StoryArc")))
         metadata.series_group = xlate(get("SeriesGroup"))
         metadata.age_rating = xlate(get("AgeRating"))
 

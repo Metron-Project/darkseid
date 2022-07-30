@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from darkseid.comicarchive import ComicArchive
-from darkseid.genericmetadata import GenericMetadata, SeriesMetadata
+from darkseid.genericmetadata import GeneralResource, GenericMetadata, SeriesMetadata
 
 TEST_FILES_PATH = Path("tests/test_files")
 IMG_DIR = TEST_FILES_PATH / "Captain_Science_001"
@@ -22,9 +22,13 @@ def fake_metadata():
     meta_data.stories = ["A Crash of Symbols"]
     meta_data.publisher = "DC Comics"
     meta_data.cover_date = date(1994, 12, 1)
-    meta_data.story_arcs = ["Final Crisis"]
-    meta_data.characters = ["Aquaman", "Mera", "Garth"]
-    meta_data.teams = ["Justice League", "Teen Titans"]
+    meta_data.story_arcs = [GeneralResource("Final Crisis")]
+    meta_data.characters = [
+        GeneralResource("Aquaman"),
+        GeneralResource("Mera"),
+        GeneralResource("Garth"),
+    ]
+    meta_data.teams = [GeneralResource("Justice League"), GeneralResource("Teen Titans")]
     meta_data.comments = "Just some sample metadata."
     meta_data.black_and_white = True
     meta_data.is_empty = False

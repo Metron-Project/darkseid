@@ -57,6 +57,7 @@ class RoleMetadata:
 class CreditMetadata:
     person: str
     role: List[RoleMetadata]
+    id: Optional[int] = None
 
 
 @dataclass
@@ -65,12 +66,19 @@ class SeriesMetadata:
     sort_name: Optional[str] = None
     volume: Optional[int] = None
     format: Optional[str] = None
+    id: Optional[int] = None
 
 
 @dataclass
 class InfoSourceMetadata:
     source: str
     id: int
+
+
+@dataclass
+class GeneralResource:
+    name: str
+    id: Optional[int] = None
 
 
 @dataclass
@@ -86,7 +94,7 @@ class GenericMetadata:
     cover_date: Optional[date] = None
     store_date: Optional[date] = None
     issue_count: Optional[int] = None
-    genres: List[str] = field(default_factory=list)
+    genres: List[GeneralResource] = field(default_factory=list)
     language: Optional[str] = None  # 2 letter iso code
     comments: Optional[str] = None  # use same way as Summary in CIX
 
@@ -105,12 +113,12 @@ class GenericMetadata:
     page_count: Optional[int] = None
     age_rating: Optional[str] = None
 
-    story_arcs: List[str] = field(default_factory=list)
+    story_arcs: List[GeneralResource] = field(default_factory=list)
     series_group: Optional[str] = None
     scan_info: Optional[str] = None
 
-    characters: List[str] = field(default_factory=list)
-    teams: List[str] = field(default_factory=list)
+    characters: List[GeneralResource] = field(default_factory=list)
+    teams: List[GeneralResource] = field(default_factory=list)
     locations: List[str] = field(default_factory=list)
 
     credits: List[CreditMetadata] = field(default_factory=list)
