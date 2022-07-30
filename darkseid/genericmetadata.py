@@ -49,7 +49,7 @@ class ImageMetadata(TypedDict, total=False):
 @dataclass
 class GeneralResource:
     name: str
-    id: Optional[int] = None
+    id_: Optional[int] = None
 
 
 @dataclass
@@ -68,7 +68,7 @@ class SeriesMetadata(GeneralResource):
 class CreditMetadata:
     person: str
     role: List[RoleMetadata]
-    id: Optional[int] = None
+    id_: Optional[int] = None
 
 
 @dataclass
