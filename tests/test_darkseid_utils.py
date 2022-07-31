@@ -22,14 +22,6 @@ def test_list_to_string() -> None:
     assert result == expected_result
 
 
-def test_string_to_list() -> None:
-    test_string = "apple; banana; cherry"
-    expected_result = ["apple", "banana", "cherry"]
-
-    result = utils.string_to_list(test_string)
-    assert result == expected_result
-
-
 def test_unique_name(tmp_path: Path) -> None:
     d = tmp_path / "test"
     d.mkdir()
