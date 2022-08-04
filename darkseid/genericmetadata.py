@@ -304,7 +304,7 @@ class GenericMetadata:
             primary = ""
             if "primary" in c and c.primary:
                 primary = " [P]"
-            add_string("credit", c.role + ": " + c.person + primary)
+            add_string("credit", f"{c.role}: {c.person}{primary}")
 
         # find the longest field name
         flen = 0
@@ -316,6 +316,6 @@ class GenericMetadata:
         outstr = ""
         fmt_str = "{0: <" + str(flen) + "} {1}\n"
         for i in vals:
-            outstr += fmt_str.format(i[0] + ":", i[1])
+            outstr += fmt_str.format(f"{i[0]}:", i[1])
 
         return outstr
