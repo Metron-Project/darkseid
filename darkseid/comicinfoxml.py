@@ -250,9 +250,7 @@ class ComicInfoXml:
 
         def get(name):
             tag = root.find(name)
-            if tag is None:
-                return None
-            return tag.text
+            return None if tag is None else tag.text
 
         def string_to_resource(string: str) -> List[GeneralResource]:
             if string is not None:

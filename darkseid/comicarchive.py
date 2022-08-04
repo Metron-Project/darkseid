@@ -371,10 +371,7 @@ class ComicArchive:
         page_list = self.get_page_name_list()
 
         num_pages = len(page_list)
-        if num_pages == 0 or index >= num_pages:
-            return None
-
-        return page_list[index]
+        return None if num_pages == 0 or index >= num_pages else page_list[index]
 
     def is_image(self, name_path: Path) -> bool:
         suffix_list = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
