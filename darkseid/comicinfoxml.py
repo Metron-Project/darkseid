@@ -298,13 +298,9 @@ class ComicInfoXml:
         # Now extract the credit info
         for n in root:
             if (
-                n.tag == "Writer"
-                or n.tag == "Penciller"
-                or n.tag == "Inker"
-                or n.tag == "Colorist"
-                or n.tag == "Letterer"
-                or n.tag == "Editor"
-            ) and n.text is not None:
+                n.tag in ["Writer", "Penciller", "Inker", "Colorist", "Letterer", "Editor"]
+                and n.text is not None
+            ):
                 for name in self._split_sting(n.text, [";"]):
                     metadata.add_credit(CreditMetadata(name.strip(), [RoleMetadata(n.tag)]))
 
