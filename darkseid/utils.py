@@ -102,8 +102,5 @@ def xlate(data, is_int=False):
         )
         if i == "0":
             return "0"
-        if not i:
-            return None
-        return int(i)
-
+        return int(i) if i else None
     return str(data)
