@@ -48,6 +48,7 @@ def fake_overlay_metadata():
         name="Aquaman", sort_name="Aquaman", volume=1, format="Annual"
     )
     overlay_md.cover_date = date(1994, 10, 1)
+    overlay_md.reprints = [GeneralResource("Aquaman (1964) #64", 12345)]
     return overlay_md
 
 

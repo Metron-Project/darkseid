@@ -112,6 +112,7 @@ class GenericMetadata:
     locations: List[GeneralResource] = field(default_factory=list)
 
     credits: List[CreditMetadata] = field(default_factory=list)
+    reprints: List[GeneralResource] = field(default_factory=list)
     tags: List[GeneralResource] = field(default_factory=list)
     pages: List[ImageMetadata] = field(default_factory=list)
 
@@ -171,6 +172,8 @@ class GenericMetadata:
             assign("teams", new_md.teams)
         if len(new_md.locations) > 0:
             assign("locations", new_md.locations)
+        if len(new_md.reprints) > 0:
+            assign("reprints", new_md.reprints)
         assign("comments", new_md.comments)
         assign("notes", new_md.notes)
 
@@ -295,6 +298,8 @@ class GenericMetadata:
             add_attr_string("teams")
         if self.locations:
             add_attr_string("locations")
+        if self.reprints:
+            add_attr_string("reprints")
         add_attr_string("comments")
         add_attr_string("notes")
 
