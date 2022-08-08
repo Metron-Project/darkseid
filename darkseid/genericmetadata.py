@@ -11,6 +11,7 @@ possible, however lossy it might be
 
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import Decimal
 from typing import List, Optional, Tuple, TypedDict
 
 from .utils import list_to_string
@@ -44,6 +45,12 @@ class ImageMetadata(TypedDict, total=False):
     ImageSize: str
     ImageHeight: str
     ImageWidth: str
+
+
+@dataclass
+class Price:
+    amount: Decimal
+    currency: str = "dollars"
 
 
 @dataclass
@@ -83,6 +90,7 @@ class GenericMetadata:
     publisher: Optional[GeneralResource] = None
     cover_date: Optional[date] = None
     store_date: Optional[date] = None
+    price: List[Price] = field(default_factory=list)
     issue_count: Optional[int] = None
     genres: List[GeneralResource] = field(default_factory=list)
     language: Optional[str] = None  # 2 letter iso code
@@ -148,6 +156,8 @@ class GenericMetadata:
         assign("publisher", new_md.publisher)
         assign("cover_date", new_md.cover_date)
         assign("store_date", new_md.store_date)
+        if len(new_md.price) > 0:
+            assign("price", new_md.price)
         assign("volume_count", new_md.volume_count)
         if len(new_md.genres) > 0:
             assign("genre", new_md.genres)
@@ -272,6 +282,8 @@ class GenericMetadata:
         add_attr_string("publisher")
         add_attr_string("cover_date")
         add_attr_string("store_date")
+        if self.price:
+            add_attr_string("price")
         add_attr_string("volume_count")
         if self.genres:
             add_attr_string("genres")

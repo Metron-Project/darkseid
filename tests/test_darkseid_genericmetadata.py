@@ -41,6 +41,7 @@ def test_metadata_overlay(
     assert md.story_arcs == fake_metadata.story_arcs
     assert md.teams == fake_metadata.teams
     assert md.reprints == fake_overlay_metadata.reprints
+    assert md.price == fake_metadata.price
 
 
 def test_metadata_credits(fake_metadata: GenericMetadata) -> None:

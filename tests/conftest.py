@@ -1,10 +1,11 @@
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
 from darkseid.comicarchive import ComicArchive
-from darkseid.genericmetadata import GeneralResource, GenericMetadata, SeriesMetadata
+from darkseid.genericmetadata import GeneralResource, GenericMetadata, Price, SeriesMetadata
 
 TEST_FILES_PATH = Path("tests/test_files")
 IMG_DIR = TEST_FILES_PATH / "Captain_Science_001"
@@ -49,6 +50,7 @@ def fake_overlay_metadata():
     )
     overlay_md.cover_date = date(1994, 10, 1)
     overlay_md.reprints = [GeneralResource("Aquaman (1964) #64", 12345)]
+    overlay_md.price = [Price(Decimal("3.99")), Price(Decimal("1.5"), "euros")]
     return overlay_md
 
 
