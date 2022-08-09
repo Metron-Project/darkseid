@@ -1,6 +1,9 @@
 from datetime import date
+from decimal import Decimal
 
-from darkseid.genericmetadata import CreditMetadata, GenericMetadata, RoleMetadata
+import pytest
+
+from darkseid.genericmetadata import CreditMetadata, GenericMetadata, Price, RoleMetadata
 
 MARTY = "Martin Egeland"
 PETER = "Peter David"
@@ -60,3 +63,34 @@ def test_metadata_credits(fake_metadata: GenericMetadata) -> None:
     md.add_credit(CreditMetadata(MARTY, [RoleMetadata(PENCILLER)]))
 
     assert md.credits == result
+
+
+good_prices = [
+    pytest.param(
+        Price(Decimal("2.50"), "CA"),
+        Price(Decimal("2.5"), "CA"),
+        "Valid 2 letter country code",
+    ),
+    pytest.param(
+        Price(Decimal("1.99"), "Canada"), Price(Decimal("1.99"), "CA"), "Valid country name"
+    ),
+    pytest.param(Price(Decimal("3.99")), Price(Decimal("3.99"), "US"), "No country given"),
+]
+
+
+@pytest.mark.parametrize("price, expected, reason", good_prices)
+def test_price_metadata(price, expected, reason) -> None:
+    assert price == expected
+
+
+bad_prices = [
+    pytest.param(Decimal("2.5"), "ZZZ", "Invalid country name"),
+    pytest.param(Decimal("1"), " ", "Space-only country value"),
+    pytest.param(Decimal("5.99"), "ZZ", "Invalid 2 letter country code"),
+]
+
+
+@pytest.mark.parametrize("amount, country, reason", bad_prices)
+def test_invalid_price_metadata(amount, country, reason) -> None:
+    with pytest.raises(ValueError):
+        Price(amount, country)

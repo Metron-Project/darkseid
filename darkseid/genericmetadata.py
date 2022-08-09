@@ -14,7 +14,23 @@ from datetime import date
 from decimal import Decimal
 from typing import List, Optional, Tuple, TypedDict
 
+import pycountry
+
 from .utils import list_to_string
+
+
+class Validations:
+    def __post_init__(self):
+        """Run validation methods if declared.
+        The validation method can be a simple check
+        that raises ValueError or a transformation to
+        the field value.
+        The validation is performed by calling a function named:
+            `validate_<field_name>(self, value, field) -> field.type`
+        """
+        for name, field_ in self.__dataclass_fields__.items():
+            if method := getattr(self, f"validate_{name}", None):
+                setattr(self, name, method(getattr(self, name), field=field_))
 
 
 class PageType:
@@ -48,9 +64,28 @@ class ImageMetadata(TypedDict, total=False):
 
 
 @dataclass
-class Price:
+class Price(Validations):
     amount: Decimal
-    currency: str = "dollars"
+    country: str = field(default="US")
+
+    def validate_country(self, value: str, **_) -> str:
+        if value is None:
+            return "US"
+        value = value.strip()
+        if not value:
+            raise ValueError("No value given for country")
+
+        if len(value) == 2:
+            obj = pycountry.countries.get(alpha_2=value)
+        else:
+            try:
+                obj = pycountry.countries.lookup(value)
+            except LookupError as e:
+                raise ValueError(f"Couldn't find country for {value}") from e
+
+        if obj is None:
+            raise ValueError(f"Couldn't get country code for {value}")
+        return obj.alpha_2
 
 
 @dataclass
