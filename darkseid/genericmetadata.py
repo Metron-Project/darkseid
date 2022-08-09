@@ -11,9 +11,26 @@ possible, however lossy it might be
 
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import Decimal
 from typing import List, Optional, Tuple, TypedDict
 
+import pycountry
+
 from .utils import list_to_string
+
+
+class Validations:
+    def __post_init__(self):
+        """Run validation methods if declared.
+        The validation method can be a simple check
+        that raises ValueError or a transformation to
+        the field value.
+        The validation is performed by calling a function named:
+            `validate_<field_name>(self, value, field) -> field.type`
+        """
+        for name, field_ in self.__dataclass_fields__.items():
+            if method := getattr(self, f"validate_{name}", None):
+                setattr(self, name, method(getattr(self, name), field=field_))
 
 
 class PageType:
@@ -44,6 +61,31 @@ class ImageMetadata(TypedDict, total=False):
     ImageSize: str
     ImageHeight: str
     ImageWidth: str
+
+
+@dataclass
+class Price(Validations):
+    amount: Decimal
+    country: str = field(default="US")
+
+    def validate_country(self, value: str, **_) -> str:
+        if value is None:
+            return "US"
+        value = value.strip()
+        if not value:
+            raise ValueError("No value given for country")
+
+        if len(value) == 2:
+            obj = pycountry.countries.get(alpha_2=value)
+        else:
+            try:
+                obj = pycountry.countries.lookup(value)
+            except LookupError as e:
+                raise ValueError(f"Couldn't find country for {value}") from e
+
+        if obj is None:
+            raise ValueError(f"Couldn't get country code for {value}")
+        return obj.alpha_2
 
 
 @dataclass
@@ -83,6 +125,7 @@ class GenericMetadata:
     publisher: Optional[GeneralResource] = None
     cover_date: Optional[date] = None
     store_date: Optional[date] = None
+    price: List[Price] = field(default_factory=list)
     issue_count: Optional[int] = None
     genres: List[GeneralResource] = field(default_factory=list)
     language: Optional[str] = None  # 2 letter iso code
@@ -148,6 +191,8 @@ class GenericMetadata:
         assign("publisher", new_md.publisher)
         assign("cover_date", new_md.cover_date)
         assign("store_date", new_md.store_date)
+        if len(new_md.price) > 0:
+            assign("price", new_md.price)
         assign("volume_count", new_md.volume_count)
         if len(new_md.genres) > 0:
             assign("genre", new_md.genres)
@@ -272,6 +317,8 @@ class GenericMetadata:
         add_attr_string("publisher")
         add_attr_string("cover_date")
         add_attr_string("store_date")
+        if self.price:
+            add_attr_string("price")
         add_attr_string("volume_count")
         if self.genres:
             add_attr_string("genres")
