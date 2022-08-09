@@ -38,6 +38,7 @@ rarfile = "^4.0"
 # Optional dependencies
 sphinx-rtd-theme = {version="^0.5.2", optional=true}
 sphinxcontrib-napoleon = {version="^0.7", optional=true}
+pycountry = "^22.3.5"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^4.0.0"
