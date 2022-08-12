@@ -121,6 +121,7 @@ class GenericMetadata:
     info_source: Optional[GeneralResource] = None
     series: Optional[SeriesMetadata] = None
     issue: Optional[str] = None
+    collection_title: Optional[str] = None
     stories: List[GeneralResource] = field(default_factory=list)
     publisher: Optional[GeneralResource] = None
     cover_date: Optional[date] = None
@@ -185,6 +186,7 @@ class GenericMetadata:
         assign("series", new_md.series)
         assign("info_source", new_md.info_source)
         assign("issue", new_md.issue)
+        assign("collection_title", new_md.collection_title)
         assign("issue_count", new_md.issue_count)
         if len(new_md.stories) > 0:
             assign("stories", new_md.stories)
@@ -311,6 +313,7 @@ class GenericMetadata:
 
         add_attr_string("series")
         add_attr_string("issue")
+        add_attr_string("collection_title")
         add_attr_string("issue_count")
         if self.stories:
             add_attr_string("stories")
