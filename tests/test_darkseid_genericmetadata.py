@@ -44,7 +44,7 @@ def test_metadata_overlay(
     assert md.story_arcs == fake_metadata.story_arcs
     assert md.teams == fake_metadata.teams
     assert md.reprints == fake_overlay_metadata.reprints
-    assert md.price == fake_metadata.price
+    assert md.prices == fake_metadata.prices
     assert md.collection_title == fake_metadata.collection_title
 
 

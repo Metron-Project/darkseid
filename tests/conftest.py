@@ -50,7 +50,7 @@ def fake_overlay_metadata():
     )
     overlay_md.cover_date = date(1994, 10, 1)
     overlay_md.reprints = [GeneralResource("Aquaman (1964) #64", 12345)]
-    overlay_md.price = [Price(Decimal("3.99")), Price(Decimal("1.5"), "CA")]
+    overlay_md.prices = [Price(Decimal("3.99")), Price(Decimal("1.5"), "CA")]
     overlay_md.collection_title = "Just another TPB"
     return overlay_md
 
