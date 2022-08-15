@@ -15,7 +15,7 @@ CI_XSD = TEST_FILES_PATH / "ComicInfo.xsd"
 RAR_PATH = TEST_FILES_PATH / "Captain Science #001-cix-cbi.cbr"
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def fake_metadata():
     meta_data = GenericMetadata()
     meta_data.series = SeriesMetadata(

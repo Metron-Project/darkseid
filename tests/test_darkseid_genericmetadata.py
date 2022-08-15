@@ -12,21 +12,27 @@ PENCILLER = "Penciller"
 COVER = "Cover"
 
 
-# def test_metadata_print_str(fake_metadata):
-#     expect_res = (
-#         "series:          SeriesMetadata(name='Aquaman', sort_name='Aquaman', "
-#         "volume=1, format='Annual', id=None)\n"
-#         "issue:           0\n"
-#         "stories:         ['A Crash of Symbols']\n"
-#         "publisher:       DC Comics\n"
-#         "cover_date:      1994-12-01\n"
-#         "black_and_white: True\n"
-#         "story_arcs:      ['Final Crisis']\n"
-#         "characters:      ['Aquaman', 'Mera', 'Garth']\n"
-#         "teams:           ['Justice League', 'Teen Titans']\n"
-#         "comments:        Just some sample metadata.\n"
-#     )
-#     assert str(fake_metadata) == expect_res
+def test_metadata_print_str(fake_metadata):
+    expect_res = """GenericMetadata(
+    is_empty = False,
+    series = SeriesMetadata(name='Aquaman', id_=None, sort_name='Aquaman', volume=1, format='Annual'),
+    issue = '0',
+    stories = [GeneralResource(name='A Crash of Symbols', id_=None)],
+    publisher = GeneralResource(name='DC Comics', id_=None),
+    cover_date = datetime.date(1994, 12, 1),
+    prices = [],
+    genres = [],
+    comments = 'Just some sample metadata.',
+    black_and_white = True,
+    story_arcs = [GeneralResource(name='Final Crisis', id_=None)],
+    characters = [GeneralResource(name='Aquaman', id_=None), GeneralResource(name='Mera', id_=None), GeneralResource(name='Garth', id_=None)],
+    teams = [GeneralResource(name='Justice League', id_=None), GeneralResource(name='Teen Titans', id_=None)],
+    locations = [],
+    credits = [],
+    reprints = [],
+    tags = [],
+    pages = [],\n)"""  # noqa: #B950
+    assert str(fake_metadata) == expect_res
 
 
 def test_metadata_overlay(
@@ -117,11 +123,3 @@ def test_bad_gtin(upc, isbn, reason) -> None:
 @pytest.mark.parametrize("upc, isbn, expected, reason", good_gtin)
 def test_good_gtin(upc, isbn, expected, reason) -> None:
     assert GTIN(upc, isbn) == expected
-
-
-def test_gtin_repr() -> None:
-    expected = """GTIN(
-    upc = 75960620237900511,
-    isbn = None,\n)"""
-    gtin = GTIN(75960620237900511)
-    assert str(gtin) == expected

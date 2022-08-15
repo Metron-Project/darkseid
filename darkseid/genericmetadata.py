@@ -16,8 +16,6 @@ from typing import List, Optional, Tuple, TypedDict
 
 import pycountry
 
-from .utils import list_to_string
-
 MAX_UPC = 17
 MAX_ISBN = 13
 
@@ -141,17 +139,6 @@ class GTIN(Validations):
             raise ValueError(f"ISBN has a length greater than {MAX_ISBN}")
 
         return value
-
-    def __repr__(self) -> str:
-        cls = self.__class__
-        cls_name = cls.__name__
-        indent = " " * 4
-        res = [f"{cls_name}("]
-        for f in fields(cls):
-            value = getattr(self, f.name)
-            res.append(f"{indent}{f.name} = {value!r},")
-        res.append(")")
-        return "\n".join(res)
 
 
 @dataclass
@@ -342,79 +329,13 @@ class GenericMetadata:
             self.credits.append(new_credit)
 
     def __str__(self) -> str:
-        vals: List[Tuple[str, str]] = []
-
-        if self.is_empty:
-            return "No metadata"
-
-        def add_string(tag: str, val: str) -> None:
-            if val is not None and f"{val}" != "":
-                vals.append((tag, val))
-
-        def add_attr_string(tag: str) -> None:
-            add_string(tag, getattr(self, tag))
-
-        add_attr_string("series")
-        add_attr_string("issue")
-        add_attr_string("collection_title")
-        add_attr_string("issue_count")
-        if self.stories:
-            add_attr_string("stories")
-        add_attr_string("publisher")
-        add_attr_string("cover_date")
-        add_attr_string("store_date")
-        if self.prices:
-            add_attr_string("price")
-        add_attr_string("gtin")
-        add_attr_string("volume_count")
-        if self.genres:
-            add_attr_string("genres")
-        add_attr_string("language")
-        add_attr_string("country")
-        add_attr_string("critical_rating")
-        add_attr_string("alternate_series")
-        add_attr_string("alternate_number")
-        add_attr_string("alternate_count")
-        add_attr_string("imprint")
-        add_attr_string("web_link")
-        add_attr_string("manga")
-
-        if self.black_and_white:
-            add_attr_string("black_and_white")
-        add_attr_string("age_rating")
-        if self.story_arcs:
-            add_attr_string("story_arcs")
-        add_attr_string("series_group")
-        add_attr_string("scan_info")
-        if self.characters:
-            add_attr_string("characters")
-        if self.teams:
-            add_attr_string("teams")
-        if self.locations:
-            add_attr_string("locations")
-        if self.reprints:
-            add_attr_string("reprints")
-        add_attr_string("comments")
-        add_attr_string("notes")
-
-        add_string("tags", list_to_string(self.tags))
-
-        for c in self.credits:
-            primary = ""
-            if "primary" in c and c.primary:
-                primary = " [P]"
-            add_string("credit", f"{c.role}: {c.person}{primary}")
-
-        # find the longest field name
-        flen = 0
-        for i in vals:
-            flen = max(flen, len(i[0]))
-        flen += 1
-
-        # format the data nicely
-        outstr = ""
-        fmt_str = "{0: <" + str(flen) + "} {1}\n"
-        for i in vals:
-            outstr += fmt_str.format(f"{i[0]}:", i[1])
-
-        return outstr
+        cls = self.__class__
+        cls_name = cls.__name__
+        indent = " " * 4
+        res = [f"{cls_name}("]
+        for f in fields(cls):
+            value = getattr(self, f.name)
+            if value is not None:
+                res.append(f"{indent}{f.name} = {value!r},")
+        res.append(")")
+        return "\n".join(res)
