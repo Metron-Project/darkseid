@@ -3,7 +3,14 @@ from decimal import Decimal
 
 import pytest
 
-from darkseid.genericmetadata import GTIN, CreditMetadata, GenericMetadata, Price, RoleMetadata
+from darkseid.genericmetadata import (
+    GTIN,
+    CreditMetadata,
+    GenericMetadata,
+    Price,
+    RoleMetadata,
+    SeriesMetadata,
+)
 
 MARTY = "Martin Egeland"
 PETER = "Peter David"
@@ -125,3 +132,23 @@ def test_gtin_repr() -> None:
     isbn = None,\n)"""
     gtin = GTIN(75960620237900511)
     assert str(gtin) == expected
+
+
+def test_series_repr() -> None:
+    expected = """SeriesMetadata(
+    name = 'Batman',
+    id_ = 12345,
+    sort_name = 'The Batman',
+    volume = 1,
+    format = 'Annual',\n)"""
+    series = SeriesMetadata("Batman", 12345, "The Batman", 1, "Annual")
+    assert str(series) == expected
+
+
+def test_credit_repr() -> None:
+    expected = """CreditMetadata(
+    person = 'John Byrne',
+    role = [RoleMetadata(name='Artist', id_=1, primary=False)],
+    id_ = 54321,\n)"""
+    md = CreditMetadata("John Byrne", [RoleMetadata("Artist", 1)], 54321)
+    assert str(md) == expected

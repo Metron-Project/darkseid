@@ -108,12 +108,34 @@ class SeriesMetadata(GeneralResource):
     volume: Optional[int] = None
     format: Optional[str] = None
 
+    def __repr__(self) -> str:
+        cls = self.__class__
+        cls_name = cls.__name__
+        indent = " " * 4
+        res = [f"{cls_name}("]
+        for f in fields(cls):
+            value = getattr(self, f.name)
+            res.append(f"{indent}{f.name} = {value!r},")
+        res.append(")")
+        return "\n".join(res)
+
 
 @dataclass
 class CreditMetadata:
     person: str
     role: List[RoleMetadata]
     id_: Optional[int] = None
+
+    def __repr__(self) -> str:
+        cls = self.__class__
+        cls_name = cls.__name__
+        indent = " " * 4
+        res = [f"{cls_name}("]
+        for f in fields(cls):
+            value = getattr(self, f.name)
+            res.append(f"{indent}{f.name} = {value!r},")
+        res.append(")")
+        return "\n".join(res)
 
 
 @dataclass
