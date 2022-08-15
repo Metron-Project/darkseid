@@ -9,7 +9,7 @@ possible, however lossy it might be
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2020 Brian Pepple
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import date
 from decimal import Decimal
 from typing import List, Optional, Tuple, TypedDict
@@ -141,6 +141,17 @@ class GTIN(Validations):
             raise ValueError(f"ISBN has a length greater than {MAX_ISBN}")
 
         return value
+
+    def __repr__(self) -> str:
+        cls = self.__class__
+        cls_name = cls.__name__
+        indent = " " * 4
+        res = [f"{cls_name}("]
+        for f in fields(cls):
+            value = getattr(self, f.name)
+            res.append(f"{indent}{f.name} = {value!r},")
+        res.append(")")
+        return "\n".join(res)
 
 
 @dataclass
