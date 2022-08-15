@@ -9,7 +9,7 @@ possible, however lossy it might be
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2020 Brian Pepple
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import date
 from decimal import Decimal
 from typing import List, Optional, Tuple, TypedDict
@@ -17,6 +17,9 @@ from typing import List, Optional, Tuple, TypedDict
 import pycountry
 
 from .utils import list_to_string
+
+MAX_UPC = 17
+MAX_ISBN = 13
 
 
 class Validations:
@@ -114,6 +117,44 @@ class CreditMetadata:
 
 
 @dataclass
+class GTIN(Validations):
+    upc: Optional[int] = None
+    isbn: Optional[int] = None
+
+    def validate_upc(self, value: int, **_) -> Optional[int]:
+        # sourcery skip: class-extract-method
+        if value is None or not isinstance(value, int):
+            return None
+
+        int_str = str(value)
+        if len(int_str) > MAX_UPC:
+            raise ValueError(f"UPC has a length greater than {MAX_UPC}")
+
+        return value
+
+    def validate_isbn(self, value: int, **_) -> Optional[int]:
+        if value is None or not isinstance(value, int):
+            return None
+
+        int_str = str(value)
+        if len(int_str) > MAX_ISBN:
+            raise ValueError(f"ISBN has a length greater than {MAX_ISBN}")
+
+        return value
+
+    def __repr__(self) -> str:
+        cls = self.__class__
+        cls_name = cls.__name__
+        indent = " " * 4
+        res = [f"{cls_name}("]
+        for f in fields(cls):
+            value = getattr(self, f.name)
+            res.append(f"{indent}{f.name} = {value!r},")
+        res.append(")")
+        return "\n".join(res)
+
+
+@dataclass
 class GenericMetadata:
     is_empty: bool = True
     tag_origin: Optional[str] = None
@@ -127,6 +168,7 @@ class GenericMetadata:
     cover_date: Optional[date] = None
     store_date: Optional[date] = None
     prices: List[Price] = field(default_factory=list)
+    gtin: Optional[GTIN] = None
     issue_count: Optional[int] = None
     genres: List[GeneralResource] = field(default_factory=list)
     language: Optional[str] = None  # 2 letter iso code
@@ -195,6 +237,7 @@ class GenericMetadata:
         assign("store_date", new_md.store_date)
         if len(new_md.prices) > 0:
             assign("price", new_md.prices)
+        assign("gtin", new_md.gtin)
         assign("volume_count", new_md.volume_count)
         if len(new_md.genres) > 0:
             assign("genre", new_md.genres)
@@ -322,6 +365,7 @@ class GenericMetadata:
         add_attr_string("store_date")
         if self.prices:
             add_attr_string("price")
+        add_attr_string("gtin")
         add_attr_string("volume_count")
         if self.genres:
             add_attr_string("genres")
