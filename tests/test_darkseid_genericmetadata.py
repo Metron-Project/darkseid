@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from darkseid.genericmetadata import CreditMetadata, GenericMetadata, Price, RoleMetadata
+from darkseid.genericmetadata import GTIN, CreditMetadata, GenericMetadata, Price, RoleMetadata
 
 MARTY = "Martin Egeland"
 PETER = "Peter David"
@@ -95,3 +95,25 @@ bad_prices = [
 def test_invalid_price_metadata(amount, country, reason) -> None:
     with pytest.raises(ValueError):
         Price(amount, country)
+
+
+bad_gtin = [
+    pytest.param(75960620237900411123446, None, "Bad UPC length"),
+    pytest.param(None, 97816841565111234, "Bad ISBN"),
+]
+
+good_gtin = [
+    pytest.param(75960620237900511, None, GTIN(upc=75960620237900511), "Good UPC"),
+    pytest.param(None, 9781684156511, GTIN(isbn=9781684156511), "Good ISBN"),
+]
+
+
+@pytest.mark.parametrize("upc, isbn, reason", bad_gtin)
+def test_bad_gtin(upc, isbn, reason) -> None:
+    with pytest.raises(ValueError):
+        GTIN(upc, isbn)
+
+
+@pytest.mark.parametrize("upc, isbn, expected, reason", good_gtin)
+def test_good_gtin(upc, isbn, expected, reason) -> None:
+    assert GTIN(upc, isbn) == expected
