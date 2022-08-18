@@ -174,25 +174,25 @@ class ComicInfoXml:
         # supports
         for credit in metadata.credits:
             for r in credit.role:
-                if r.name.lower() in set(self.writer_synonyms):
+                if r.name.casefold() in set(self.writer_synonyms):
                     credit_writer_list.append(credit.person.replace(",", ""))
 
-                if r.name.lower() in set(self.penciller_synonyms):
+                if r.name.casefold() in set(self.penciller_synonyms):
                     credit_penciller_list.append(credit.person.replace(",", ""))
 
-                if r.name.lower() in set(self.inker_synonyms):
+                if r.name.casefold() in set(self.inker_synonyms):
                     credit_inker_list.append(credit.person.replace(",", ""))
 
-                if r.name.lower() in set(self.colorist_synonyms):
+                if r.name.casefold() in set(self.colorist_synonyms):
                     credit_colorist_list.append(credit.person.replace(",", ""))
 
-                if r.name.lower() in set(self.letterer_synonyms):
+                if r.name.casefold() in set(self.letterer_synonyms):
                     credit_letterer_list.append(credit.person.replace(",", ""))
 
-                if r.name.lower() in set(self.cover_synonyms):
+                if r.name.casefold() in set(self.cover_synonyms):
                     credit_cover_list.append(credit.person.replace(",", ""))
 
-                if r.name.lower() in set(self.editor_synonyms):
+                if r.name.casefold() in set(self.editor_synonyms):
                     credit_editor_list.append(credit.person.replace(",", ""))
 
         # second, convert each list to string, and add to XML struct
@@ -293,7 +293,7 @@ class ComicInfoXml:
 
         tmp = xlate(get("BlackAndWhite"))
         metadata.black_and_white = False
-        if tmp is not None and tmp.lower() in ["yes", "true", "1"]:
+        if tmp is not None and tmp.casefold() in ["yes", "true", "1"]:
             metadata.black_and_white = True
         # Now extract the credit info
         for n in root:

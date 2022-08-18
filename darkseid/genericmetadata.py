@@ -270,7 +270,7 @@ class GenericMetadata:
             # Remove credit role if person is blank
             if c.person == "":
                 for r in reversed(self.credits):
-                    if r.role.lower() == c.role.lower():
+                    if r.role.casefold() == c.role.casefold():
                         self.credits.remove(r)
             else:
                 c.primary = bool("primary" in c and c.primary)
@@ -307,7 +307,7 @@ class GenericMetadata:
                 (
                     (True, i)
                     for i, existing in enumerate(self.credits)
-                    if creator.lower() == existing.person.lower()
+                    if creator.casefold() == existing.person.casefold()
                 ),
                 (False, None),
             )
@@ -316,7 +316,7 @@ class GenericMetadata:
         )
 
     def _role_exists(self, new_role: RoleMetadata, old_roles: List[RoleMetadata]) -> bool:
-        return any(role.name.lower() == new_role.name.lower() for role in old_roles)
+        return any(role.name.casefold() == new_role.name.casefold() for role in old_roles)
 
     def add_credit(self, new_credit: CreditMetadata) -> None:
         exist, idx = self._existing_credit(new_credit.person)

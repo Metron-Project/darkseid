@@ -70,7 +70,9 @@ def remove_articles(text: str) -> str:
         "the",
         "with",
     ]
-    new_text = "".join(f"{word} " for word in text.split(" ") if word.lower() not in articles)
+    new_text = "".join(
+        f"{word} " for word in text.split(" ") if word.casefold() not in articles
+    )
 
     new_text = new_text[:-1]
 
