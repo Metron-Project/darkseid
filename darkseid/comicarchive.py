@@ -375,7 +375,7 @@ class ComicArchive:
 
     def is_image(self, name_path: Path) -> bool:
         suffix_list = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
-        return name_path.suffix.lower() in suffix_list and name_path.name[0] != "."
+        return name_path.suffix.casefold() in suffix_list and name_path.name[0] != "."
 
     def get_page_name_list(self, sort_list: bool = True) -> List[str]:
         """Returns a list of page names from an archive"""

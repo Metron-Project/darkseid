@@ -197,7 +197,7 @@ class FileNameParser:
             one_shot_words = ["tpb", "os", "one-shot", "ogn", "gn"]
             with contextlib.suppress(ValueError):
                 last_word = series.split()[-1]
-                if last_word.lower() in one_shot_words:
+                if last_word.casefold() in one_shot_words:
                     series = series.rsplit(" ", 1)[0]
         return series, volume.strip()
 
