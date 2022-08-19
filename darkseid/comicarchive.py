@@ -10,7 +10,7 @@ import shutil
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Any, List, Optional, cast
+from typing import List, Optional, cast
 
 import py7zr
 import rarfile
@@ -32,8 +32,8 @@ class UnknownArchiver:
     def __init__(self, path: Path) -> None:
         self.path = path
 
-    def read_file(self, archive_file: str) -> Any:
-        return Any
+    def read_file(self, archive_file: str) -> bytes:
+        raise NotImplementedError
 
     def write_file(self, archive_file: str, data: str) -> bool:
         return False
@@ -49,13 +49,13 @@ class UnknownArchiver:
 
 
 # ------------------------------------------------------------------
-class RarArchiver:
+class RarArchiver(UnknownArchiver):
     """Rar implementation"""
 
     def __init__(self, path: Path) -> None:
-        self.path = path
+        super().__init__(path)
 
-    def read_file(self, archive_file: str) -> Optional[bytes]:
+    def read_file(self, archive_file: str) -> bytes:
         """Read the contents of a comic archive"""
         try:
             with rarfile.RarFile(self.path) as rf:
@@ -65,7 +65,7 @@ class RarArchiver:
             raise RarError(e) from e
         except io.UnsupportedOperation:
             """If rar directory doesn't contain any data, return None."""
-            return None
+            return b""
 
     def remove_file(self) -> bool:
         """Rar files are read-only, so we return False."""
@@ -93,12 +93,12 @@ class RarArchiver:
 # ------------------------------------------------------------------
 
 
-class ZipArchiver:
+class ZipArchiver(UnknownArchiver):
 
     """ZIP implementation"""
 
     def __init__(self, path: Path) -> None:
-        self.path = path
+        super().__init__(path)
 
     def read_file(self, archive_file: str) -> bytes:
         """Read the contents of a comic archive"""
@@ -113,7 +113,7 @@ class ZipArchiver:
 
     def remove_file(self, archive_file: str) -> bool:
         """Returns a boolean when attempting to remove a file from an archive"""
-        return self._rebuild_zipfile([archive_file])
+        return self._rebuild([archive_file])
 
     def write_file(self, archive_file: str, data: str) -> bool:
         #  At the moment, no other option but to rebuild the whole
@@ -121,7 +121,7 @@ class ZipArchiver:
         # another solution can be found
         files = self.get_filename_list()
         if archive_file in files:
-            self._rebuild_zipfile([archive_file])
+            self._rebuild([archive_file])
 
         try:
             # now just add the archive file as a new one
@@ -144,7 +144,7 @@ class ZipArchiver:
             logger.error(f"Error listing files in zip archive [{e}]: {self.path}")
             return []
 
-    def _rebuild_zipfile(self, exclude_list: List[str]) -> None:
+    def _rebuild(self, exclude_list: List[str]) -> bool:
         """
         Zip helper func
 
@@ -188,12 +188,12 @@ class ZipArchiver:
 
 
 # ------------------------------------------------------------------
-class SevenZipArchiver:
+class SevenZipArchiver(UnknownArchiver):
 
     """7Z implementation"""
 
     def __init__(self, path: Path) -> None:
-        self.path = path
+        super().__init__(path)
 
     def read_file(self, archive_file: str) -> bytes:
         """Read the contents of a comic archive"""
@@ -291,15 +291,15 @@ class ComicArchive:
         self.page_list: Optional[List[str]] = None
         self.metadata: Optional[GenericMetadata] = None
 
-        if self.sevenzip_test():
-            self.archive_type: int = self.ArchiveType.sevenzip
-            self.archiver = SevenZipArchiver(self.path)
-        elif self.zip_test():
+        if self.zip_test():
             self.archive_type: int = self.ArchiveType.zip
             self.archiver = ZipArchiver(self.path)
         elif self.rar_test():
             self.archive_type: int = self.ArchiveType.rar
             self.archiver = RarArchiver(self.path)
+        elif self.sevenzip_test():
+            self.archive_type: int = self.ArchiveType.sevenzip
+            self.archiver = SevenZipArchiver(self.path)
         else:
             self.archive_type = self.ArchiveType.unknown
             self.archiver = UnknownArchiver(self.path)
@@ -359,7 +359,7 @@ class ComicArchive:
             try:
                 image_data = self.archiver.read_file(filename)
             except OSError:
-                logger.exception("Error reading in page.")
+                logger.exception(f"Error reading '{filename}' from '{self.path}'")
 
         return image_data
 
@@ -431,7 +431,7 @@ class ComicArchive:
             # Convert bytes to str. Is it safe to decode with utf-8?
             raw_metadata = tmp_raw_metadata.decode("utf-8")
         except OSError:
-            print("Error reading in raw CIX!")
+            logger.error("Error reading in raw CIX!")
             raw_metadata = None
         return raw_metadata
 
