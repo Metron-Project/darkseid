@@ -5,13 +5,7 @@ from pathlib import Path
 import pytest
 
 from darkseid.comicarchive import ComicArchive
-from darkseid.genericmetadata import (
-    Arc,
-    GeneralResource,
-    GenericMetadata,
-    Price,
-    SeriesMetadata,
-)
+from darkseid.genericmetadata import Arc, Basic, ComicMetadata, Price, Series
 
 TEST_FILES_PATH = Path("tests/test_files")
 IMG_DIR = TEST_FILES_PATH / "Captain_Science_001"
@@ -23,24 +17,24 @@ RAR_PATH = TEST_FILES_PATH / "Captain Science #001-cix-cbi.cbr"
 
 @pytest.fixture(scope="module")
 def fake_metadata():
-    meta_data = GenericMetadata()
-    meta_data.series = SeriesMetadata(
+    meta_data = ComicMetadata()
+    meta_data.series = Series(
         name="Aquaman",
         sort_name="Aquaman",
         volume=1,
         format="Annual",
     )
     meta_data.issue = "0"
-    meta_data.stories = [GeneralResource("A Crash of Symbols")]
-    meta_data.publisher = GeneralResource("DC Comics")
+    meta_data.stories = [Basic("A Crash of Symbols")]
+    meta_data.publisher = Basic("DC Comics")
     meta_data.cover_date = date(1994, 12, 1)
     meta_data.story_arcs = [Arc("Final Crisis")]
     meta_data.characters = [
-        GeneralResource("Aquaman"),
-        GeneralResource("Mera"),
-        GeneralResource("Garth"),
+        Basic("Aquaman"),
+        Basic("Mera"),
+        Basic("Garth"),
     ]
-    meta_data.teams = [GeneralResource("Justice League"), GeneralResource("Teen Titans")]
+    meta_data.teams = [Basic("Justice League"), Basic("Teen Titans")]
     meta_data.comments = "Just some sample metadata."
     meta_data.black_and_white = True
     meta_data.is_empty = False
@@ -50,12 +44,10 @@ def fake_metadata():
 
 @pytest.fixture(scope="session")
 def fake_overlay_metadata():
-    overlay_md = GenericMetadata()
-    overlay_md.series = SeriesMetadata(
-        name="Aquaman", sort_name="Aquaman", volume=1, format="Annual"
-    )
+    overlay_md = ComicMetadata()
+    overlay_md.series = Series(name="Aquaman", sort_name="Aquaman", volume=1, format="Annual")
     overlay_md.cover_date = date(1994, 10, 1)
-    overlay_md.reprints = [GeneralResource("Aquaman (1964) #64", 12345)]
+    overlay_md.reprints = [Basic("Aquaman (1964) #64", 12345)]
     overlay_md.prices = [Price(Decimal("3.99")), Price(Decimal("1.5"), "CA")]
     overlay_md.collection_title = "Just another TPB"
     return overlay_md

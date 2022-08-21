@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from darkseid.genericmetadata import GTIN, CreditMetadata, GenericMetadata, Price, RoleMetadata
+from darkseid.genericmetadata import GTIN, ComicMetadata, Credit, Price, Role
 
 MARTY = "Martin Egeland"
 PETER = "Peter David"
@@ -13,20 +13,20 @@ COVER = "Cover"
 
 
 def test_metadata_print_str(fake_metadata):
-    expect_res = """GenericMetadata(
+    expect_res = """ComicMetadata(
     is_empty = False,
-    series = SeriesMetadata(name='Aquaman', id_=None, sort_name='Aquaman', volume=1, format='Annual'),
+    series = Series(name='Aquaman', id_=None, sort_name='Aquaman', volume=1, format='Annual'),
     issue = '0',
-    stories = [GeneralResource(name='A Crash of Symbols', id_=None)],
-    publisher = GeneralResource(name='DC Comics', id_=None),
+    stories = [Basic(name='A Crash of Symbols', id_=None)],
+    publisher = Basic(name='DC Comics', id_=None),
     cover_date = datetime.date(1994, 12, 1),
     prices = [],
     genres = [],
     comments = 'Just some sample metadata.',
     black_and_white = True,
     story_arcs = [Arc(name='Final Crisis', id_=None, number=None)],
-    characters = [GeneralResource(name='Aquaman', id_=None), GeneralResource(name='Mera', id_=None), GeneralResource(name='Garth', id_=None)],
-    teams = [GeneralResource(name='Justice League', id_=None), GeneralResource(name='Teen Titans', id_=None)],
+    characters = [Basic(name='Aquaman', id_=None), Basic(name='Mera', id_=None), Basic(name='Garth', id_=None)],
+    teams = [Basic(name='Justice League', id_=None), Basic(name='Teen Titans', id_=None)],
     locations = [],
     credits = [],
     reprints = [],
@@ -36,7 +36,7 @@ def test_metadata_print_str(fake_metadata):
 
 
 def test_metadata_overlay(
-    fake_metadata: GenericMetadata, fake_overlay_metadata: GenericMetadata
+    fake_metadata: ComicMetadata, fake_overlay_metadata: ComicMetadata
 ) -> None:
     md = fake_metadata
     # Fake overlay cover date info.
@@ -54,20 +54,18 @@ def test_metadata_overlay(
     assert md.collection_title == fake_metadata.collection_title
 
 
-def test_metadata_credits(fake_metadata: GenericMetadata) -> None:
+def test_metadata_credits(fake_metadata: ComicMetadata) -> None:
     result = [
-        CreditMetadata(PETER, [RoleMetadata(WRITER, primary=True)]),
-        CreditMetadata(
-            MARTY, [RoleMetadata(PENCILLER), RoleMetadata(COVER), RoleMetadata("Inker")]
-        ),
+        Credit(PETER, [Role(WRITER, primary=True)]),
+        Credit(MARTY, [Role(PENCILLER), Role(COVER), Role("Inker")]),
     ]
 
     md = fake_metadata
-    md.add_credit(CreditMetadata(PETER, [RoleMetadata(WRITER, None, True)]))
-    md.add_credit(CreditMetadata(MARTY, [RoleMetadata(PENCILLER), RoleMetadata(COVER)]))
-    md.add_credit(CreditMetadata(MARTY, [RoleMetadata("Inker")]))
+    md.add_credit(Credit(PETER, [Role(WRITER, None, True)]))
+    md.add_credit(Credit(MARTY, [Role(PENCILLER), Role(COVER)]))
+    md.add_credit(Credit(MARTY, [Role("Inker")]))
     # Try to add role for creator a 2nd time
-    md.add_credit(CreditMetadata(MARTY, [RoleMetadata(PENCILLER)]))
+    md.add_credit(Credit(MARTY, [Role(PENCILLER)]))
 
     assert md.credits == result
 

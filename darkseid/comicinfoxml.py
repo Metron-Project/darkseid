@@ -9,15 +9,7 @@ from datetime import date
 from re import split
 from typing import Any, List, Optional, Union, cast
 
-from .genericmetadata import (
-    Arc,
-    CreditMetadata,
-    GeneralResource,
-    GenericMetadata,
-    ImageMetadata,
-    RoleMetadata,
-    SeriesMetadata,
-)
+from .genericmetadata import Arc, Basic, ComicMetadata, Credit, ImageMetadata, Role, Series
 from .issuestring import IssueString
 from .utils import list_to_string, xlate
 
@@ -90,13 +82,11 @@ class ComicInfoXml:
         "supervising editor",
     ]
 
-    def metadata_from_string(self, string: str) -> GenericMetadata:
+    def metadata_from_string(self, string: str) -> ComicMetadata:
         tree = ET.ElementTree(ET.fromstring(string))
         return self.convert_xml_to_metadata(tree)
 
-    def string_from_metadata(
-        self, metadata: GenericMetadata, xml: Optional[any] = None
-    ) -> str:
+    def string_from_metadata(self, metadata: ComicMetadata, xml: Optional[any] = None) -> str:
         tree = self.convert_metadata_to_xml(metadata, xml)
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
 
@@ -126,7 +116,7 @@ class ComicInfoXml:
         if val is not None:
             return "Unknown" if val not in cls.ci_manga else val
 
-    def convert_metadata_to_xml(self, metadata: GenericMetadata, xml=None) -> ET.ElementTree:
+    def convert_metadata_to_xml(self, metadata: ComicMetadata, xml=None) -> ET.ElementTree:
         root = self._get_root(xml)
 
         # helper func
@@ -142,7 +132,7 @@ class ComicInfoXml:
                 if et_entry is not None:
                     root.remove(et_entry)
 
-        def get_resource_list(resource: List[GeneralResource]) -> str:
+        def get_resource_list(resource: List[Basic]) -> str:
             return list_to_string([i.name for i in resource])
 
         assign("Title", get_resource_list(metadata.stories))
@@ -243,7 +233,7 @@ class ComicInfoXml:
         tree = ET.ElementTree(root)
         return tree
 
-    def convert_xml_to_metadata(self, tree: ET.ElementTree) -> GenericMetadata:
+    def convert_xml_to_metadata(self, tree: ET.ElementTree) -> ComicMetadata:
         root = tree.getroot()
 
         if root.tag != "ComicInfo":
@@ -253,17 +243,17 @@ class ComicInfoXml:
             tag = root.find(name)
             return None if tag is None else tag.text
 
-        def string_to_resource(string: str) -> List[GeneralResource]:
+        def string_to_resource(string: str) -> List[Basic]:
             if string is not None:
                 # TODO: Make the delimiter also check for ','
-                return [GeneralResource(x.strip()) for x in string.split(";")]
+                return [Basic(x.strip()) for x in string.split(";")]
 
         def string_to_arc(string: str) -> List[Arc]:
             if string is not None:
                 return [Arc(x.strip()) for x in string.split(";")]
 
-        metadata = GenericMetadata()
-        metadata.series = SeriesMetadata(name=xlate(get("Series")))
+        metadata = ComicMetadata()
+        metadata.series = Series(name=xlate(get("Series")))
         metadata.stories = string_to_resource(xlate(get("Title")))
         metadata.issue = IssueString(xlate(get("Number"))).as_string()
         metadata.issue_count = xlate(get("Count"), True)
@@ -280,7 +270,7 @@ class ComicInfoXml:
         if tmp_year is not None and tmp_month is not None and tmp_day is not None:
             metadata.cover_date = date(tmp_year, tmp_month, tmp_day)
 
-        metadata.publisher = GeneralResource(xlate(get("Publisher")))
+        metadata.publisher = Basic(xlate(get("Publisher")))
         metadata.imprint = xlate(get("Imprint"))
         metadata.genres = string_to_resource(xlate(get("Genre")))
         metadata.web_link = xlate(get("Web"))
@@ -307,11 +297,11 @@ class ComicInfoXml:
                 and n.text is not None
             ):
                 for name in self._split_sting(n.text, [";"]):
-                    metadata.add_credit(CreditMetadata(name.strip(), [RoleMetadata(n.tag)]))
+                    metadata.add_credit(Credit(name.strip(), [Role(n.tag)]))
 
             if n.tag == "CoverArtist" and n.text is not None:
                 for name in self._split_sting(n.text, [";"]):
-                    metadata.add_credit(CreditMetadata(name.strip(), [RoleMetadata("Cover")]))
+                    metadata.add_credit(Credit(name.strip(), [Role("Cover")]))
 
         # parse page data now
         pages_node = root.find("Pages")
@@ -327,11 +317,11 @@ class ComicInfoXml:
         return metadata
 
     def write_to_external_file(
-        self, filename: str, metadata: GenericMetadata, xml: Optional[any] = None
+        self, filename: str, metadata: ComicMetadata, xml: Optional[any] = None
     ) -> None:
         tree = self.convert_metadata_to_xml(metadata, xml)
         tree.write(filename, encoding="utf-8", xml_declaration=True)
 
-    def read_from_external_file(self, filename: str) -> GenericMetadata:
+    def read_from_external_file(self, filename: str) -> ComicMetadata:
         tree = ET.parse(filename)
         return self.convert_xml_to_metadata(tree)

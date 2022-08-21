@@ -20,7 +20,7 @@ from PIL import Image
 from darkseid.comicinfoxml import ComicInfoXml
 from darkseid.exceptions import RarError
 from darkseid.filenameparser import FileNameParser
-from darkseid.genericmetadata import GenericMetadata
+from darkseid.genericmetadata import ComicMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -289,7 +289,7 @@ class ComicArchive:
         self.has_md: Optional[bool] = None
         self.page_count: Optional[int] = None
         self.page_list: Optional[List[str]] = None
-        self.metadata: Optional[GenericMetadata] = None
+        self.metadata: Optional[ComicMetadata] = None
 
         if self.zip_test():
             self.archive_type: int = self.ArchiveType.zip
@@ -403,12 +403,12 @@ class ComicArchive:
             self.page_count = len(self.get_page_name_list())
         return self.page_count
 
-    def read_metadata(self) -> GenericMetadata:
+    def read_metadata(self) -> ComicMetadata:
         """Reads the metadata from an archive if present"""
         if self.metadata is None:
             raw_metadata = self.read_raw_metadata()
             if raw_metadata is None or raw_metadata == "":
-                self.metadata = GenericMetadata()
+                self.metadata = ComicMetadata()
             else:
                 self.metadata = ComicInfoXml().metadata_from_string(raw_metadata)
 
@@ -435,7 +435,7 @@ class ComicArchive:
             raw_metadata = None
         return raw_metadata
 
-    def write_metadata(self, metadata: Optional[GenericMetadata]) -> bool:
+    def write_metadata(self, metadata: Optional[ComicMetadata]) -> bool:
         """Write the metadata to the archive"""
         if metadata is None or not self.is_writable():
             return False
@@ -455,7 +455,7 @@ class ComicArchive:
         return True
 
     def _successful_write(
-        self, write_success: bool, has_md: bool, metadata: Optional[GenericMetadata]
+        self, write_success: bool, has_md: bool, metadata: Optional[ComicMetadata]
     ) -> bool:
         if write_success:
             self.has_md = has_md
@@ -477,7 +477,7 @@ class ComicArchive:
         return self.has_md
 
     def apply_archive_info_to_metadata(
-        self, metadata: GenericMetadata, calc_page_sizes: bool = False
+        self, metadata: ComicMetadata, calc_page_sizes: bool = False
     ) -> None:
         """Apply page information from the archive to the metadata"""
         metadata.page_count = str(self.get_number_of_pages())
@@ -502,9 +502,9 @@ class ComicArchive:
                         except OSError:
                             page["ImageSize"] = str(len(data))
 
-    def metadata_from_filename(self, parse_scan_info: bool = True) -> GenericMetadata:
+    def metadata_from_filename(self, parse_scan_info: bool = True) -> ComicMetadata:
         """Attempts to get the metadata from the filename"""
-        metadata = GenericMetadata()
+        metadata = ComicMetadata()
 
         fnp = FileNameParser()
         fnp.parse_filename(self.path)

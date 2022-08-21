@@ -7,7 +7,7 @@ import py7zr
 import pytest
 
 from darkseid.comicarchive import ComicArchive, UnknownArchiver
-from darkseid.genericmetadata import GenericMetadata
+from darkseid.genericmetadata import ComicMetadata
 from tests.conftest import IMG_DIR
 
 # Uses to test image bytes
@@ -41,7 +41,7 @@ def test_cb7_writing_with_no_metadata(fake_cb7: ComicArchive) -> None:
 
 # Skip test for windows, until some with a windows box can help debug this.
 @pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
-def test_cb7_test_metadata(tmp_path: Path, fake_metadata: GenericMetadata) -> None:
+def test_cb7_test_metadata(tmp_path: Path, fake_metadata: ComicMetadata) -> None:
     """Test to determine if a cb7 has metadata"""
 
     # Create cb7 archive/
@@ -100,7 +100,7 @@ def test_cb7_metadata_from_filename(fake_cb7: ComicArchive) -> None:
 
 def test_cb7_apply_file_info_to_metadata(fake_cb7: ComicArchive) -> None:
     """Test to apply archive info to the generic metadata"""
-    test_md = GenericMetadata()
+    test_md = ComicMetadata()
     fake_cb7.apply_archive_info_to_metadata(test_md)
     # TODO: Need to test calculate page sizes
     assert test_md.page_count == "5"
@@ -109,14 +109,14 @@ def test_cb7_apply_file_info_to_metadata(fake_cb7: ComicArchive) -> None:
 #######
 # CBZ #
 #######
-def test_archive_from_img_dir(tmp_path: Path, fake_metadata: GenericMetadata) -> None:
+def test_archive_from_img_dir(tmp_path: Path, fake_metadata: ComicMetadata) -> None:
     z_file: Path = tmp_path / "Aquaman v1 #001 (of 08) (1994).cbz"
     with zipfile.ZipFile(z_file, "w") as zf:
         for p in IMG_DIR.iterdir():
             zf.write(p)
 
     ca = ComicArchive(z_file)
-    test_md = GenericMetadata()
+    test_md = ComicMetadata()
     test_md.set_default_page_list(ca.get_number_of_pages())
     test_md.overlay(fake_metadata)
     ca.write_metadata(test_md)
@@ -168,7 +168,7 @@ def test_archive_writing_with_no_metadata(fake_cbz: ComicArchive) -> None:
     assert fake_cbz.write_metadata(None) is False
 
 
-def test_archive_test_metadata(fake_cbz: ComicArchive, fake_metadata: GenericMetadata) -> None:
+def test_archive_test_metadata(fake_cbz: ComicArchive, fake_metadata: ComicMetadata) -> None:
     """Test to determine if a comic archive has metadata"""
     # verify archive has no metadata
     assert fake_cbz.has_metadata() is False
@@ -219,7 +219,7 @@ def test_archive_metadata_from_filename(fake_cbz: ComicArchive) -> None:
 @pytest.mark.skipif(sys.platform in ["win32"], reason="Skip Windows.")
 def test_archive_apply_file_info_to_metadata(fake_cbz: ComicArchive) -> None:
     """Test to apply archive info to the generic metadata"""
-    test_md = GenericMetadata()
+    test_md = ComicMetadata()
     fake_cbz.apply_archive_info_to_metadata(test_md)
     # TODO: Need to test calculate page sizes
     assert test_md.page_count == "5"
@@ -239,7 +239,7 @@ def test_archive_export_to_cb7(tmp_path, fake_cbz: ComicArchive) -> None:
 # CBR #
 #######
 @pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
-def test_rar_write(fake_rar: ComicArchive, fake_metadata: GenericMetadata) -> None:
+def test_rar_write(fake_rar: ComicArchive, fake_metadata: ComicMetadata) -> None:
     assert fake_rar.write_metadata(fake_metadata) is False
 
 
