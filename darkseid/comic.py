@@ -17,10 +17,10 @@ import rarfile
 from natsort import natsorted, ns
 from PIL import Image
 
-from darkseid.comic_metadata import ComicMetadata
-from darkseid.comicinfo_xml import ComicInfoXml
+from darkseid.comicinfo import ComicInfoXml
 from darkseid.exceptions import RarError
-from darkseid.filename_parser import FileNameParser
+from darkseid.filename import FileNameParser
+from darkseid.metadata import ComicMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -273,9 +273,9 @@ class SevenZipArchiver(UnknownArchiver):
 # ------------------------------------------------------------------
 
 
-class ComicArchive:
+class Comic:
 
-    """Comic Archive implementation"""
+    """Comic implementation"""
 
     class ArchiveType:
         """Types of archives supported. Currently .cbr, .cbz, and .cb7"""

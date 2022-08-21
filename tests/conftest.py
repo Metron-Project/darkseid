@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from darkseid.comic_archive import ComicArchive
-from darkseid.comic_metadata import Arc, Basic, ComicMetadata, Price, Series
+from darkseid.comic import Comic
+from darkseid.metadata import Arc, Basic, ComicMetadata, Price, Series
 
 TEST_FILES_PATH = Path("tests/test_files")
 IMG_DIR = TEST_FILES_PATH / "Captain_Science_001"
@@ -54,15 +54,15 @@ def fake_overlay_metadata():
 
 
 @pytest.fixture(scope="session")
-def fake_cb7() -> ComicArchive:
-    return ComicArchive(CB7_PATH)
+def fake_cb7() -> Comic:
+    return Comic(CB7_PATH)
 
 
 @pytest.fixture(scope="session")
-def fake_cbz() -> ComicArchive:
-    return ComicArchive(ARCHIVE_PATH)
+def fake_cbz() -> Comic:
+    return Comic(ARCHIVE_PATH)
 
 
 @pytest.fixture(scope="session")
-def fake_rar() -> ComicArchive:
-    return ComicArchive(RAR_PATH)
+def fake_rar() -> Comic:
+    return Comic(RAR_PATH)

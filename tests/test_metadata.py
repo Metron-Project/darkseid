@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from darkseid.comic_metadata import GTIN, ComicMetadata, Credit, Price, Role
+from darkseid.metadata import GTIN, ComicMetadata, Credit, Price, Role
 
 MARTY = "Martin Egeland"
 PETER = "Peter David"

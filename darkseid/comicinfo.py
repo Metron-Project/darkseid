@@ -9,9 +9,9 @@ from datetime import date
 from re import split
 from typing import Any, List, Optional, Union, cast
 
-from .comic_metadata import Arc, Basic, ComicMetadata, Credit, ImageMetadata, Role, Series
-from .issue_string import IssueString
-from .utils import list_to_string, xlate
+from darkseid.issue_string import IssueString
+from darkseid.metadata import Arc, Basic, ComicMetadata, Credit, ImageMetadata, Role, Series
+from darkseid.utils import list_to_string, xlate
 
 
 class ComicInfoXml:
