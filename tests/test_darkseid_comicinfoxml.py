@@ -8,6 +8,7 @@ from lxml import etree
 
 from darkseid.comicinfoxml import ComicInfoXml
 from darkseid.genericmetadata import (
+    Arc,
     CreditMetadata,
     GeneralResource,
     GenericMetadata,
@@ -50,8 +51,8 @@ def test_meta_data(test_credits: List[CreditMetadata]) -> GenericMetadata:
     meta_data.locations = [GeneralResource("Atlantis"), GeneralResource("Metropolis")]
     meta_data.genres = [GeneralResource("Super-Hero")]
     meta_data.story_arcs = [
-        GeneralResource("Crisis on Infinite Earths"),
-        GeneralResource("Death of Aquagirl"),
+        Arc("Crisis on Infinite Earths"),
+        Arc("Death of Aquagirl"),
     ]
     meta_data.black_and_white = True
     meta_data.age_rating = "MA15+"

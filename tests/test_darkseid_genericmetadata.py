@@ -24,7 +24,7 @@ def test_metadata_print_str(fake_metadata):
     genres = [],
     comments = 'Just some sample metadata.',
     black_and_white = True,
-    story_arcs = [GeneralResource(name='Final Crisis', id_=None)],
+    story_arcs = [Arc(name='Final Crisis', id_=None, number=None)],
     characters = [GeneralResource(name='Aquaman', id_=None), GeneralResource(name='Mera', id_=None), GeneralResource(name='Garth', id_=None)],
     teams = [GeneralResource(name='Justice League', id_=None), GeneralResource(name='Teen Titans', id_=None)],
     locations = [],
