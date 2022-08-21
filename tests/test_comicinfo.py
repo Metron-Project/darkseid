@@ -28,29 +28,29 @@ def test_credits() -> List[Credit]:
 
 @pytest.fixture()
 def test_meta_data(test_credits: List[Credit]) -> Metadata:
-    meta_data = Metadata()
-    meta_data.series = Series("Aquaman", sort_name="Aquaman", volume=3, format="Annual")
-    meta_data.issue = "1"
-    meta_data.stories = [Basic("Foo"), Basic("Bar")]
-    meta_data.cover_date = date(1993, 4, 15)
-    meta_data.characters = [
+    md = Metadata()
+    md.series = Series("Aquaman", sort_name="Aquaman", volume=3, format="Annual")
+    md.issue = "1"
+    md.stories = [Basic("Foo"), Basic("Bar")]
+    md.cover_date = date(1993, 4, 15)
+    md.characters = [
         Basic("Aquaman"),
         Basic("Mera"),
         Basic("Garth"),
     ]
-    meta_data.teams = [Basic("Atlanteans"), Basic("Justice League")]
-    meta_data.locations = [Basic("Atlantis"), Basic("Metropolis")]
-    meta_data.genres = [Basic("Super-Hero")]
-    meta_data.story_arcs = [
+    md.teams = [Basic("Atlanteans"), Basic("Justice League")]
+    md.locations = [Basic("Atlantis"), Basic("Metropolis")]
+    md.genres = [Basic("Super-Hero")]
+    md.story_arcs = [
         Arc("Crisis on Infinite Earths"),
         Arc("Death of Aquagirl"),
     ]
-    meta_data.black_and_white = True
-    meta_data.age_rating = "MA15+"
-    meta_data.manga = "YesAndRightToLeft"
+    md.black_and_white = True
+    md.age_rating = "MA15+"
+    md.manga = "YesAndRightToLeft"
     for c in test_credits:
-        meta_data.add_credit(c)
-    return meta_data
+        md.add_credit(c)
+    return md
 
 
 def validate(xml_path: str, xsd_path: str) -> bool:

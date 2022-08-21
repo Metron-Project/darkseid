@@ -85,8 +85,8 @@ class ComicInfo:
         tree = ET.ElementTree(ET.fromstring(string))
         return self.convert_xml_to_metadata(tree)
 
-    def string_from_metadata(self, metadata: Metadata, xml: Optional[any] = None) -> str:
-        tree = self.convert_metadata_to_xml(metadata, xml)
+    def string_from_metadata(self, md: Metadata, xml: Optional[any] = None) -> str:
+        tree = self.convert_metadata_to_xml(md, xml)
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
 
     @classmethod
@@ -115,7 +115,7 @@ class ComicInfo:
         if val is not None:
             return "Unknown" if val not in cls.ci_manga else val
 
-    def convert_metadata_to_xml(self, metadata: Metadata, xml=None) -> ET.ElementTree:
+    def convert_metadata_to_xml(self, md: Metadata, xml=None) -> ET.ElementTree:
         root = self._get_root(xml)
 
         # helper func
@@ -134,21 +134,21 @@ class ComicInfo:
         def get_resource_list(resource: List[Basic]) -> str:
             return list_to_string([i.name for i in resource])
 
-        assign("Title", get_resource_list(metadata.stories))
-        assign("Series", metadata.series.name)
-        assign("Number", metadata.issue)
-        assign("Count", metadata.issue_count)
-        assign("Volume", metadata.series.volume)
-        assign("AlternateSeries", metadata.alternate_series)
-        assign("AlternateNumber", metadata.alternate_number)
-        assign("SeriesGroup", metadata.series_group)
-        assign("AlternateCount", metadata.alternate_count)
-        assign("Summary", metadata.comments)
-        assign("Notes", metadata.notes)
-        if metadata.cover_date is not None:
-            assign("Year", metadata.cover_date.year)
-            assign("Month", metadata.cover_date.month)
-            assign("Day", metadata.cover_date.day)
+        assign("Title", get_resource_list(md.stories))
+        assign("Series", md.series.name)
+        assign("Number", md.issue)
+        assign("Count", md.issue_count)
+        assign("Volume", md.series.volume)
+        assign("AlternateSeries", md.alternate_series)
+        assign("AlternateNumber", md.alternate_number)
+        assign("SeriesGroup", md.series_group)
+        assign("AlternateCount", md.alternate_count)
+        assign("Summary", md.comments)
+        assign("Notes", md.notes)
+        if md.cover_date is not None:
+            assign("Year", md.cover_date.year)
+            assign("Month", md.cover_date.month)
+            assign("Day", md.cover_date.day)
 
         # need to specially process the credits, since they are structured
         # differently than CIX
@@ -162,7 +162,7 @@ class ComicInfo:
 
         # first, loop thru credits, and build a list for each role that CIX
         # supports
-        for credit in metadata.credits:
+        for credit in md.credits:
             for r in credit.role:
                 if r.name.casefold() in set(self.writer_synonyms):
                     credit_writer_list.append(credit.person.replace(",", ""))
@@ -194,22 +194,22 @@ class ComicInfo:
         assign("CoverArtist", list_to_string(credit_cover_list))
         assign("Editor", list_to_string(credit_editor_list))
 
-        if metadata.publisher:
-            assign("Publisher", metadata.publisher.name)
-        assign("Imprint", metadata.imprint)
-        assign("Genre", get_resource_list(metadata.genres))
-        assign("Web", metadata.web_link)
-        assign("PageCount", metadata.page_count)
-        assign("LanguageISO", metadata.language)
-        assign("Format", metadata.series.format)
-        assign("BlackAndWhite", "Yes" if metadata.black_and_white else None)
-        assign("Manga", self.validate_manga(metadata.manga))
-        assign("Characters", get_resource_list(metadata.characters))
-        assign("Teams", get_resource_list(metadata.teams))
-        assign("Locations", get_resource_list(metadata.locations))
-        assign("ScanInformation", metadata.scan_info)
-        assign("StoryArc", get_resource_list(metadata.story_arcs))
-        assign("AgeRating", self.validate_age_rating(metadata.age_rating))
+        if md.publisher:
+            assign("Publisher", md.publisher.name)
+        assign("Imprint", md.imprint)
+        assign("Genre", get_resource_list(md.genres))
+        assign("Web", md.web_link)
+        assign("PageCount", md.page_count)
+        assign("LanguageISO", md.language)
+        assign("Format", md.series.format)
+        assign("BlackAndWhite", "Yes" if md.black_and_white else None)
+        assign("Manga", self.validate_manga(md.manga))
+        assign("Characters", get_resource_list(md.characters))
+        assign("Teams", get_resource_list(md.teams))
+        assign("Locations", get_resource_list(md.locations))
+        assign("ScanInformation", md.scan_info)
+        assign("StoryArc", get_resource_list(md.story_arcs))
+        assign("AgeRating", self.validate_age_rating(md.age_rating))
 
         #  loop and add the page entries under pages node
         pages_node = root.find("Pages")
@@ -218,7 +218,7 @@ class ComicInfo:
         else:
             pages_node = ET.SubElement(root, "Pages")
 
-        for page_dict in metadata.pages:
+        for page_dict in md.pages:
             page = page_dict
             if "Image" in page:
                 page["Image"] = str(page["Image"])
@@ -251,44 +251,44 @@ class ComicInfo:
             if string is not None:
                 return [Arc(x.strip()) for x in string.split(";")]
 
-        metadata = Metadata()
-        metadata.series = Series(name=xlate(get("Series")))
-        metadata.stories = string_to_resource(xlate(get("Title")))
-        metadata.issue = IssueString(xlate(get("Number"))).as_string()
-        metadata.issue_count = xlate(get("Count"), True)
-        metadata.series.volume = xlate(get("Volume"), True)
-        metadata.alternate_series = xlate(get("AlternateSeries"))
-        metadata.alternate_number = IssueString(xlate(get("AlternateNumber"))).as_string()
-        metadata.alternate_count = xlate(get("AlternateCount"), True)
-        metadata.comments = xlate(get("Summary"))
-        metadata.notes = xlate(get("Notes"))
+        md = Metadata()
+        md.series = Series(name=xlate(get("Series")))
+        md.stories = string_to_resource(xlate(get("Title")))
+        md.issue = IssueString(xlate(get("Number"))).as_string()
+        md.issue_count = xlate(get("Count"), True)
+        md.series.volume = xlate(get("Volume"), True)
+        md.alternate_series = xlate(get("AlternateSeries"))
+        md.alternate_number = IssueString(xlate(get("AlternateNumber"))).as_string()
+        md.alternate_count = xlate(get("AlternateCount"), True)
+        md.comments = xlate(get("Summary"))
+        md.notes = xlate(get("Notes"))
         # Cover Year
         tmp_year = xlate(get("Year"), True)
         tmp_month = xlate(get("Month"), True)
         tmp_day = xlate(get("Day"), True)
         if tmp_year is not None and tmp_month is not None and tmp_day is not None:
-            metadata.cover_date = date(tmp_year, tmp_month, tmp_day)
+            md.cover_date = date(tmp_year, tmp_month, tmp_day)
 
-        metadata.publisher = Basic(xlate(get("Publisher")))
-        metadata.imprint = xlate(get("Imprint"))
-        metadata.genres = string_to_resource(xlate(get("Genre")))
-        metadata.web_link = xlate(get("Web"))
-        metadata.language = xlate(get("LanguageISO"))
-        metadata.series.format = xlate(get("Format"))
-        metadata.manga = xlate(get("Manga"))
-        metadata.characters = string_to_resource(xlate(get("Characters")))
-        metadata.teams = string_to_resource(xlate(get("Teams")))
-        metadata.locations = string_to_resource(xlate(get("Locations")))
-        metadata.page_count = xlate(get("PageCount"), True)
-        metadata.scan_info = xlate(get("ScanInformation"))
-        metadata.story_arcs = string_to_arc(xlate(get("StoryArc")))
-        metadata.series_group = xlate(get("SeriesGroup"))
-        metadata.age_rating = xlate(get("AgeRating"))
+        md.publisher = Basic(xlate(get("Publisher")))
+        md.imprint = xlate(get("Imprint"))
+        md.genres = string_to_resource(xlate(get("Genre")))
+        md.web_link = xlate(get("Web"))
+        md.language = xlate(get("LanguageISO"))
+        md.series.format = xlate(get("Format"))
+        md.manga = xlate(get("Manga"))
+        md.characters = string_to_resource(xlate(get("Characters")))
+        md.teams = string_to_resource(xlate(get("Teams")))
+        md.locations = string_to_resource(xlate(get("Locations")))
+        md.page_count = xlate(get("PageCount"), True)
+        md.scan_info = xlate(get("ScanInformation"))
+        md.story_arcs = string_to_arc(xlate(get("StoryArc")))
+        md.series_group = xlate(get("SeriesGroup"))
+        md.age_rating = xlate(get("AgeRating"))
 
         tmp = xlate(get("BlackAndWhite"))
-        metadata.black_and_white = False
+        md.black_and_white = False
         if tmp is not None and tmp.casefold() in ["yes", "true", "1"]:
-            metadata.black_and_white = True
+            md.black_and_white = True
         # Now extract the credit info
         for n in root:
             if (
@@ -296,11 +296,11 @@ class ComicInfo:
                 and n.text is not None
             ):
                 for name in self._split_sting(n.text, [";"]):
-                    metadata.add_credit(Credit(name.strip(), [Role(n.tag)]))
+                    md.add_credit(Credit(name.strip(), [Role(n.tag)]))
 
             if n.tag == "CoverArtist" and n.text is not None:
                 for name in self._split_sting(n.text, [";"]):
-                    metadata.add_credit(Credit(name.strip(), [Role("Cover")]))
+                    md.add_credit(Credit(name.strip(), [Role("Cover")]))
 
         # parse page data now
         pages_node = root.find("Pages")
@@ -309,16 +309,16 @@ class ComicInfo:
                 p: dict[str, Any] = page.attrib
                 if "Image" in p:
                     p["Image"] = int(p["Image"])
-                metadata.pages.append(cast(ImageMetadata, p))
+                md.pages.append(cast(ImageMetadata, p))
 
-        metadata.is_empty = False
+        md.is_empty = False
 
-        return metadata
+        return md
 
     def write_to_external_file(
-        self, filename: str, metadata: Metadata, xml: Optional[any] = None
+        self, filename: str, md: Metadata, xml: Optional[any] = None
     ) -> None:
-        tree = self.convert_metadata_to_xml(metadata, xml)
+        tree = self.convert_metadata_to_xml(md, xml)
         tree.write(filename, encoding="utf-8", xml_declaration=True)
 
     def read_from_external_file(self, filename: str) -> Metadata:

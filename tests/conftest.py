@@ -17,29 +17,29 @@ RAR_PATH = TEST_FILES_PATH / "Captain Science #001-cix-cbi.cbr"
 
 @pytest.fixture(scope="module")
 def fake_metadata():
-    meta_data = Metadata()
-    meta_data.series = Series(
+    md = Metadata()
+    md.series = Series(
         name="Aquaman",
         sort_name="Aquaman",
         volume=1,
         format="Annual",
     )
-    meta_data.issue = "0"
-    meta_data.stories = [Basic("A Crash of Symbols")]
-    meta_data.publisher = Basic("DC Comics")
-    meta_data.cover_date = date(1994, 12, 1)
-    meta_data.story_arcs = [Arc("Final Crisis")]
-    meta_data.characters = [
+    md.issue = "0"
+    md.stories = [Basic("A Crash of Symbols")]
+    md.publisher = Basic("DC Comics")
+    md.cover_date = date(1994, 12, 1)
+    md.story_arcs = [Arc("Final Crisis")]
+    md.characters = [
         Basic("Aquaman"),
         Basic("Mera"),
         Basic("Garth"),
     ]
-    meta_data.teams = [Basic("Justice League"), Basic("Teen Titans")]
-    meta_data.comments = "Just some sample metadata."
-    meta_data.black_and_white = True
-    meta_data.is_empty = False
+    md.teams = [Basic("Justice League"), Basic("Teen Titans")]
+    md.comments = "Just some sample metadata."
+    md.black_and_white = True
+    md.is_empty = False
 
-    return meta_data
+    return md
 
 
 @pytest.fixture(scope="session")
