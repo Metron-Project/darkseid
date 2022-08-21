@@ -6,8 +6,8 @@ from typing import List
 import pytest
 from lxml import etree
 
-from darkseid.comic_info_xml import ComicInfoXml
 from darkseid.comic_metadata import Arc, Basic, ComicMetadata, Credit, Role, Series
+from darkseid.comicinfo_xml import ComicInfoXml
 
 from .conftest import CI_XSD
 

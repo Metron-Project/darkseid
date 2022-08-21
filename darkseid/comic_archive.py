@@ -17,8 +17,8 @@ import rarfile
 from natsort import natsorted, ns
 from PIL import Image
 
-from darkseid.comic_info_xml import ComicInfoXml
 from darkseid.comic_metadata import ComicMetadata
+from darkseid.comicinfo_xml import ComicInfoXml
 from darkseid.exceptions import RarError
 from darkseid.filename_parser import FileNameParser
 
