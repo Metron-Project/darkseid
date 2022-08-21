@@ -108,6 +108,11 @@ class SeriesMetadata(GeneralResource):
 
 
 @dataclass
+class Arc(GeneralResource):
+    number: Optional[int] = None
+
+
+@dataclass
 class CreditMetadata:
     person: str
     role: List[RoleMetadata]
@@ -176,7 +181,7 @@ class GenericMetadata:
     page_count: Optional[int] = None
     age_rating: Optional[str] = None
 
-    story_arcs: List[GeneralResource] = field(default_factory=list)
+    story_arcs: List[Arc] = field(default_factory=list)
     series_group: Optional[str] = None
     scan_info: Optional[str] = None
 

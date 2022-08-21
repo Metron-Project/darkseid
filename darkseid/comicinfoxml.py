@@ -10,6 +10,7 @@ from re import split
 from typing import Any, List, Optional, Union, cast
 
 from .genericmetadata import (
+    Arc,
     CreditMetadata,
     GeneralResource,
     GenericMetadata,
@@ -257,6 +258,10 @@ class ComicInfoXml:
                 # TODO: Make the delimiter also check for ','
                 return [GeneralResource(x.strip()) for x in string.split(";")]
 
+        def string_to_arc(string: str) -> List[Arc]:
+            if string is not None:
+                return [Arc(x.strip()) for x in string.split(";")]
+
         metadata = GenericMetadata()
         metadata.series = SeriesMetadata(name=xlate(get("Series")))
         metadata.stories = string_to_resource(xlate(get("Title")))
@@ -287,7 +292,7 @@ class ComicInfoXml:
         metadata.locations = string_to_resource(xlate(get("Locations")))
         metadata.page_count = xlate(get("PageCount"), True)
         metadata.scan_info = xlate(get("ScanInformation"))
-        metadata.story_arcs = string_to_resource(xlate(get("StoryArc")))
+        metadata.story_arcs = string_to_arc(xlate(get("StoryArc")))
         metadata.series_group = xlate(get("SeriesGroup"))
         metadata.age_rating = xlate(get("AgeRating"))
 
