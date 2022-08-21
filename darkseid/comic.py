@@ -17,7 +17,7 @@ import rarfile
 from natsort import natsorted, ns
 from PIL import Image
 
-from darkseid.comicinfo import ComicInfoXml
+from darkseid.comicinfo import ComicInfo
 from darkseid.exceptions import RarError
 from darkseid.filename import FileNameParser
 from darkseid.metadata import ComicMetadata
@@ -410,7 +410,7 @@ class Comic:
             if raw_metadata is None or raw_metadata == "":
                 self.metadata = ComicMetadata()
             else:
-                self.metadata = ComicInfoXml().metadata_from_string(raw_metadata)
+                self.metadata = ComicInfo().metadata_from_string(raw_metadata)
 
             # validate the existing page list (make sure count is correct)
             if len(self.metadata.pages) not in [0, self.get_number_of_pages()]:
@@ -441,9 +441,9 @@ class Comic:
             return False
         self.apply_archive_info_to_metadata(metadata, calc_page_sizes=True)
         if raw_cix := self.read_raw_metadata():
-            md_string = ComicInfoXml().string_from_metadata(metadata, raw_cix.encode("utf-8"))
+            md_string = ComicInfo().string_from_metadata(metadata, raw_cix.encode("utf-8"))
         else:
-            md_string = ComicInfoXml().string_from_metadata(metadata)
+            md_string = ComicInfo().string_from_metadata(metadata)
         write_success = self.archiver.write_file(self.ci_xml_filename, md_string)
         return self._successful_write(write_success, True, metadata)
 

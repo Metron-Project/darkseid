@@ -6,7 +6,7 @@ from typing import List
 import pytest
 from lxml import etree
 
-from darkseid.comicinfo import ComicInfoXml
+from darkseid.comicinfo import ComicInfo
 from darkseid.metadata import Arc, Basic, ComicMetadata, Credit, Role, Series
 
 from .conftest import CI_XSD
@@ -64,7 +64,7 @@ def validate(xml_path: str, xsd_path: str) -> bool:
 
 def test_metadata_from_xml(test_meta_data: ComicMetadata) -> None:
     """Simple test of creating the ComicInfo"""
-    res = ComicInfoXml().string_from_metadata(test_meta_data)
+    res = ComicInfo().string_from_metadata(test_meta_data)
     # TODO: add more asserts to verify data.
     assert res is not None
 
@@ -72,7 +72,7 @@ def test_metadata_from_xml(test_meta_data: ComicMetadata) -> None:
 def test_meta_write_to_file(test_meta_data: ComicMetadata, tmp_path: Path) -> None:
     """Test of writing the metadata to a file"""
     tmp_file = tmp_path / "test-write.xml"
-    ComicInfoXml().write_to_external_file(tmp_file, test_meta_data)
+    ComicInfo().write_to_external_file(tmp_file, test_meta_data)
     assert tmp_file.read_text() is not None
     assert validate(tmp_file, CI_XSD) is True
 
@@ -82,7 +82,7 @@ def test_invalid_age_write_to_file(tmp_path: Path) -> None:
     aquaman = Series("Aquaman")
     bad_metadata = ComicMetadata(series=aquaman, age_rating="MA 15+")
     tmp_file = tmp_path / "test-age-write.xml"
-    ci = ComicInfoXml()
+    ci = ComicInfo()
     ci.write_to_external_file(tmp_file, bad_metadata)
     result_md = ci.read_from_external_file(tmp_file)
     assert tmp_file.read_text() is not None
@@ -95,7 +95,7 @@ def test_invalid_manga_write_to_file(tmp_path: Path) -> None:
     aquaman = Series("Aquaman")
     bad_metadata = ComicMetadata(series=aquaman, manga="Foo Bar")
     tmp_file = tmp_path / "test-manga-write.xml"
-    ci = ComicInfoXml()
+    ci = ComicInfo()
     ci.write_to_external_file(tmp_file, bad_metadata)
     result_md = ci.read_from_external_file(tmp_file)
     assert tmp_file.read_text() is not None
@@ -107,9 +107,9 @@ def test_read_from_file(test_meta_data: ComicMetadata, tmp_path: Path) -> None:
     """Test to read in the data from a file"""
     tmp_file = tmp_path / "test-read.xml"
     # Write metadata to file
-    ComicInfoXml().write_to_external_file(tmp_file, test_meta_data)
+    ComicInfo().write_to_external_file(tmp_file, test_meta_data)
     # Read the metadat from the file
-    new_md = ComicInfoXml().read_from_external_file(tmp_file)
+    new_md = ComicInfo().read_from_external_file(tmp_file)
 
     assert new_md is not None
     assert new_md.series.name == test_meta_data.series.name

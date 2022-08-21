@@ -14,8 +14,7 @@ from darkseid.metadata import Arc, Basic, ComicMetadata, Credit, ImageMetadata, 
 from darkseid.utils import list_to_string, xlate
 
 
-class ComicInfoXml:
-
+class ComicInfo:
     ci_age_ratings = [
         "Unknown",
         "Adults Only 18+",
