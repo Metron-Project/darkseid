@@ -9,8 +9,8 @@ from datetime import date
 from re import split
 from typing import Any, List, Optional, Union, cast
 
-from .genericmetadata import Arc, Basic, ComicMetadata, Credit, ImageMetadata, Role, Series
-from .issuestring import IssueString
+from .comic_metadata import Arc, Basic, ComicMetadata, Credit, ImageMetadata, Role, Series
+from .issue_string import IssueString
 from .utils import list_to_string, xlate
 
 

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from darkseid.filenameparser import FileNameParser
+from darkseid.filename_parser import FileNameParser
 
 from .test_params import test_file_names
 

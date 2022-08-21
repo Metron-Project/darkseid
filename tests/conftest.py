@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from darkseid.comicarchive import ComicArchive
-from darkseid.genericmetadata import Arc, Basic, ComicMetadata, Price, Series
+from darkseid.comic_archive import ComicArchive
+from darkseid.comic_metadata import Arc, Basic, ComicMetadata, Price, Series
 
 TEST_FILES_PATH = Path("tests/test_files")
 IMG_DIR = TEST_FILES_PATH / "Captain_Science_001"

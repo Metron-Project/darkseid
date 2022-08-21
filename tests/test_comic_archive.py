@@ -6,8 +6,8 @@ from pathlib import Path
 import py7zr
 import pytest
 
-from darkseid.comicarchive import ComicArchive, UnknownArchiver
-from darkseid.genericmetadata import ComicMetadata
+from darkseid.comic_archive import ComicArchive, UnknownArchiver
+from darkseid.comic_metadata import ComicMetadata
 from tests.conftest import IMG_DIR
 
 # Uses to test image bytes

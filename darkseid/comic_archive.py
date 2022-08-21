@@ -17,10 +17,10 @@ import rarfile
 from natsort import natsorted, ns
 from PIL import Image
 
-from darkseid.comicinfoxml import ComicInfoXml
+from darkseid.comic_info_xml import ComicInfoXml
+from darkseid.comic_metadata import ComicMetadata
 from darkseid.exceptions import RarError
-from darkseid.filenameparser import FileNameParser
-from darkseid.genericmetadata import ComicMetadata
+from darkseid.filename_parser import FileNameParser
 
 logger = logging.getLogger(__name__)
 
