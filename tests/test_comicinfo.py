@@ -7,7 +7,7 @@ import pytest
 from lxml import etree
 
 from darkseid.comicinfo import ComicInfo
-from darkseid.metadata import Arc, Basic, ComicMetadata, Credit, Role, Series
+from darkseid.metadata import Arc, Basic, Credit, Metadata, Role, Series
 
 from .conftest import CI_XSD
 
@@ -27,8 +27,8 @@ def test_credits() -> List[Credit]:
 
 
 @pytest.fixture()
-def test_meta_data(test_credits: List[Credit]) -> ComicMetadata:
-    meta_data = ComicMetadata()
+def test_meta_data(test_credits: List[Credit]) -> Metadata:
+    meta_data = Metadata()
     meta_data.series = Series("Aquaman", sort_name="Aquaman", volume=3, format="Annual")
     meta_data.issue = "1"
     meta_data.stories = [Basic("Foo"), Basic("Bar")]
@@ -62,14 +62,14 @@ def validate(xml_path: str, xsd_path: str) -> bool:
     return xmlschema.validate(xml_doc)
 
 
-def test_metadata_from_xml(test_meta_data: ComicMetadata) -> None:
+def test_metadata_from_xml(test_meta_data: Metadata) -> None:
     """Simple test of creating the ComicInfo"""
     res = ComicInfo().string_from_metadata(test_meta_data)
     # TODO: add more asserts to verify data.
     assert res is not None
 
 
-def test_meta_write_to_file(test_meta_data: ComicMetadata, tmp_path: Path) -> None:
+def test_meta_write_to_file(test_meta_data: Metadata, tmp_path: Path) -> None:
     """Test of writing the metadata to a file"""
     tmp_file = tmp_path / "test-write.xml"
     ComicInfo().write_to_external_file(tmp_file, test_meta_data)
@@ -80,7 +80,7 @@ def test_meta_write_to_file(test_meta_data: ComicMetadata, tmp_path: Path) -> No
 def test_invalid_age_write_to_file(tmp_path: Path) -> None:
     """Test writing of invalid age rating value to a file."""
     aquaman = Series("Aquaman")
-    bad_metadata = ComicMetadata(series=aquaman, age_rating="MA 15+")
+    bad_metadata = Metadata(series=aquaman, age_rating="MA 15+")
     tmp_file = tmp_path / "test-age-write.xml"
     ci = ComicInfo()
     ci.write_to_external_file(tmp_file, bad_metadata)
@@ -93,7 +93,7 @@ def test_invalid_age_write_to_file(tmp_path: Path) -> None:
 def test_invalid_manga_write_to_file(tmp_path: Path) -> None:
     """Test writing of invalid manga value to a file."""
     aquaman = Series("Aquaman")
-    bad_metadata = ComicMetadata(series=aquaman, manga="Foo Bar")
+    bad_metadata = Metadata(series=aquaman, manga="Foo Bar")
     tmp_file = tmp_path / "test-manga-write.xml"
     ci = ComicInfo()
     ci.write_to_external_file(tmp_file, bad_metadata)
@@ -103,7 +103,7 @@ def test_invalid_manga_write_to_file(tmp_path: Path) -> None:
     assert result_md.manga == "Unknown"
 
 
-def test_read_from_file(test_meta_data: ComicMetadata, tmp_path: Path) -> None:
+def test_read_from_file(test_meta_data: Metadata, tmp_path: Path) -> None:
     """Test to read in the data from a file"""
     tmp_file = tmp_path / "test-read.xml"
     # Write metadata to file

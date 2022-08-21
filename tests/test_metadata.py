@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from darkseid.metadata import GTIN, ComicMetadata, Credit, Price, Role
+from darkseid.metadata import GTIN, Credit, Metadata, Price, Role
 
 MARTY = "Martin Egeland"
 PETER = "Peter David"
@@ -13,7 +13,7 @@ COVER = "Cover"
 
 
 def test_metadata_print_str(fake_metadata):
-    expect_res = """ComicMetadata(
+    expect_res = """Metadata(
     is_empty = False,
     series = Series(name='Aquaman', id_=None, sort_name='Aquaman', volume=1, format='Annual'),
     issue = '0',
@@ -35,9 +35,7 @@ def test_metadata_print_str(fake_metadata):
     assert str(fake_metadata) == expect_res
 
 
-def test_metadata_overlay(
-    fake_metadata: ComicMetadata, fake_overlay_metadata: ComicMetadata
-) -> None:
+def test_metadata_overlay(fake_metadata: Metadata, fake_overlay_metadata: Metadata) -> None:
     md = fake_metadata
     # Fake overlay cover date info.
     md.overlay(fake_overlay_metadata)
@@ -54,7 +52,7 @@ def test_metadata_overlay(
     assert md.collection_title == fake_metadata.collection_title
 
 
-def test_metadata_credits(fake_metadata: ComicMetadata) -> None:
+def test_metadata_credits(fake_metadata: Metadata) -> None:
     result = [
         Credit(PETER, [Role(WRITER, primary=True)]),
         Credit(MARTY, [Role(PENCILLER), Role(COVER), Role("Inker")]),

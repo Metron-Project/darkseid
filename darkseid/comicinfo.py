@@ -10,7 +10,7 @@ from re import split
 from typing import Any, List, Optional, Union, cast
 
 from darkseid.issue_string import IssueString
-from darkseid.metadata import Arc, Basic, ComicMetadata, Credit, ImageMetadata, Role, Series
+from darkseid.metadata import Arc, Basic, Credit, ImageMetadata, Metadata, Role, Series
 from darkseid.utils import list_to_string, xlate
 
 
@@ -81,11 +81,11 @@ class ComicInfo:
         "supervising editor",
     ]
 
-    def metadata_from_string(self, string: str) -> ComicMetadata:
+    def metadata_from_string(self, string: str) -> Metadata:
         tree = ET.ElementTree(ET.fromstring(string))
         return self.convert_xml_to_metadata(tree)
 
-    def string_from_metadata(self, metadata: ComicMetadata, xml: Optional[any] = None) -> str:
+    def string_from_metadata(self, metadata: Metadata, xml: Optional[any] = None) -> str:
         tree = self.convert_metadata_to_xml(metadata, xml)
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
 
@@ -115,7 +115,7 @@ class ComicInfo:
         if val is not None:
             return "Unknown" if val not in cls.ci_manga else val
 
-    def convert_metadata_to_xml(self, metadata: ComicMetadata, xml=None) -> ET.ElementTree:
+    def convert_metadata_to_xml(self, metadata: Metadata, xml=None) -> ET.ElementTree:
         root = self._get_root(xml)
 
         # helper func
@@ -232,7 +232,7 @@ class ComicInfo:
         tree = ET.ElementTree(root)
         return tree
 
-    def convert_xml_to_metadata(self, tree: ET.ElementTree) -> ComicMetadata:
+    def convert_xml_to_metadata(self, tree: ET.ElementTree) -> Metadata:
         root = tree.getroot()
 
         if root.tag != "ComicInfo":
@@ -251,7 +251,7 @@ class ComicInfo:
             if string is not None:
                 return [Arc(x.strip()) for x in string.split(";")]
 
-        metadata = ComicMetadata()
+        metadata = Metadata()
         metadata.series = Series(name=xlate(get("Series")))
         metadata.stories = string_to_resource(xlate(get("Title")))
         metadata.issue = IssueString(xlate(get("Number"))).as_string()
@@ -316,11 +316,11 @@ class ComicInfo:
         return metadata
 
     def write_to_external_file(
-        self, filename: str, metadata: ComicMetadata, xml: Optional[any] = None
+        self, filename: str, metadata: Metadata, xml: Optional[any] = None
     ) -> None:
         tree = self.convert_metadata_to_xml(metadata, xml)
         tree.write(filename, encoding="utf-8", xml_declaration=True)
 
-    def read_from_external_file(self, filename: str) -> ComicMetadata:
+    def read_from_external_file(self, filename: str) -> Metadata:
         tree = ET.parse(filename)
         return self.convert_xml_to_metadata(tree)

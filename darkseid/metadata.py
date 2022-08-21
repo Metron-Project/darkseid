@@ -147,7 +147,7 @@ class GTIN(Validations):
 
 
 @dataclass
-class ComicMetadata:
+class Metadata:
     is_empty: bool = True
     tag_origin: Optional[str] = None
 
@@ -200,7 +200,7 @@ class ComicMetadata:
                 self.is_empty = False
                 break
 
-    def overlay(self, new_md: "ComicMetadata") -> None:
+    def overlay(self, new_md: "Metadata") -> None:
         """Overlay a metadata object on this one
 
         That is, when the new object has non-None values, over-write them
