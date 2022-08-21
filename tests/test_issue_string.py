@@ -1,5 +1,6 @@
 import pytest
-from darkseid.issuestring import IssueString
+
+from darkseid.issue_string import IssueString
 
 float_test_values = {
     ("1½", 1.5),

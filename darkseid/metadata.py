@@ -90,32 +90,32 @@ class Price(Validations):
 
 
 @dataclass
-class GeneralResource:
+class Basic:
     name: str
     id_: Optional[int] = None
 
 
 @dataclass
-class RoleMetadata(GeneralResource):
+class Role(Basic):
     primary: bool = False
 
 
 @dataclass
-class SeriesMetadata(GeneralResource):
+class Series(Basic):
     sort_name: Optional[str] = None
     volume: Optional[int] = None
     format: Optional[str] = None
 
 
 @dataclass
-class Arc(GeneralResource):
+class Arc(Basic):
     number: Optional[int] = None
 
 
 @dataclass
-class CreditMetadata:
+class Credit:
     person: str
-    role: List[RoleMetadata]
+    role: List[Role]
     id_: Optional[int] = None
 
 
@@ -147,22 +147,22 @@ class GTIN(Validations):
 
 
 @dataclass
-class GenericMetadata:
+class Metadata:
     is_empty: bool = True
     tag_origin: Optional[str] = None
 
-    info_source: Optional[GeneralResource] = None
-    series: Optional[SeriesMetadata] = None
+    info_source: Optional[Basic] = None
+    series: Optional[Series] = None
     issue: Optional[str] = None
     collection_title: Optional[str] = None
-    stories: List[GeneralResource] = field(default_factory=list)
-    publisher: Optional[GeneralResource] = None
+    stories: List[Basic] = field(default_factory=list)
+    publisher: Optional[Basic] = None
     cover_date: Optional[date] = None
     store_date: Optional[date] = None
     prices: List[Price] = field(default_factory=list)
     gtin: Optional[GTIN] = None
     issue_count: Optional[int] = None
-    genres: List[GeneralResource] = field(default_factory=list)
+    genres: List[Basic] = field(default_factory=list)
     language: Optional[str] = None  # 2 letter iso code
     comments: Optional[str] = None  # use same way as Summary in CIX
 
@@ -185,13 +185,13 @@ class GenericMetadata:
     series_group: Optional[str] = None
     scan_info: Optional[str] = None
 
-    characters: List[GeneralResource] = field(default_factory=list)
-    teams: List[GeneralResource] = field(default_factory=list)
-    locations: List[GeneralResource] = field(default_factory=list)
+    characters: List[Basic] = field(default_factory=list)
+    teams: List[Basic] = field(default_factory=list)
+    locations: List[Basic] = field(default_factory=list)
 
-    credits: List[CreditMetadata] = field(default_factory=list)
-    reprints: List[GeneralResource] = field(default_factory=list)
-    tags: List[GeneralResource] = field(default_factory=list)
+    credits: List[Credit] = field(default_factory=list)
+    reprints: List[Basic] = field(default_factory=list)
+    tags: List[Basic] = field(default_factory=list)
     pages: List[ImageMetadata] = field(default_factory=list)
 
     def __post_init__(self):
@@ -200,7 +200,7 @@ class GenericMetadata:
                 self.is_empty = False
                 break
 
-    def overlay(self, new_md: "GenericMetadata") -> None:
+    def overlay(self, new_md: "Metadata") -> None:
         """Overlay a metadata object on this one
 
         That is, when the new object has non-None values, over-write them
@@ -270,7 +270,7 @@ class GenericMetadata:
         if len(new_md.pages) > 0:
             assign("pages", new_md.pages)
 
-    def overlay_credits(self, new_credits: List[CreditMetadata]) -> None:
+    def overlay_credits(self, new_credits: List[Credit]) -> None:
         for c in new_credits:
             # Remove credit role if person is blank
             if c.person == "":
@@ -320,13 +320,13 @@ class GenericMetadata:
             else (False, None)
         )
 
-    def _role_exists(self, new_role: RoleMetadata, old_roles: List[RoleMetadata]) -> bool:
+    def _role_exists(self, new_role: Role, old_roles: List[Role]) -> bool:
         return any(role.name.casefold() == new_role.name.casefold() for role in old_roles)
 
-    def add_credit(self, new_credit: CreditMetadata) -> None:
+    def add_credit(self, new_credit: Credit) -> None:
         exist, idx = self._existing_credit(new_credit.person)
         if exist:
-            existing_credit: CreditMetadata = self.credits[idx]
+            existing_credit: Credit = self.credits[idx]
             for new_role in new_credit.role:
                 if not self._role_exists(new_role, existing_credit.role):
                     existing_credit.role.append(new_role)

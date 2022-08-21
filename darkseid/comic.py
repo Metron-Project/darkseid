@@ -17,10 +17,10 @@ import rarfile
 from natsort import natsorted, ns
 from PIL import Image
 
-from darkseid.comicinfoxml import ComicInfoXml
+from darkseid.comicinfo import ComicInfo
 from darkseid.exceptions import RarError
-from darkseid.filenameparser import FileNameParser
-from darkseid.genericmetadata import GenericMetadata
+from darkseid.filename import FileNameParser
+from darkseid.metadata import Metadata
 
 logger = logging.getLogger(__name__)
 
@@ -273,9 +273,9 @@ class SevenZipArchiver(UnknownArchiver):
 # ------------------------------------------------------------------
 
 
-class ComicArchive:
+class Comic:
 
-    """Comic Archive implementation"""
+    """Comic implementation"""
 
     class ArchiveType:
         """Types of archives supported. Currently .cbr, .cbz, and .cb7"""
@@ -289,7 +289,7 @@ class ComicArchive:
         self.has_md: Optional[bool] = None
         self.page_count: Optional[int] = None
         self.page_list: Optional[List[str]] = None
-        self.metadata: Optional[GenericMetadata] = None
+        self.metadata: Optional[Metadata] = None
 
         if self.zip_test():
             self.archive_type: int = self.ArchiveType.zip
@@ -403,14 +403,14 @@ class ComicArchive:
             self.page_count = len(self.get_page_name_list())
         return self.page_count
 
-    def read_metadata(self) -> GenericMetadata:
+    def read_metadata(self) -> Metadata:
         """Reads the metadata from an archive if present"""
         if self.metadata is None:
             raw_metadata = self.read_raw_metadata()
             if raw_metadata is None or raw_metadata == "":
-                self.metadata = GenericMetadata()
+                self.metadata = Metadata()
             else:
-                self.metadata = ComicInfoXml().metadata_from_string(raw_metadata)
+                self.metadata = ComicInfo().metadata_from_string(raw_metadata)
 
             # validate the existing page list (make sure count is correct)
             if len(self.metadata.pages) not in [0, self.get_number_of_pages()]:
@@ -435,15 +435,15 @@ class ComicArchive:
             raw_metadata = None
         return raw_metadata
 
-    def write_metadata(self, metadata: Optional[GenericMetadata]) -> bool:
+    def write_metadata(self, metadata: Optional[Metadata]) -> bool:
         """Write the metadata to the archive"""
         if metadata is None or not self.is_writable():
             return False
         self.apply_archive_info_to_metadata(metadata, calc_page_sizes=True)
         if raw_cix := self.read_raw_metadata():
-            md_string = ComicInfoXml().string_from_metadata(metadata, raw_cix.encode("utf-8"))
+            md_string = ComicInfo().string_from_metadata(metadata, raw_cix.encode("utf-8"))
         else:
-            md_string = ComicInfoXml().string_from_metadata(metadata)
+            md_string = ComicInfo().string_from_metadata(metadata)
         write_success = self.archiver.write_file(self.ci_xml_filename, md_string)
         return self._successful_write(write_success, True, metadata)
 
@@ -455,7 +455,7 @@ class ComicArchive:
         return True
 
     def _successful_write(
-        self, write_success: bool, has_md: bool, metadata: Optional[GenericMetadata]
+        self, write_success: bool, has_md: bool, metadata: Optional[Metadata]
     ) -> bool:
         if write_success:
             self.has_md = has_md
@@ -477,7 +477,7 @@ class ComicArchive:
         return self.has_md
 
     def apply_archive_info_to_metadata(
-        self, metadata: GenericMetadata, calc_page_sizes: bool = False
+        self, metadata: Metadata, calc_page_sizes: bool = False
     ) -> None:
         """Apply page information from the archive to the metadata"""
         metadata.page_count = str(self.get_number_of_pages())
@@ -502,9 +502,9 @@ class ComicArchive:
                         except OSError:
                             page["ImageSize"] = str(len(data))
 
-    def metadata_from_filename(self, parse_scan_info: bool = True) -> GenericMetadata:
+    def metadata_from_filename(self, parse_scan_info: bool = True) -> Metadata:
         """Attempts to get the metadata from the filename"""
-        metadata = GenericMetadata()
+        metadata = Metadata()
 
         fnp = FileNameParser()
         fnp.parse_filename(self.path)
