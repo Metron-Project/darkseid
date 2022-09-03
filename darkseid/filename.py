@@ -8,7 +8,7 @@ This should probably be re-written, but, well, it mostly works!
 import contextlib
 import re
 from pathlib import Path
-from typing import List, Match, Optional, Tuple
+from typing import List, Tuple
 from urllib.parse import unquote
 
 
@@ -45,8 +45,7 @@ class FileNameParser:
         tmpstr: str = self.fix_spaces(filename)
         found: bool = False
 
-        match: Optional[Match[str]] = re.search(r"(?<=\sof\s)\d+(?=\s)", tmpstr, re.IGNORECASE)
-        if match:
+        if match := re.search(r"(?<=\sof\s)\d+(?=\s)", tmpstr, re.IGNORECASE):
             count = match.group()
             found = True
 
@@ -209,8 +208,7 @@ class FileNameParser:
 
         year: str = ""
         # look for four digit number with "(" ")" or "--" around it
-        match: Optional[Match[str]] = re.search(r"(\(\d\d\d\d\))|(--\d\d\d\d--)", filename)
-        if match:
+        if match := re.search(r"(\(\d\d\d\d\))|(--\d\d\d\d--)", filename):
             year = match.group()
             # remove non-digits
             year = re.sub("[^0-9]", "", year)
