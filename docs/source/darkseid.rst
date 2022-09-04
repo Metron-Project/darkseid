@@ -4,42 +4,50 @@ darkseid package
 Submodules
 ----------
 
-darkseid.comicarchive module
-----------------------------
+darkseid.comic module
+---------------------
 
-.. automodule:: darkseid.comicarchive
+.. automodule:: darkseid.comic
    :members:
    :undoc-members:
    :show-inheritance:
 
-darkseid.comicinfoxml module
-----------------------------
+darkseid.comicinfo module
+-------------------------
 
-.. automodule:: darkseid.comicinfoxml
+.. automodule:: darkseid.comicinfo
    :members:
    :undoc-members:
    :show-inheritance:
 
-darkseid.filenameparser module
-------------------------------
+darkseid.exceptions module
+--------------------------
 
-.. automodule:: darkseid.filenameparser
+.. automodule:: darkseid.exceptions
    :members:
    :undoc-members:
    :show-inheritance:
 
-darkseid.genericmetadata module
--------------------------------
+darkseid.filename module
+------------------------
 
-.. automodule:: darkseid.genericmetadata
+.. automodule:: darkseid.filename
    :members:
    :undoc-members:
    :show-inheritance:
 
-darkseid.issuestring module
----------------------------
+darkseid.issue\_string module
+-----------------------------
 
-.. automodule:: darkseid.issuestring
+.. automodule:: darkseid.issue_string
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+darkseid.metadata module
+------------------------
+
+.. automodule:: darkseid.metadata
    :members:
    :undoc-members:
    :show-inheritance:
@@ -51,7 +59,6 @@ darkseid.utils module
    :members:
    :undoc-members:
    :show-inheritance:
-
 
 Module contents
 ---------------
