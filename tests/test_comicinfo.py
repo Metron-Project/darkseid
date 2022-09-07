@@ -29,7 +29,9 @@ def test_credits() -> List[Credit]:
 @pytest.fixture()
 def test_meta_data(test_credits: List[Credit]) -> Metadata:
     md = Metadata()
-    md.series = Series("Aquaman", sort_name="Aquaman", volume=3, format="Annual")
+    md.series = Series(
+        "Aquaman", sort_name="Aquaman", volume=3, format="Annual", language="en"
+    )
     md.issue = "1"
     md.stories = [Basic("Foo"), Basic("Bar")]
     md.cover_date = date(1993, 4, 15)
@@ -113,6 +115,7 @@ def test_read_from_file(test_meta_data: Metadata, tmp_path: Path) -> None:
 
     assert new_md is not None
     assert new_md.series.name == test_meta_data.series.name
+    assert new_md.series.language == new_md.series.language
     assert new_md.issue == test_meta_data.issue
     assert new_md.stories == test_meta_data.stories
     assert new_md.cover_date == test_meta_data.cover_date

@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from darkseid.metadata import GTIN, Credit, Metadata, Price, Role
+from darkseid.metadata import GTIN, Credit, Metadata, Price, Role, Series
 
 MARTY = "Martin Egeland"
 PETER = "Peter David"
@@ -15,7 +15,7 @@ COVER = "Cover"
 def test_metadata_print_str(fake_metadata):
     expect_res = """Metadata(
     is_empty = False,
-    series = Series(name='Aquaman', id_=None, sort_name='Aquaman', volume=1, format='Annual'),
+    series = Series(name='Aquaman', id_=None, sort_name='Aquaman', volume=1, format='Annual', language=None),
     issue = '0',
     stories = [Basic(name='A Crash of Symbols', id_=None)],
     publisher = Basic(name='DC Comics', id_=None),
@@ -119,3 +119,27 @@ def test_bad_gtin(upc, isbn, reason) -> None:
 @pytest.mark.parametrize("upc, isbn, expected, reason", good_gtin)
 def test_good_gtin(upc, isbn, expected, reason) -> None:
     assert GTIN(upc, isbn) == expected
+
+
+good_series = [
+    pytest.param("Foo Bar", "en", Series("Foo Bar", language="en"), "Good language code"),
+    pytest.param("Foo", "German", Series("Foo", language="de"), "Long name search"),
+]
+
+
+@pytest.mark.parametrize("name, lang, expected, reason", good_series)
+def test_good_series(name, lang, expected, reason) -> None:
+    assert Series(name, language=lang) == expected
+
+
+bad_series = [
+    pytest.param("Foo", "Fugazi", "Invalid language"),
+    pytest.param("Bar", " ", "Space-only language value"),
+    pytest.param("Foo", "ZZ", "Invalid 2 letter language code"),
+]
+
+
+@pytest.mark.parametrize("name, lang, reason", bad_series)
+def test_bad_series(name, lang, reason) -> None:
+    with pytest.raises(ValueError):
+        Series(name, language=lang)

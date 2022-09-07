@@ -200,7 +200,8 @@ class ComicInfo:
         assign("Genre", get_resource_list(md.genres))
         assign("Web", md.web_link)
         assign("PageCount", md.page_count)
-        assign("LanguageISO", md.language)
+        if md.series.language:
+            assign("LanguageISO", md.series.language)
         assign("Format", md.series.format)
         assign("BlackAndWhite", "Yes" if md.black_and_white else None)
         assign("Manga", self.validate_manga(md.manga))
@@ -273,7 +274,7 @@ class ComicInfo:
         md.imprint = xlate(get("Imprint"))
         md.genres = string_to_resource(xlate(get("Genre")))
         md.web_link = xlate(get("Web"))
-        md.language = xlate(get("LanguageISO"))
+        md.series.language = xlate(get("LanguageISO"))
         md.series.format = xlate(get("Format"))
         md.manga = xlate(get("Manga"))
         md.characters = string_to_resource(xlate(get("Characters")))

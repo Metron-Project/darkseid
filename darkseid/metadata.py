@@ -101,10 +101,26 @@ class Role(Basic):
 
 
 @dataclass
-class Series(Basic):
+class Series(Basic, Validations):
     sort_name: Optional[str] = None
     volume: Optional[int] = None
     format: Optional[str] = None
+    language: Optional[str] = None  # 2 letter iso code
+
+    def validate_language(self, value: str, **_) -> Optional[str]:
+        if not value:
+            return
+        value = value.strip()
+        if len(value) == 2:
+            obj = pycountry.languages.get(alpha_2=value)
+        else:
+            try:
+                obj = pycountry.languages.lookup(value)
+            except LookupError as e:
+                raise ValueError(f"Couldn't find language for {value}") from e
+        if obj is None:
+            raise ValueError(f"Couldn't get language code for {value}")
+        return obj.alpha_2
 
 
 @dataclass
@@ -163,7 +179,6 @@ class Metadata:
     gtin: Optional[GTIN] = None
     issue_count: Optional[int] = None
     genres: List[Basic] = field(default_factory=list)
-    language: Optional[str] = None  # 2 letter iso code
     comments: Optional[str] = None  # use same way as Summary in CIX
 
     volume_count: Optional[str] = None
@@ -233,7 +248,6 @@ class Metadata:
         assign("volume_count", new_md.volume_count)
         if len(new_md.genres) > 0:
             assign("genre", new_md.genres)
-        assign("language", new_md.language)
         assign("country", new_md.country)
         assign("critical_rating", new_md.critical_rating)
         assign("alternate_series", new_md.alternate_series)
