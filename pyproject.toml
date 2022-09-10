@@ -34,13 +34,16 @@ Pillow = "^9.0.0"
 natsort = "^8.0.0"
 py7zr = "^0.18.3"
 rarfile = "^4.0"
-
-# Optional dependencies
-sphinx-rtd-theme = {version="^0.5.2", optional=true}
-sphinxcontrib-napoleon = {version="^0.7", optional=true}
 pycountry = "^22.3.5"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.docs.dependencies]
+sphinx-rtd-theme = "^0.5.2"
+sphinxcontrib-napoleon = "^0.7"
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
 flake8 = "^4.0.0"
 flake8-bugbear = "^22.4.25"
 black = "^21.7b0"
@@ -56,7 +59,7 @@ tox = "^3.24.4"
 lxml = "^4.9.1"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core>=1.1.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.black]
@@ -75,9 +78,6 @@ known_third_party = ["PIL", "lxml", "natsort", "py7zr", "pycountry", "pytest", "
 [tool.poetry.urls]
 "Homepage" = "https://github.com/Metron-Project/darkseid"
 "Bug Tracker" = "https://github.com/Metron-Project/darkseid/issues"
-
-[tool.poetry.extras]
-docs = ["sphinx-rtd-theme", "sphinxcontrib-napoleon"]
 
 [tool.coverage.run]
 source = ["darkseid"]
