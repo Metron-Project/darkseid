@@ -104,7 +104,7 @@ class Role(Basic):
 class Series(Basic, Validations):
     sort_name: Optional[str] = None
     volume: Optional[int] = None
-    format: Optional[str] = None
+    format_: Optional[str] = None
     language: Optional[str] = None  # 2 letter iso code
 
     def validate_language(self, value: str, **_) -> Optional[str]:

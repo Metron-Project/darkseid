@@ -30,7 +30,7 @@ def test_credits() -> List[Credit]:
 def test_meta_data(test_credits: List[Credit]) -> Metadata:
     md = Metadata()
     md.series = Series(
-        "Aquaman", sort_name="Aquaman", volume=3, format="Annual", language="en"
+        "Aquaman", sort_name="Aquaman", volume=3, format_="Annual", language="en"
     )
     md.issue = "1"
     md.stories = [Basic("Foo"), Basic("Bar")]

@@ -13,6 +13,7 @@ ARCHIVE_PATH = TEST_FILES_PATH / "Captain Science #001.cbz"
 CB7_PATH = TEST_FILES_PATH / "Captain Science #001.cb7"
 CI_XSD = TEST_FILES_PATH / "ComicInfo.xsd"
 RAR_PATH = TEST_FILES_PATH / "Captain Science #001-cix-cbi.cbr"
+MI_XSD = TEST_FILES_PATH / "MetronInfo.xsd"
 
 
 @pytest.fixture(scope="module")
@@ -22,7 +23,7 @@ def fake_metadata():
         name="Aquaman",
         sort_name="Aquaman",
         volume=1,
-        format="Annual",
+        format_="Annual",
     )
     md.issue = "0"
     md.stories = [Basic("A Crash of Symbols")]
@@ -45,7 +46,7 @@ def fake_metadata():
 @pytest.fixture(scope="session")
 def fake_overlay_metadata():
     overlay_md = Metadata()
-    overlay_md.series = Series(name="Aquaman", sort_name="Aquaman", volume=1, format="Annual")
+    overlay_md.series = Series(name="Aquaman", sort_name="Aquaman", volume=1, format_="Annual")
     overlay_md.cover_date = date(1994, 10, 1)
     overlay_md.reprints = [Basic("Aquaman (1964) #64", 12345)]
     overlay_md.prices = [Price(Decimal("3.99")), Price(Decimal("1.5"), "CA")]

@@ -65,7 +65,7 @@ def test_cb7_test_metadata(tmp_path: Path, fake_metadata: Metadata) -> None:
     assert new_md.series.name == fake_metadata.series.name
     assert new_md.publisher.name == fake_metadata.publisher.name
     assert new_md.series.volume == fake_metadata.series.volume
-    assert new_md.series.format == fake_metadata.series.format
+    assert new_md.series.format_ == fake_metadata.series.format_
     assert new_md.issue == fake_metadata.issue
     assert new_md.stories == fake_metadata.stories
 
@@ -123,7 +123,7 @@ def test_archive_from_img_dir(tmp_path: Path, fake_metadata: Metadata) -> None:
     res = ca.read_metadata()
     assert res.page_count == 5
     assert res.series.name == fake_metadata.series.name
-    assert res.series.format == fake_metadata.series.format
+    assert res.series.format_ == fake_metadata.series.format_
     assert res.series.volume == fake_metadata.series.volume
     assert res.issue == fake_metadata.issue
     assert res.stories == fake_metadata.stories
@@ -182,7 +182,7 @@ def test_archive_test_metadata(fake_cbz: Comic, fake_metadata: Metadata) -> None
     new_md = fake_cbz.read_metadata()
     assert new_md.series.name == fake_metadata.series.name
     assert new_md.series.volume == fake_metadata.series.volume
-    assert new_md.series.format == fake_metadata.series.format
+    assert new_md.series.format_ == fake_metadata.series.format_
     assert new_md.issue == fake_metadata.issue
     assert new_md.stories == fake_metadata.stories
 
