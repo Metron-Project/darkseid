@@ -267,8 +267,11 @@ class ComicInfo:
         tmp_year = xlate(get("Year"), True)
         tmp_month = xlate(get("Month"), True)
         tmp_day = xlate(get("Day"), True)
-        if tmp_year is not None and tmp_month is not None and tmp_day is not None:
-            md.cover_date = date(tmp_year, tmp_month, tmp_day)
+        if tmp_year is not None and tmp_month is not None:
+            if tmp_day is not None:
+                md.cover_date = date(tmp_year, tmp_month, tmp_day)
+            else:
+                md.cover_date = date(tmp_year, tmp_month, 1)
 
         md.publisher = Basic(xlate(get("Publisher")))
         md.imprint = xlate(get("Imprint"))
