@@ -103,7 +103,7 @@ class ZipArchiver(UnknownArchiver):
     def read_file(self, archive_file: str) -> bytes:
         """Read the contents of a comic archive"""
         try:
-            data = bytes()
+            data = b""
             with zipfile.ZipFile(self.path, mode="r") as zf:
                 data = zf.read(archive_file)
             return data
@@ -198,7 +198,7 @@ class SevenZipArchiver(UnknownArchiver):
     def read_file(self, archive_file: str) -> bytes:
         """Read the contents of a comic archive"""
         try:
-            data = bytes()
+            data = b""
             with py7zr.SevenZipFile(self.path, "r") as zf:
                 data = zf.read(archive_file)[archive_file].read()
             return data
