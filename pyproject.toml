@@ -33,7 +33,7 @@ keywords=["comics", "comic", "metadata", "tagging", "tagger"]
 python = "^3.9"
 Pillow = "^9.0.0"
 natsort = "^8.0.0"
-py7zr = "^0.18.3"
+py7zr = ">=0.18.3,<0.21.0"
 rarfile = "^4.0"
 pycountry = "^22.3.5"
 
