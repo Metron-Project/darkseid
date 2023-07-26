@@ -282,8 +282,8 @@ class Comic:
 
         zip, sevenzip, rar, unknown = list(range(4))
 
-    def __init__(self, path: Path) -> None:
-        self.path = path
+    def __init__(self, path: str) -> None:
+        self.path = Path(path)
 
         self.ci_xml_filename = "ComicInfo.xml"
         self.has_md: Optional[bool] = None
@@ -303,6 +303,9 @@ class Comic:
         else:
             self.archive_type = self.ArchiveType.unknown
             self.archiver = UnknownArchiver(self.path)
+
+    def __str__(self):
+        return f"{self.path.name}"
 
     def reset_cache(self) -> None:
         """Clears the cached data"""
