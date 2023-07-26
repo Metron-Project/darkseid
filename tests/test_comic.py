@@ -94,7 +94,7 @@ def test_cb7_get_random_page(fake_cb7: Comic) -> None:
 def test_cb7_metadata_from_filename(fake_cb7: Comic) -> None:
     """Test to get metadata from comic archives filename"""
     test_md = fake_cb7.metadata_from_filename()
-    assert test_md.series == "Captain Science"
+    assert test_md.series.name == "Captain Science"
     assert test_md.issue == "1"
 
 
@@ -212,7 +212,7 @@ def test_cbz_get_random_page(fake_cbz: Comic) -> None:
 def test_archive_metadata_from_filename(fake_cbz: Comic) -> None:
     """Test to get metadata from comic archives filename"""
     test_md = fake_cbz.metadata_from_filename()
-    assert test_md.series == "Captain Science"
+    assert test_md.series.name == "Captain Science"
     assert test_md.issue == "1"
 
 
@@ -275,7 +275,7 @@ def test_rar_read_metadata(fake_rar: Comic) -> None:
 def test_rar_metadata_from_filename(fake_rar: Comic) -> None:
     """Test to get metadata from comic archives filename"""
     test_md = fake_rar.metadata_from_filename()
-    assert test_md.series == "Captain Science"
+    assert test_md.series.name == "Captain Science"
     assert test_md.issue == "1"
 
 

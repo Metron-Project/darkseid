@@ -20,7 +20,7 @@ from PIL import Image
 from darkseid.comicinfo import ComicInfo
 from darkseid.exceptions import RarError
 from darkseid.filename import FileNameParser
-from darkseid.metadata import Metadata
+from darkseid.metadata import Metadata, Series
 
 logger = logging.getLogger(__name__)
 
@@ -515,11 +515,12 @@ class Comic:
         if fnp.issue != "":
             metadata.issue = fnp.issue
         if fnp.series != "":
-            metadata.series = fnp.series
-        if fnp.volume != "":
-            metadata.volume = fnp.volume
+            series = Series(name=fnp.series)
+            if fnp.volume != "":
+                series.volume = fnp.volume
+            metadata.series = series
         if fnp.year != "":
-            metadata.year = fnp.year
+            metadata.cover_date.year = fnp.year
         if fnp.issue_count != "":
             metadata.issue_count = fnp.issue_count
         if parse_scan_info and fnp.remainder != "":
