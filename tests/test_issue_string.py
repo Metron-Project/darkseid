@@ -15,7 +15,7 @@ float_test_values = {
 
 
 @pytest.mark.parametrize("issue, expected", float_test_values)
-def test_float_strings(issue, expected):
+def test_float_strings(issue: str, expected: float) -> None:
     assert IssueString(issue).as_float() == expected
 
 
@@ -23,7 +23,7 @@ int_test_values = {("1", 1), ("1.5", 1), ("", None)}
 
 
 @pytest.mark.parametrize("issue, expected", int_test_values)
-def test_issue_int(issue, expected):
+def test_issue_int(issue: str, expected: int) -> None:
     assert IssueString(issue).as_int() == expected
 
 
@@ -36,5 +36,5 @@ string_test_values = {
 
 
 @pytest.mark.parametrize("issue, expected, pad", string_test_values)
-def test_issue_string_monsters_unleashed(issue, expected, pad):
+def test_issue_string_monsters_unleashed(issue: str, expected: str, pad: int) -> None:
     assert IssueString(issue).as_string(pad) == expected

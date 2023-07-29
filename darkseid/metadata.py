@@ -1,4 +1,4 @@
-"""A class for internal metadata storage
+"""A class for internal metadata storage.
 
 The goal of this class is to handle ALL the data that might come from various
 tagging schemes and databases, such as Metron, ComicVine or GCD.  This makes conversion
@@ -21,13 +21,13 @@ MAX_ISBN = 13
 
 
 class Validations:
-    def __post_init__(self):
+    def __post_init__(self: "Validations") -> None:
         """Run validation methods if declared.
         The validation method can be a simple check
         that raises ValueError or a transformation to
         the field value.
         The validation is performed by calling a function named:
-            `validate_<field_name>(self, value, field) -> field.type`
+            `validate_<field_name>(self, value, field) -> field.type`.
         """
         for name, field_ in self.__dataclass_fields__.items():
             if method := getattr(self, f"validate_{name}", None):
@@ -35,10 +35,8 @@ class Validations:
 
 
 class PageType:
-
-    """
-    These page info classes are exactly the same as the CIX scheme, since
-    it's unique
+    """These page info classes are exactly the same as the CIX scheme, since
+    it's unique.
     """
 
     FrontCover = "FrontCover"
@@ -69,7 +67,7 @@ class Price(Validations):
     amount: Decimal
     country: str = field(default="US")
 
-    def validate_country(self, value: str, **_) -> str:
+    def validate_country(self: "Price", value: str, **_: any) -> str:
         if value is None:
             return "US"
         value = value.strip()
@@ -107,7 +105,7 @@ class Series(Basic, Validations):
     format: Optional[str] = None
     language: Optional[str] = None  # 2 letter iso code
 
-    def validate_language(self, value: str, **_) -> Optional[str]:
+    def validate_language(self: "Series", value: str, **_: any) -> Optional[str]:
         if not value:
             return
         value = value.strip()
@@ -140,7 +138,7 @@ class GTIN(Validations):
     upc: Optional[int] = None
     isbn: Optional[int] = None
 
-    def validate_upc(self, value: int, **_) -> Optional[int]:
+    def validate_upc(self: "GTIN", value: int, **_: any) -> Optional[int]:
         # sourcery skip: class-extract-method
         if value is None or not isinstance(value, int):
             return None
@@ -151,7 +149,7 @@ class GTIN(Validations):
 
         return value
 
-    def validate_isbn(self, value: int, **_) -> Optional[int]:
+    def validate_isbn(self: "GTIN", value: int, **_: any) -> Optional[int]:
         if value is None or not isinstance(value, int):
             return None
 
@@ -209,20 +207,20 @@ class Metadata:
     tags: List[Basic] = field(default_factory=list)
     pages: List[ImageMetadata] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self: "Metadata") -> None:
         for key, value in self.__dict__.items():
             if value and key != "is_empty":
                 self.is_empty = False
                 break
 
-    def overlay(self, new_md: "Metadata") -> None:
-        """Overlay a metadata object on this one
+    def overlay(self: "Metadata", new_md: "Metadata") -> None:
+        """Overlay a metadata object on this one.
 
         That is, when the new object has non-None values, over-write them
         to this one.
         """
 
-        def assign(cur, new) -> None:
+        def assign(cur: str, new: any) -> None:
             if new is not None:
                 if isinstance(new, str) and len(new) == 0:
                     setattr(self, cur, None)
@@ -284,7 +282,7 @@ class Metadata:
         if len(new_md.pages) > 0:
             assign("pages", new_md.pages)
 
-    def overlay_credits(self, new_credits: List[Credit]) -> None:
+    def overlay_credits(self: "Metadata", new_credits: List[Credit]) -> None:
         for c in new_credits:
             # Remove credit role if person is blank
             if c.person == "":
@@ -295,7 +293,7 @@ class Metadata:
                 c.primary = bool("primary" in c and c.primary)
                 self.add_credit(c)
 
-    def set_default_page_list(self, count: int) -> None:
+    def set_default_page_list(self: "Metadata", count: int) -> None:
         # generate a default page list, with the first page marked as the cover
         for i in range(count):
             page_dict = ImageMetadata(Image=i)
@@ -303,11 +301,11 @@ class Metadata:
                 page_dict["Type"] = PageType.FrontCover
             self.pages.append(page_dict)
 
-    def get_archive_page_index(self, pagenum: int) -> int:
+    def get_archive_page_index(self: "Metadata", pagenum: int) -> int:
         # convert the displayed page number to the page index of the file in the archive
         return int(self.pages[pagenum]["Image"]) if pagenum < len(self.pages) else 0
 
-    def get_cover_page_index_list(self) -> List[int]:
+    def get_cover_page_index_list(self: "Metadata") -> List[int]:
         # return a list of archive page indices of cover pages
         coverlist = [
             int(p["Image"])
@@ -320,7 +318,7 @@ class Metadata:
 
         return coverlist
 
-    def _existing_credit(self, creator: str) -> Tuple[bool, Optional[int]]:
+    def _existing_credit(self: "Metadata", creator: str) -> Tuple[bool, Optional[int]]:
         return (
             next(
                 (
@@ -334,10 +332,10 @@ class Metadata:
             else (False, None)
         )
 
-    def _role_exists(self, new_role: Role, old_roles: List[Role]) -> bool:
+    def _role_exists(self: "Metadata", new_role: Role, old_roles: List[Role]) -> bool:
         return any(role.name.casefold() == new_role.name.casefold() for role in old_roles)
 
-    def add_credit(self, new_credit: Credit) -> None:
+    def add_credit(self: "Metadata", new_credit: Credit) -> None:
         exist, idx = self._existing_credit(new_credit.person)
         if exist:
             existing_credit: Credit = self.credits[idx]
@@ -347,7 +345,7 @@ class Metadata:
         else:
             self.credits.append(new_credit)
 
-    def __str__(self) -> str:
+    def __str__(self: "Metadata") -> str:
         cls = self.__class__
         cls_name = cls.__name__
         indent = " " * 4

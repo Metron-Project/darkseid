@@ -1,4 +1,4 @@
-"""Functions for parsing comic info from filename
+"""Functions for parsing comic info from filename.
 
 This should probably be re-written, but, well, it mostly works!
 """
@@ -8,14 +8,14 @@ This should probably be re-written, but, well, it mostly works!
 import contextlib
 import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, LiteralString, Tuple
 from urllib.parse import unquote
 
 
 class FileNameParser:
     """Class to get parse the filename to get information about the comic."""
 
-    def __init__(self) -> None:
+    def __init__(self: "FileNameParser") -> None:
         self.issue: str = ""
         self.series: str = ""
         self.volume: str = ""
@@ -24,20 +24,18 @@ class FileNameParser:
         self.remainder: str = ""
 
     @staticmethod
-    def repl(match):
+    def repl(match: str) -> LiteralString:
         return " " * len(match.group())
 
-    def fix_spaces(self, string: str, remove_dashes: bool = True) -> str:
-        """Returns a string with the spaces fixed"""
-
+    def fix_spaces(self: "FileNameParser", string: str, remove_dashes: bool = True) -> str:
+        """Returns a string with the spaces fixed."""
         placeholders = ["[-_]", "  +"] if remove_dashes else ["[_]", "  +"]
         for place_holder in placeholders:
             string = re.sub(place_holder, self.repl, string)
         return string  # .strip()
 
-    def get_issue_count(self, filename: str, issue_end: int) -> str:
-        """Returns a string with the issue count"""
-
+    def get_issue_count(self: "FileNameParser", filename: str, issue_end: int) -> str:
+        """Returns a string with the issue count."""
         count: str = ""
         filename = filename[issue_end:]
 
@@ -58,11 +56,10 @@ class FileNameParser:
 
         return count
 
-    def get_issue_number(self, filename: str) -> Tuple[str, int, int]:
+    def get_issue_number(self: "FileNameParser", filename: str) -> Tuple[str, int, int]:
         """Returns a tuple of issue number string, and start and end indexes in the filename
-        (The indexes will be used to split the string up for further parsing)
+        (The indexes will be used to split the string up for further parsing).
         """
-
         found: bool = False
         issue: str = ""
         start: int = 0
@@ -145,9 +142,12 @@ class FileNameParser:
 
         return issue, start, end
 
-    def get_series_name(self, filename: str, issue_start: int) -> Tuple[str, str]:
-        """Use the issue number string index to split the filename string"""
-
+    def get_series_name(
+        self: "FileNameParser",
+        filename: str,
+        issue_start: int,
+    ) -> Tuple[str, str]:
+        """Use the issue number string index to split the filename string."""
         if issue_start != 0:
             filename = filename[:issue_start]
 
@@ -202,8 +202,7 @@ class FileNameParser:
 
     @staticmethod
     def get_year(filename: str, issue_end: int) -> str:
-        """Return the year from the filename"""
-
+        """Return the year from the filename."""
         filename = filename[issue_end:]
 
         year: str = ""
@@ -215,10 +214,14 @@ class FileNameParser:
         return year
 
     def get_remainder(
-        self, filename: str, year: str, count: str, volume: str, issue_end: int
+        self: "FileNameParser",
+        filename: str,
+        year: str,
+        count: str,
+        volume: str,
+        issue_end: int,
     ) -> str:
-        """Make a guess at where the the non-interesting stuff begins"""
-
+        """Make a guess at where the the non-interesting stuff begins."""
         remainder: str = ""
 
         if "--" in filename:
@@ -241,9 +244,8 @@ class FileNameParser:
 
         return remainder.strip()
 
-    def parse_filename(self, comic: Path) -> None:
+    def parse_filename(self: "FileNameParser", comic: Path) -> None:
         """Method to parse the filename."""
-
         # Get comic name without path or extension
         filename = comic.stem
 
@@ -267,7 +269,11 @@ class FileNameParser:
         self.year = self.get_year(filename, issue_end)
         self.issue_count = self.get_issue_count(filename, issue_end)
         self.remainder = self.get_remainder(
-            filename, self.year, self.issue_count, self.volume, issue_end
+            filename,
+            self.year,
+            self.issue_count,
+            self.volume,
+            issue_end,
         )
 
         if self.issue != "":

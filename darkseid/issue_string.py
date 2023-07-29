@@ -1,4 +1,4 @@
-"""Support for mixed digit/string type Issue field
+"""Support for mixed digit/string type Issue field.
 
 Class for handling the odd permutations of an 'issue number' that the
 comics industry throws at us.
@@ -11,13 +11,12 @@ from typing import Optional
 
 
 class IssueString:
-    """
-    Class to handle various types of comic issue numbers.
+    """Class to handle various types of comic issue numbers.
 
     :param str text: The issue number.
     """
 
-    def __init__(self, text: str) -> None:
+    def __init__(self: "IssueString", text: str) -> None:
         """Intialize a new IssueString."""
         # break up the issue number string into 2 parts: the numeric and suffix string.
         # (assumes that the numeric portion is always first)
@@ -51,18 +50,26 @@ class IssueString:
         else:
             self.suffix = text
 
-    def _move_trailing_numeric_decimal_to_suffix(self, idx: int, text: str) -> int:
+    def _move_trailing_numeric_decimal_to_suffix(
+        self: "IssueString",
+        idx: int,
+        text: str,
+    ) -> int:
         # move trailing numeric decimal to suffix (only if there is other junk after )
         if text[idx - 1] == "." and len(text) != idx:
             idx -= 1
         return idx
 
-    def _determine_if_number_after_minus_sign(self, idx: int, start: int) -> int:
+    def _determine_if_number_after_minus_sign(
+        self: "IssueString",
+        idx: int,
+        start: int,
+    ) -> int:
         # if there is no numeric after the minus, make the minus part of
         # the suffix
         return 0 if idx == 1 and start == 1 else idx
 
-    def _find_splitpoint(self, text: str, start: int) -> int:
+    def _find_splitpoint(self: "IssueString", text: str, start: int) -> int:
         # walk through the string, look for split point (the first non-numeric)
         decimal_count: int = 0
         for idx in range(start, len(text)):
@@ -78,9 +85,8 @@ class IssueString:
 
         return idx
 
-    def as_string(self, pad: int = 0) -> str:
-        """
-        Returns a string with left-side zero padding
+    def as_string(self: "IssueString", pad: int = 0) -> str:
+        """Returns a string with left-side zero padding.
 
         :param int pad: The number of left-side zeroes to pad with.
 
@@ -107,9 +113,8 @@ class IssueString:
 
         return num_s
 
-    def as_float(self) -> Optional[float]:
-        """
-        Return a float with no suffix
+    def as_float(self: "IssueString") -> Optional[float]:
+        """Return a float with no suffix.
 
         example: "1½" is returned as "1.5"
 
@@ -120,9 +125,8 @@ class IssueString:
             return self.num + 0.5 if self.num is not None else 0.5
         return self.num
 
-    def as_int(self) -> Optional[int]:
-        """
-        Returns the integer version of the float
+    def as_int(self: "IssueString") -> Optional[int]:
+        """Returns the integer version of the float.
 
         :returns: String as an integer.
         :rtype: int, optional

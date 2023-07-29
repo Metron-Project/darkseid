@@ -1,4 +1,4 @@
-"""A class to encapsulate ComicRack's ComicInfo.xml data"""
+"""A class to encapsulate ComicRack's ComicInfo.xml data."""
 
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2020 Brian Pepple
@@ -7,7 +7,7 @@
 import xml.etree.ElementTree as ET
 from datetime import date
 from re import split
-from typing import Any, List, Optional, Union, cast
+from typing import Any, List, Optional, Type, Union, cast
 
 from darkseid.issue_string import IssueString
 from darkseid.metadata import Arc, Basic, Credit, ImageMetadata, Metadata, Role, Series
@@ -81,20 +81,24 @@ class ComicInfo:
         "supervising editor",
     ]
 
-    def metadata_from_string(self, string: str) -> Metadata:
+    def metadata_from_string(self: "ComicInfo", string: str) -> Metadata:
         tree = ET.ElementTree(ET.fromstring(string))
         return self.convert_xml_to_metadata(tree)
 
-    def string_from_metadata(self, md: Metadata, xml: Optional[any] = None) -> str:
+    def string_from_metadata(
+        self: "ComicInfo",
+        md: Metadata,
+        xml: Optional[any] = None,
+    ) -> str:
         tree = self.convert_metadata_to_xml(md, xml)
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
 
     @classmethod
-    def _split_sting(cls, string: str, delimiters: List[str]) -> List[str]:
+    def _split_sting(cls: Type["ComicInfo"], string: str, delimiters: List[str]) -> List[str]:
         pattern = r"|".join(delimiters)
         return split(pattern, string)
 
-    def _get_root(self, xml) -> ET.Element:
+    def _get_root(self: "ComicInfo", xml: any) -> ET.Element:
         if xml:
             root = ET.ElementTree(ET.fromstring(xml)).getroot()
         else:
@@ -106,16 +110,23 @@ class ComicInfo:
         return root
 
     @classmethod
-    def validate_age_rating(cls, val: Optional[str] = None) -> Optional[str]:
+    def validate_age_rating(
+        cls: Type["ComicInfo"],
+        val: Optional[str] = None,
+    ) -> Optional[str]:
         if val is not None:
             return "Unknown" if val not in cls.ci_age_ratings else val
 
     @classmethod
-    def validate_manga(cls, val: Optional[str] = None) -> Optional[str]:
+    def validate_manga(cls: Type["ComicInfo"], val: Optional[str] = None) -> Optional[str]:
         if val is not None:
             return "Unknown" if val not in cls.ci_manga else val
 
-    def convert_metadata_to_xml(self, md: Metadata, xml=None) -> ET.ElementTree:
+    def convert_metadata_to_xml(
+        self: "ComicInfo",
+        md: Metadata,
+        xml: Optional[any] = None,
+    ) -> ET.ElementTree:
         root = self._get_root(xml)
 
         # helper func
@@ -233,13 +244,13 @@ class ComicInfo:
         tree = ET.ElementTree(root)
         return tree
 
-    def convert_xml_to_metadata(self, tree: ET.ElementTree) -> Metadata:
+    def convert_xml_to_metadata(self: "ComicInfo", tree: ET.ElementTree) -> Metadata:
         root = tree.getroot()
 
         if root.tag != "ComicInfo":
             raise ValueError("Metadata is not ComicInfo format")
 
-        def get(name):
+        def get(name: str) -> Optional[str | int]:
             tag = root.find(name)
             return None if tag is None else tag.text
 
@@ -320,11 +331,14 @@ class ComicInfo:
         return md
 
     def write_to_external_file(
-        self, filename: str, md: Metadata, xml: Optional[any] = None
+        self: "ComicInfo",
+        filename: str,
+        md: Metadata,
+        xml: Optional[any] = None,
     ) -> None:
         tree = self.convert_metadata_to_xml(md, xml)
         tree.write(filename, encoding="utf-8", xml_declaration=True)
 
-    def read_from_external_file(self, filename: str) -> Metadata:
+    def read_from_external_file(self: "ComicInfo", filename: str) -> Metadata:
         tree = ET.parse(filename)
         return self.convert_xml_to_metadata(tree)

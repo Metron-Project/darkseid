@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from typing import Optional
 
 import pytest
 
@@ -12,7 +13,7 @@ PENCILLER = "Penciller"
 COVER = "Cover"
 
 
-def test_metadata_print_str(fake_metadata):
+def test_metadata_print_str(fake_metadata: Metadata) -> None:
     expect_res = """Metadata(
     is_empty = False,
     series = Series(name='Aquaman', id_=None, sort_name='Aquaman', volume=1, format='Annual', language=None),
@@ -31,7 +32,7 @@ def test_metadata_print_str(fake_metadata):
     credits = [],
     reprints = [],
     tags = [],
-    pages = [],\n)"""  # noqa: #B950
+    pages = [],\n)"""  # noqa: E501
     assert str(fake_metadata) == expect_res
 
 
@@ -75,14 +76,16 @@ good_prices = [
         "Valid 2 letter country code",
     ),
     pytest.param(
-        Price(Decimal("1.99"), "Canada"), Price(Decimal("1.99"), "CA"), "Valid country name"
+        Price(Decimal("1.99"), "Canada"),
+        Price(Decimal("1.99"), "CA"),
+        "Valid country name",
     ),
     pytest.param(Price(Decimal("3.99")), Price(Decimal("3.99"), "US"), "No country given"),
 ]
 
 
 @pytest.mark.parametrize("price, expected, reason", good_prices)
-def test_price_metadata(price, expected, reason) -> None:
+def test_price_metadata(price: Price, expected: Price, reason: str) -> None:  # noqa: ARG001
     assert price == expected
 
 
@@ -94,7 +97,11 @@ bad_prices = [
 
 
 @pytest.mark.parametrize("amount, country, reason", bad_prices)
-def test_invalid_price_metadata(amount, country, reason) -> None:
+def test_invalid_price_metadata(
+    amount: Decimal,
+    country: str,
+    reason: str,  # noqa: ARG001
+) -> None:
     with pytest.raises(ValueError):
         Price(amount, country)
 
@@ -111,13 +118,22 @@ good_gtin = [
 
 
 @pytest.mark.parametrize("upc, isbn, reason", bad_gtin)
-def test_bad_gtin(upc, isbn, reason) -> None:
+def test_bad_gtin(
+    upc: Optional[int],
+    isbn: Optional[int],
+    reason: str,  # noqa: ARG001
+) -> None:
     with pytest.raises(ValueError):
         GTIN(upc, isbn)
 
 
 @pytest.mark.parametrize("upc, isbn, expected, reason", good_gtin)
-def test_good_gtin(upc, isbn, expected, reason) -> None:
+def test_good_gtin(
+    upc: Optional[int],
+    isbn: Optional[int],
+    expected: GTIN,
+    reason: str,  # noqa: ARG001
+) -> None:
     assert GTIN(upc, isbn) == expected
 
 
@@ -128,7 +144,12 @@ good_series = [
 
 
 @pytest.mark.parametrize("name, lang, expected, reason", good_series)
-def test_good_series(name, lang, expected, reason) -> None:
+def test_good_series(
+    name: str,
+    lang: str,
+    expected: Series,
+    reason: str,  # noqa: ARG001
+) -> None:
     assert Series(name, language=lang) == expected
 
 
@@ -140,6 +161,6 @@ bad_series = [
 
 
 @pytest.mark.parametrize("name, lang, reason", bad_series)
-def test_bad_series(name, lang, reason) -> None:
+def test_bad_series(name: str, lang: str, reason: str) -> None:  # noqa: ARG001
     with pytest.raises(ValueError):
         Series(name, language=lang)
