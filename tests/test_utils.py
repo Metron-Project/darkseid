@@ -4,11 +4,19 @@ import pytest
 
 from darkseid import utils
 
-from .test_params import test_articles
+test_articles = [
+    pytest.param("The Champions & Inhumans", "Test string with '&'", "Champions Inhumans"),
+    pytest.param("Justice League", "Test string with no articles", "Justice League"),
+    pytest.param("The X-Men", "Test string with leading 'The'", "X-Men"),
+]
 
 
-@pytest.mark.parametrize("test_string,reason,expected", test_articles)
-def test_file_name_for_articles(test_string: str, reason: str, expected: str) -> None:
+@pytest.mark.parametrize(("test_string", "reason", "expected"), test_articles)
+def test_file_name_for_articles(
+    test_string: str,
+    reason: str,  # noqa: ARG001
+    expected: str,
+) -> None:
     result = utils.remove_articles(test_string)
 
     assert result == expected

@@ -1,21 +1,20 @@
-"""Some generic utilities"""
+"""Some generic utilities."""
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2019 Brian Pepple
 
 import itertools
 from collections import defaultdict
 from pathlib import Path
-from typing import List
+from typing import Optional, Union  # Union type can be remove when Python3.9 support ends
 
 
-def get_recursive_filelist(pathlist: List[Path]) -> List[Path]:
-    """
-    Returns a path list of comic archives.
+def get_recursive_filelist(pathlist: list[Path]) -> list[Path]:
+    """Returns a path list of comic archives.
 
     :param pathlist: A list of path objects
     :type pathlist:  list of Path
     """
-    filelist: List[Path] = []
+    filelist: list[Path] = []
     for path_str in pathlist:
         path = Path(path_str)
         if path.is_dir():
@@ -27,10 +26,9 @@ def get_recursive_filelist(pathlist: List[Path]) -> List[Path]:
     return sorted(filelist)
 
 
-def list_to_string(list_of_strings: List[str]) -> str:
-    """
-    Function that takes a list of string and converts it to a string.
-    For example: ["apple", "banana", "cherry"] is changed to "apple; banana; cherry"
+def list_to_string(list_of_strings: list[str]) -> str:
+    """Function that takes a list of string and converts it to a string.
+    For example: ["apple", "banana", "cherry"] is changed to "apple; banana; cherry".
 
     :param list_of_strings: A list of strings.
     :type list_of_strings: list of str
@@ -39,8 +37,7 @@ def list_to_string(list_of_strings: List[str]) -> str:
 
 
 def remove_articles(text: str) -> str:
-    """
-    Takes a string and removes any articles in it.
+    """Takes a string and removes any articles in it.
 
     :param str text: A string with articles (ex. 'and', 'a', 'the').
     """
@@ -74,14 +71,11 @@ def remove_articles(text: str) -> str:
         f"{word} " for word in text.split(" ") if word.casefold() not in articles
     )
 
-    new_text = new_text[:-1]
-
-    return new_text
+    return new_text[:-1]
 
 
 def unique_file(file_name: Path) -> Path:
-    """
-    Takes a filename and if one already exist with that name, returns a new filename.
+    """Takes a filename and if one already exist with that name, returns a new filename.
 
     :param Path file_name: A path objects
     """
@@ -95,12 +89,12 @@ def unique_file(file_name: Path) -> Path:
     return file_name
 
 
-def xlate(data, is_int=False):
+def xlate(data: Optional[Union[int, str]], is_int: bool = False) -> Optional[Union[int, str]]:
     if data is None or data == "":
         return None
     if is_int:
         i = str(data).translate(
-            defaultdict(lambda: None, zip((ord(c) for c in "1234567890"), "1234567890"))
+            defaultdict(lambda: None, zip((ord(c) for c in "1234567890"), "1234567890")),
         )
         if i == "0":
             return "0"

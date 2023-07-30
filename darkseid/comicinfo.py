@@ -1,13 +1,13 @@
-"""A class to encapsulate ComicRack's ComicInfo.xml data"""
+"""A class to encapsulate ComicRack's ComicInfo.xml data."""
 
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2020 Brian Pepple
 
 
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ET  # noqa: N817
 from datetime import date
 from re import split
-from typing import Any, List, Optional, Union, cast
+from typing import Any, ClassVar, Optional, Union, cast
 
 from darkseid.issue_string import IssueString
 from darkseid.metadata import Arc, Basic, Credit, ImageMetadata, Metadata, Role, Series
@@ -15,7 +15,7 @@ from darkseid.utils import list_to_string, xlate
 
 
 class ComicInfo:
-    ci_age_ratings = [
+    ci_age_ratings: ClassVar[list[str]] = [
         "Unknown",
         "Adults Only 18+",
         "Early Childhood",
@@ -33,9 +33,9 @@ class ComicInfo:
         "X18+",
     ]
 
-    ci_manga = ["Unknown", "Yes", "No", "YesAndRightToLeft"]
+    ci_manga: ClassVar[list[str]] = ["Unknown", "Yes", "No", "YesAndRightToLeft"]
 
-    writer_synonyms: List[str] = [
+    writer_synonyms: ClassVar[list[str]] = [
         "writer",
         "plotter",
         "scripter",
@@ -43,7 +43,7 @@ class ComicInfo:
         "story",
         "plot",
     ]
-    penciller_synonyms: List[str] = [
+    penciller_synonyms: ClassVar[list[str]] = [
         "artist",
         "breakdowns",
         "illustrator",
@@ -51,7 +51,7 @@ class ComicInfo:
         "penciller",
         "penciler",
     ]
-    inker_synonyms: List[str] = [
+    inker_synonyms: ClassVar[list[str]] = [
         "artist",
         "embellisher",
         "finishes",
@@ -59,7 +59,7 @@ class ComicInfo:
         "ink assists",
         "inker",
     ]
-    colorist_synonyms: List[str] = [
+    colorist_synonyms: ClassVar[list[str]] = [
         "colorist",
         "colourist",
         "colorer",
@@ -67,9 +67,9 @@ class ComicInfo:
         "color assists",
         "color flats",
     ]
-    letterer_synonyms: List[str] = ["letterer"]
-    cover_synonyms: List[str] = ["cover", "covers", "coverartist", "cover artist"]
-    editor_synonyms: List[str] = [
+    letterer_synonyms: ClassVar[list[str]] = ["letterer"]
+    cover_synonyms: ClassVar[list[str]] = ["cover", "covers", "coverartist", "cover artist"]
+    editor_synonyms: ClassVar[list[str]] = [
         "assistant editor",
         "associate editor",
         "consulting editor",
@@ -81,22 +81,26 @@ class ComicInfo:
         "supervising editor",
     ]
 
-    def metadata_from_string(self, string: str) -> Metadata:
-        tree = ET.ElementTree(ET.fromstring(string))
+    def metadata_from_string(self: "ComicInfo", string: str) -> Metadata:
+        tree = ET.ElementTree(ET.fromstring(string))  # noqa: S314
         return self.convert_xml_to_metadata(tree)
 
-    def string_from_metadata(self, md: Metadata, xml: Optional[any] = None) -> str:
+    def string_from_metadata(
+        self: "ComicInfo",
+        md: Metadata,
+        xml: Optional[any] = None,
+    ) -> str:
         tree = self.convert_metadata_to_xml(md, xml)
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
 
     @classmethod
-    def _split_sting(cls, string: str, delimiters: List[str]) -> List[str]:
+    def _split_sting(cls: type["ComicInfo"], string: str, delimiters: list[str]) -> list[str]:
         pattern = r"|".join(delimiters)
         return split(pattern, string)
 
-    def _get_root(self, xml) -> ET.Element:
+    def _get_root(self: "ComicInfo", xml: any) -> ET.Element:
         if xml:
-            root = ET.ElementTree(ET.fromstring(xml)).getroot()
+            root = ET.ElementTree(ET.fromstring(xml)).getroot()  # noqa: S314
         else:
             # build a tree structure
             root = ET.Element("ComicInfo")
@@ -106,16 +110,25 @@ class ComicInfo:
         return root
 
     @classmethod
-    def validate_age_rating(cls, val: Optional[str] = None) -> Optional[str]:
+    def validate_age_rating(
+        cls: type["ComicInfo"],
+        val: Optional[str] = None,
+    ) -> Optional[str]:
         if val is not None:
             return "Unknown" if val not in cls.ci_age_ratings else val
+        return None
 
     @classmethod
-    def validate_manga(cls, val: Optional[str] = None) -> Optional[str]:
+    def validate_manga(cls: type["ComicInfo"], val: Optional[str] = None) -> Optional[str]:
         if val is not None:
             return "Unknown" if val not in cls.ci_manga else val
+        return None
 
-    def convert_metadata_to_xml(self, md: Metadata, xml=None) -> ET.ElementTree:
+    def convert_metadata_to_xml(
+        self: "ComicInfo",
+        md: Metadata,
+        xml: Optional[any] = None,
+    ) -> ET.ElementTree:
         root = self._get_root(xml)
 
         # helper func
@@ -131,7 +144,7 @@ class ComicInfo:
                 if et_entry is not None:
                     root.remove(et_entry)
 
-        def get_resource_list(resource: List[Basic]) -> str:
+        def get_resource_list(resource: list[Basic]) -> str:
             return list_to_string([i.name for i in resource])
 
         assign("Title", get_resource_list(md.stories))
@@ -152,13 +165,13 @@ class ComicInfo:
 
         # need to specially process the credits, since they are structured
         # differently than CIX
-        credit_writer_list: List[str] = []
-        credit_penciller_list: List[str] = []
-        credit_inker_list: List[str] = []
-        credit_colorist_list: List[str] = []
-        credit_letterer_list: List[str] = []
-        credit_cover_list: List[str] = []
-        credit_editor_list: List[str] = []
+        credit_writer_list: list[str] = []
+        credit_penciller_list: list[str] = []
+        credit_inker_list: list[str] = []
+        credit_colorist_list: list[str] = []
+        credit_letterer_list: list[str] = []
+        credit_cover_list: list[str] = []
+        credit_editor_list: list[str] = []
 
         # first, loop thru credits, and build a list for each role that CIX
         # supports
@@ -230,27 +243,28 @@ class ComicInfo:
         ET.indent(root)
 
         # wrap it in an ElementTree instance, and save as XML
-        tree = ET.ElementTree(root)
-        return tree
+        return ET.ElementTree(root)
 
-    def convert_xml_to_metadata(self, tree: ET.ElementTree) -> Metadata:
+    def convert_xml_to_metadata(self: "ComicInfo", tree: ET.ElementTree) -> Metadata:
         root = tree.getroot()
 
         if root.tag != "ComicInfo":
             raise ValueError("Metadata is not ComicInfo format")
 
-        def get(name):
+        def get(name: str) -> Optional[Union[str, int]]:
             tag = root.find(name)
             return None if tag is None else tag.text
 
-        def string_to_resource(string: str) -> List[Basic]:
+        def string_to_resource(string: str) -> list[Basic]:
             if string is not None:
                 # TODO: Make the delimiter also check for ','
                 return [Basic(x.strip()) for x in string.split(";")]
+            return None
 
-        def string_to_arc(string: str) -> List[Arc]:
+        def string_to_arc(string: str) -> list[Arc]:
             if string is not None:
                 return [Arc(x.strip()) for x in string.split(";")]
+            return None
 
         md = Metadata()
         md.series = Series(name=xlate(get("Series")))
@@ -320,11 +334,14 @@ class ComicInfo:
         return md
 
     def write_to_external_file(
-        self, filename: str, md: Metadata, xml: Optional[any] = None
+        self: "ComicInfo",
+        filename: str,
+        md: Metadata,
+        xml: Optional[any] = None,
     ) -> None:
         tree = self.convert_metadata_to_xml(md, xml)
         tree.write(filename, encoding="utf-8", xml_declaration=True)
 
-    def read_from_external_file(self, filename: str) -> Metadata:
-        tree = ET.parse(filename)
+    def read_from_external_file(self: "ComicInfo", filename: str) -> Metadata:
+        tree = ET.parse(filename)  # noqa: S314
         return self.convert_xml_to_metadata(tree)

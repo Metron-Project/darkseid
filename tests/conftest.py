@@ -16,7 +16,7 @@ RAR_PATH = TEST_FILES_PATH / "Captain Science #001-cix-cbi.cbr"
 
 
 @pytest.fixture(scope="module")
-def fake_metadata():
+def fake_metadata() -> Metadata:
     md = Metadata()
     md.series = Series(
         name="Aquaman",
@@ -43,7 +43,7 @@ def fake_metadata():
 
 
 @pytest.fixture(scope="session")
-def fake_overlay_metadata():
+def fake_overlay_metadata() -> Metadata:
     overlay_md = Metadata()
     overlay_md.series = Series(name="Aquaman", sort_name="Aquaman", volume=1, format="Annual")
     overlay_md.cover_date = date(1994, 10, 1)

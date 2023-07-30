@@ -1,4 +1,4 @@
-"""Functions for parsing comic info from filename
+"""Functions for parsing comic info from filename.
 
 This should probably be re-written, but, well, it mostly works!
 """
@@ -8,14 +8,13 @@ This should probably be re-written, but, well, it mostly works!
 import contextlib
 import re
 from pathlib import Path
-from typing import List, Tuple
 from urllib.parse import unquote
 
 
 class FileNameParser:
     """Class to get parse the filename to get information about the comic."""
 
-    def __init__(self) -> None:
+    def __init__(self: "FileNameParser") -> None:
         self.issue: str = ""
         self.series: str = ""
         self.volume: str = ""
@@ -24,20 +23,18 @@ class FileNameParser:
         self.remainder: str = ""
 
     @staticmethod
-    def repl(match):
+    def repl(match: str) -> str:
         return " " * len(match.group())
 
-    def fix_spaces(self, string: str, remove_dashes: bool = True) -> str:
-        """Returns a string with the spaces fixed"""
-
+    def fix_spaces(self: "FileNameParser", string: str, remove_dashes: bool = True) -> str:
+        """Returns a string with the spaces fixed."""
         placeholders = ["[-_]", "  +"] if remove_dashes else ["[_]", "  +"]
         for place_holder in placeholders:
             string = re.sub(place_holder, self.repl, string)
         return string  # .strip()
 
-    def get_issue_count(self, filename: str, issue_end: int) -> str:
-        """Returns a string with the issue count"""
-
+    def get_issue_count(self: "FileNameParser", filename: str, issue_end: int) -> str:
+        """Returns a string with the issue count."""
         count: str = ""
         filename = filename[issue_end:]
 
@@ -49,20 +46,16 @@ class FileNameParser:
             count = match.group()
             found = True
 
-        if match := re.search(r"(?<=\(of\s)\d+(?=\))", tmpstr, re.IGNORECASE):
-            if not found:
-                count = match.group()
-                found = True
+        if (match := re.search(r"(?<=\(of\s)\d+(?=\))", tmpstr, re.IGNORECASE)) and not found:
+            count = match.group()
+            found = True
 
-        count = count.lstrip("0")
+        return count.lstrip("0")
 
-        return count
-
-    def get_issue_number(self, filename: str) -> Tuple[str, int, int]:
+    def get_issue_number(self: "FileNameParser", filename: str) -> tuple[str, int, int]:
         """Returns a tuple of issue number string, and start and end indexes in the filename
-        (The indexes will be used to split the string up for further parsing)
+        (The indexes will be used to split the string up for further parsing).
         """
-
         found: bool = False
         issue: str = ""
         start: int = 0
@@ -93,13 +86,11 @@ class FileNameParser:
         # some titles)
         filename = re.sub(r"of [\d]+", self.repl, filename)
 
-        # print u"[{0}]".format(filename)
-
         # we should now have a cleaned up filename version with all the words in
         # the same positions as original filename
 
         # make a list of each word and its position
-        word_list: List[Tuple[str, int, int]] = [
+        word_list: list[tuple[str, int, int]] = [
             (match.group(0), match.start(), match.end())
             for match in re.finditer(r"\S+", filename)
         ]
@@ -114,7 +105,7 @@ class FileNameParser:
         # Now try to search for the likely issue number word in the list
 
         # Intialize the word variable so that it's not unbound.
-        word: Tuple[str, int, int] = ("", 0, 0)
+        word: tuple[str, int, int] = ("", 0, 0)
         # first look for a word with "#" followed by digits with optional suffix
         # this is almost certainly the issue number
         for word in reversed(word_list):
@@ -145,9 +136,12 @@ class FileNameParser:
 
         return issue, start, end
 
-    def get_series_name(self, filename: str, issue_start: int) -> Tuple[str, str]:
-        """Use the issue number string index to split the filename string"""
-
+    def get_series_name(
+        self: "FileNameParser",
+        filename: str,
+        issue_start: int,
+    ) -> tuple[str, str]:
+        """Use the issue number string index to split the filename string."""
         if issue_start != 0:
             filename = filename[:issue_start]
 
@@ -183,9 +177,8 @@ class FileNameParser:
 
         # if a volume wasn't found, see if the last word is a year in parentheses
         # since that's a common way to designate the volume
-        if volume == "":
-            if match := re.search(r"(\()(\d{4})(-(\d{4}|)|)(\))", last_word):
-                volume = match[2]
+        if volume == "" and (match := re.search(r"(\()(\d{4})(-(\d{4}|)|)(\))", last_word)):
+            volume = match[2]
 
         series = series.strip()
 
@@ -202,8 +195,7 @@ class FileNameParser:
 
     @staticmethod
     def get_year(filename: str, issue_end: int) -> str:
-        """Return the year from the filename"""
-
+        """Return the year from the filename."""
         filename = filename[issue_end:]
 
         year: str = ""
@@ -215,10 +207,14 @@ class FileNameParser:
         return year
 
     def get_remainder(
-        self, filename: str, year: str, count: str, volume: str, issue_end: int
+        self: "FileNameParser",
+        filename: str,
+        year: str,
+        count: str,
+        volume: str,
+        issue_end: int,
     ) -> str:
-        """Make a guess at where the the non-interesting stuff begins"""
-
+        """Make a guess at where the the non-interesting stuff begins."""
         remainder: str = ""
 
         if "--" in filename:
@@ -241,9 +237,8 @@ class FileNameParser:
 
         return remainder.strip()
 
-    def parse_filename(self, comic: Path) -> None:
+    def parse_filename(self: "FileNameParser", comic: Path) -> None:
         """Method to parse the filename."""
-
         # Get comic name without path or extension
         filename = comic.stem
 
@@ -267,7 +262,11 @@ class FileNameParser:
         self.year = self.get_year(filename, issue_end)
         self.issue_count = self.get_issue_count(filename, issue_end)
         self.remainder = self.get_remainder(
-            filename, self.year, self.issue_count, self.volume, issue_end
+            filename,
+            self.year,
+            self.issue_count,
+            self.volume,
+            issue_end,
         )
 
         if self.issue != "":

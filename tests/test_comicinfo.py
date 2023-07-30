@@ -1,19 +1,17 @@
-""" Tests for ComicInfo Tags """
+"""Tests for ComicInfo Tags."""
 from datetime import date
 from pathlib import Path
-from typing import List
 
 import pytest
 from lxml import etree
 
 from darkseid.comicinfo import ComicInfo
 from darkseid.metadata import Arc, Basic, Credit, Metadata, Role, Series
+from tests.conftest import CI_XSD
 
-from .conftest import CI_XSD
 
-
-@pytest.fixture
-def test_credits() -> List[Credit]:
+@pytest.fixture()
+def test_credits() -> list[Credit]:
     return [
         Credit("Peter David", [Role("Writer")]),
         Credit("Martin Egeland", [Role("Penciller")]),
@@ -27,10 +25,14 @@ def test_credits() -> List[Credit]:
 
 
 @pytest.fixture()
-def test_meta_data(test_credits: List[Credit]) -> Metadata:
+def test_meta_data(test_credits: list[Credit]) -> Metadata:
     md = Metadata()
     md.series = Series(
-        "Aquaman", sort_name="Aquaman", volume=3, format="Annual", language="en"
+        "Aquaman",
+        sort_name="Aquaman",
+        volume=3,
+        format="Annual",
+        language="en",
     )
     md.issue = "1"
     md.stories = [Basic("Foo"), Basic("Bar")]
@@ -56,7 +58,6 @@ def test_meta_data(test_credits: List[Credit]) -> Metadata:
 
 
 def validate(xml_path: str, xsd_path: str) -> bool:
-
     xmlschema_doc = etree.parse(xsd_path)
     xmlschema = etree.XMLSchema(xmlschema_doc)
 
@@ -65,14 +66,14 @@ def validate(xml_path: str, xsd_path: str) -> bool:
 
 
 def test_metadata_from_xml(test_meta_data: Metadata) -> None:
-    """Simple test of creating the ComicInfo"""
+    """Simple test of creating the ComicInfo."""
     res = ComicInfo().string_from_metadata(test_meta_data)
     # TODO: add more asserts to verify data.
     assert res is not None
 
 
 def test_meta_write_to_file(test_meta_data: Metadata, tmp_path: Path) -> None:
-    """Test of writing the metadata to a file"""
+    """Test of writing the metadata to a file."""
     tmp_file = tmp_path / "test-write.xml"
     ComicInfo().write_to_external_file(tmp_file, test_meta_data)
     assert tmp_file.read_text() is not None
@@ -106,7 +107,7 @@ def test_invalid_manga_write_to_file(tmp_path: Path) -> None:
 
 
 def test_read_from_file(test_meta_data: Metadata, tmp_path: Path) -> None:
-    """Test to read in the data from a file"""
+    """Test to read in the data from a file."""
     tmp_file = tmp_path / "test-read.xml"
     # Write metadata to file
     ComicInfo().write_to_external_file(tmp_file, test_meta_data)
