@@ -5,7 +5,7 @@
 import itertools
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union  # Union type can be remove when Python3.9 support ends
 
 
 def get_recursive_filelist(pathlist: list[Path]) -> list[Path]:
@@ -89,7 +89,7 @@ def unique_file(file_name: Path) -> Path:
     return file_name
 
 
-def xlate(data: Optional[str | int], is_int: bool = False) -> Optional[int | str]:
+def xlate(data: Optional[Union[int, str]], is_int: bool = False) -> Optional[Union[int, str]]:
     if data is None or data == "":
         return None
     if is_int:

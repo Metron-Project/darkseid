@@ -251,7 +251,7 @@ class ComicInfo:
         if root.tag != "ComicInfo":
             raise ValueError("Metadata is not ComicInfo format")
 
-        def get(name: str) -> Optional[str | int]:
+        def get(name: str) -> Optional[Union[str, int]]:
             tag = root.find(name)
             return None if tag is None else tag.text
 
