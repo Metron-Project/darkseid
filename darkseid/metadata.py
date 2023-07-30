@@ -12,7 +12,7 @@ possible, however lossy it might be
 from dataclasses import dataclass, field, fields
 from datetime import date
 from decimal import Decimal
-from typing import List, Optional, Tuple, TypedDict
+from typing import Optional, TypedDict
 
 import pycountry
 
@@ -107,7 +107,7 @@ class Series(Basic, Validations):
 
     def validate_language(self: "Series", value: str, **_: any) -> Optional[str]:
         if not value:
-            return
+            return None
         value = value.strip()
         if len(value) == 2:
             obj = pycountry.languages.get(alpha_2=value)
@@ -129,7 +129,7 @@ class Arc(Basic):
 @dataclass
 class Credit:
     person: str
-    role: List[Role]
+    role: list[Role]
     id_: Optional[int] = None
 
 
@@ -169,14 +169,14 @@ class Metadata:
     series: Optional[Series] = None
     issue: Optional[str] = None
     collection_title: Optional[str] = None
-    stories: List[Basic] = field(default_factory=list)
+    stories: list[Basic] = field(default_factory=list)
     publisher: Optional[Basic] = None
     cover_date: Optional[date] = None
     store_date: Optional[date] = None
-    prices: List[Price] = field(default_factory=list)
+    prices: list[Price] = field(default_factory=list)
     gtin: Optional[GTIN] = None
     issue_count: Optional[int] = None
-    genres: List[Basic] = field(default_factory=list)
+    genres: list[Basic] = field(default_factory=list)
     comments: Optional[str] = None  # use same way as Summary in CIX
 
     volume_count: Optional[str] = None
@@ -194,18 +194,18 @@ class Metadata:
     page_count: Optional[int] = None
     age_rating: Optional[str] = None
 
-    story_arcs: List[Arc] = field(default_factory=list)
+    story_arcs: list[Arc] = field(default_factory=list)
     series_group: Optional[str] = None
     scan_info: Optional[str] = None
 
-    characters: List[Basic] = field(default_factory=list)
-    teams: List[Basic] = field(default_factory=list)
-    locations: List[Basic] = field(default_factory=list)
+    characters: list[Basic] = field(default_factory=list)
+    teams: list[Basic] = field(default_factory=list)
+    locations: list[Basic] = field(default_factory=list)
 
-    credits: List[Credit] = field(default_factory=list)
-    reprints: List[Basic] = field(default_factory=list)
-    tags: List[Basic] = field(default_factory=list)
-    pages: List[ImageMetadata] = field(default_factory=list)
+    credits: list[Credit] = field(default_factory=list)
+    reprints: list[Basic] = field(default_factory=list)
+    tags: list[Basic] = field(default_factory=list)
+    pages: list[ImageMetadata] = field(default_factory=list)
 
     def __post_init__(self: "Metadata") -> None:
         for key, value in self.__dict__.items():
@@ -282,7 +282,7 @@ class Metadata:
         if len(new_md.pages) > 0:
             assign("pages", new_md.pages)
 
-    def overlay_credits(self: "Metadata", new_credits: List[Credit]) -> None:
+    def overlay_credits(self: "Metadata", new_credits: list[Credit]) -> None:
         for c in new_credits:
             # Remove credit role if person is blank
             if c.person == "":
@@ -305,7 +305,7 @@ class Metadata:
         # convert the displayed page number to the page index of the file in the archive
         return int(self.pages[pagenum]["Image"]) if pagenum < len(self.pages) else 0
 
-    def get_cover_page_index_list(self: "Metadata") -> List[int]:
+    def get_cover_page_index_list(self: "Metadata") -> list[int]:
         # return a list of archive page indices of cover pages
         coverlist = [
             int(p["Image"])
@@ -318,7 +318,7 @@ class Metadata:
 
         return coverlist
 
-    def _existing_credit(self: "Metadata", creator: str) -> Tuple[bool, Optional[int]]:
+    def _existing_credit(self: "Metadata", creator: str) -> tuple[bool, Optional[int]]:
         return (
             next(
                 (
@@ -332,7 +332,7 @@ class Metadata:
             else (False, None)
         )
 
-    def _role_exists(self: "Metadata", new_role: Role, old_roles: List[Role]) -> bool:
+    def _role_exists(self: "Metadata", new_role: Role, old_roles: list[Role]) -> bool:
         return any(role.name.casefold() == new_role.name.casefold() for role in old_roles)
 
     def add_credit(self: "Metadata", new_credit: Credit) -> None:

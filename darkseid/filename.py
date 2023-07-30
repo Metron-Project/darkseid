@@ -8,7 +8,7 @@ This should probably be re-written, but, well, it mostly works!
 import contextlib
 import re
 from pathlib import Path
-from typing import List, LiteralString, Tuple
+from typing import LiteralString
 from urllib.parse import unquote
 
 
@@ -47,16 +47,13 @@ class FileNameParser:
             count = match.group()
             found = True
 
-        if match := re.search(r"(?<=\(of\s)\d+(?=\))", tmpstr, re.IGNORECASE):
-            if not found:
-                count = match.group()
-                found = True
+        if (match := re.search(r"(?<=\(of\s)\d+(?=\))", tmpstr, re.IGNORECASE)) and not found:
+            count = match.group()
+            found = True
 
-        count = count.lstrip("0")
+        return count.lstrip("0")
 
-        return count
-
-    def get_issue_number(self: "FileNameParser", filename: str) -> Tuple[str, int, int]:
+    def get_issue_number(self: "FileNameParser", filename: str) -> tuple[str, int, int]:
         """Returns a tuple of issue number string, and start and end indexes in the filename
         (The indexes will be used to split the string up for further parsing).
         """
@@ -90,13 +87,11 @@ class FileNameParser:
         # some titles)
         filename = re.sub(r"of [\d]+", self.repl, filename)
 
-        # print u"[{0}]".format(filename)
-
         # we should now have a cleaned up filename version with all the words in
         # the same positions as original filename
 
         # make a list of each word and its position
-        word_list: List[Tuple[str, int, int]] = [
+        word_list: list[tuple[str, int, int]] = [
             (match.group(0), match.start(), match.end())
             for match in re.finditer(r"\S+", filename)
         ]
@@ -111,7 +106,7 @@ class FileNameParser:
         # Now try to search for the likely issue number word in the list
 
         # Intialize the word variable so that it's not unbound.
-        word: Tuple[str, int, int] = ("", 0, 0)
+        word: tuple[str, int, int] = ("", 0, 0)
         # first look for a word with "#" followed by digits with optional suffix
         # this is almost certainly the issue number
         for word in reversed(word_list):
@@ -146,7 +141,7 @@ class FileNameParser:
         self: "FileNameParser",
         filename: str,
         issue_start: int,
-    ) -> Tuple[str, str]:
+    ) -> tuple[str, str]:
         """Use the issue number string index to split the filename string."""
         if issue_start != 0:
             filename = filename[:issue_start]
@@ -183,9 +178,8 @@ class FileNameParser:
 
         # if a volume wasn't found, see if the last word is a year in parentheses
         # since that's a common way to designate the volume
-        if volume == "":
-            if match := re.search(r"(\()(\d{4})(-(\d{4}|)|)(\))", last_word):
-                volume = match[2]
+        if volume == "" and (match := re.search(r"(\()(\d{4})(-(\d{4}|)|)(\))", last_word)):
+            volume = match[2]
 
         series = series.strip()
 

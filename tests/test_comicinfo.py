@@ -1,7 +1,6 @@
 """Tests for ComicInfo Tags."""
 from datetime import date
 from pathlib import Path
-from typing import List
 
 import pytest
 from lxml import etree
@@ -12,8 +11,8 @@ from darkseid.metadata import Arc, Basic, Credit, Metadata, Role, Series
 from .conftest import CI_XSD
 
 
-@pytest.fixture
-def test_credits() -> List[Credit]:
+@pytest.fixture()
+def test_credits() -> list[Credit]:
     return [
         Credit("Peter David", [Role("Writer")]),
         Credit("Martin Egeland", [Role("Penciller")]),
@@ -27,7 +26,7 @@ def test_credits() -> List[Credit]:
 
 
 @pytest.fixture()
-def test_meta_data(test_credits: List[Credit]) -> Metadata:
+def test_meta_data(test_credits: list[Credit]) -> Metadata:
     md = Metadata()
     md.series = Series(
         "Aquaman",

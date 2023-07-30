@@ -11,11 +11,11 @@ test_articles = [
 ]
 
 
-@pytest.mark.parametrize("test_string,reason,expected", test_articles)
+@pytest.mark.parametrize(("test_string", "reason", "expected"), test_articles)
 def test_file_name_for_articles(
     test_string: str,
     reason: str,  # noqa: ARG001
-    expected: str,  # noqa: ARG001
+    expected: str,
 ) -> None:
     result = utils.remove_articles(test_string)
 

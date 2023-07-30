@@ -84,7 +84,7 @@ def test_removing_metadata_on_cb7_wo_metadata(fake_cb7: Comic) -> None:
 def test_cb7_get_random_page(fake_cb7: Comic) -> None:
     """Test to set if a page from a comic archive can be retrieved."""
     page = fake_cb7.get_page(4)
-    with open(PAGE_FIVE, "rb") as cif:
+    with Path.open(PAGE_FIVE, "rb") as cif:
         image = cif.read()
     assert image == page
 
@@ -200,7 +200,7 @@ def test_removing_metadata_on_comic_wo_metadata(fake_cbz: Comic) -> None:
 def test_cbz_get_random_page(fake_cbz: Comic) -> None:
     """Test to set if a page from a comic archive can be retrieved."""
     page = fake_cbz.get_page(4)
-    with open(PAGE_FIVE, "rb") as cif:
+    with Path.open(PAGE_FIVE, "rb") as cif:
         image = cif.read()
     assert image == page
 
@@ -287,7 +287,7 @@ def test_rar_number_of_pages(fake_rar: Comic) -> None:
 def test_rar_get_random_page(fake_rar: Comic) -> None:
     """Test to set if a page from a comic archive can be retrieved."""
     page = fake_rar.get_page(4)
-    with open(PAGE_FIVE, "rb") as cif:
+    with Path.open(PAGE_FIVE, "rb") as cif:
         image = cif.read()
     assert image == page
 

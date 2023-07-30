@@ -134,11 +134,11 @@ test_file_names = [
 ]
 
 
-@pytest.mark.parametrize("filename,reason,expected", test_file_names)
+@pytest.mark.parametrize(("filename", "reason", "expected"), test_file_names)
 def test_file_name_parser(
     filename: str,
     reason: str,  # noqa: ARG001
-    expected: dict[str, any],  # noqa: ARG001
+    expected: dict[str, any],
 ) -> None:
     p = FileNameParser()
     p.parse_filename(Path(filename))

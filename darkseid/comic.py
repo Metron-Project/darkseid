@@ -10,7 +10,7 @@ import shutil
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import List, Optional, cast
+from typing import Optional, cast
 
 import py7zr
 import rarfile
@@ -44,7 +44,7 @@ class UnknownArchiver:
     def remove_file(self: "UnknownArchiver", archive_file: str) -> bool:  # noqa: ARG002
         return False
 
-    def get_filename_list(self: "UnknownArchiver") -> List[str]:
+    def get_filename_list(self: "UnknownArchiver") -> list[str]:
         return []
 
     def copy_from_archive(
@@ -81,13 +81,11 @@ class RarArchiver(UnknownArchiver):
         """Rar files are read-only, so we return False."""
         return False
 
-    def get_filename_list(self: "RarArchiver") -> List[str]:
+    def get_filename_list(self: "RarArchiver") -> list[str]:
         """Returns a list of the filenames in an archive."""
         try:
-            fn_list = []
             with rarfile.RarFile(self.path) as rf:
-                fn_list = sorted(rf.namelist())
-            return fn_list
+                return sorted(rf.namelist())
         except rarfile.RarCannotExec as e:
             raise RarError(e) from e
 
@@ -108,12 +106,15 @@ class ZipArchiver(UnknownArchiver):
     def read_file(self: "ZipArchiver", archive_file: str) -> bytes:
         """Read the contents of a comic archive."""
         try:
-            data = b""
             with zipfile.ZipFile(self.path, mode="r") as zf:
-                data = zf.read(archive_file)
-            return data
+                return zf.read(archive_file)
         except (zipfile.BadZipfile, OSError) as e:
-            logger.error(f"Error reading zip archive [{e}]: {self.path} :: {archive_file}")
+            logger.error(
+                "Error reading zip archive [%s]: %s :: %s",
+                e,
+                self.path,
+                archive_file,
+            )
             raise OSError from e
 
     def remove_file(self: "ZipArchiver", archive_file: str) -> bool:
@@ -139,20 +140,24 @@ class ZipArchiver(UnknownArchiver):
                 zf.writestr(archive_file, data)
             return True
         except (zipfile.BadZipfile, OSError) as e:
-            logger.error(f"Error writing zip archive [{e}]: {self.path} :: {archive_file}")
+            logger.error(
+                "Error writing zip archive [%s]: %s :: %s",
+                e,
+                self.path,
+                archive_file,
+            )
             return False
 
-    def get_filename_list(self: "ZipArchiver") -> List[str]:
+    def get_filename_list(self: "ZipArchiver") -> list[str]:
         """Returns a list of the filenames in an archive."""
         try:
             with zipfile.ZipFile(self.path, mode="r") as zf:
-                namelist = zf.namelist()
-            return namelist
+                return zf.namelist()
         except (zipfile.BadZipfile, OSError) as e:
-            logger.error(f"Error listing files in zip archive [{e}]: {self.path}")
+            logger.error("Error listing files in zip archive [%s]: %s", e, self.path)
             return []
 
-    def _rebuild(self: "ZipArchiver", exclude_list: List[str]) -> bool:
+    def _rebuild(self: "ZipArchiver", exclude_list: list[str]) -> bool:
         """Zip helper func.
 
         This recompresses the zip archive, without the files in the exclude_list
@@ -174,7 +179,7 @@ class ZipArchiver(UnknownArchiver):
                 shutil.move(cast(str, zout.filename), self.path)
             return True
         except (zipfile.BadZipfile, OSError) as e:
-            logger.error(f"Error rebuilding zip file [{e}]: {self.path}")
+            logger.error("Error rebuilding zip file [%s]: %s", e, self.path)
             return False
 
     def copy_from_archive(self: "ZipArchiver", other_archive: UnknownArchiver) -> bool:
@@ -190,7 +195,7 @@ class ZipArchiver(UnknownArchiver):
             # Remove any partial files created
             if self.path.exists():
                 self.path.unlink()
-            logger.warning(f"Error while copying to {self.path}: {e}")
+            logger.warning("Error while copying to %s: %s", self.path, e)
             return False
 
 
@@ -204,12 +209,10 @@ class SevenZipArchiver(UnknownArchiver):
     def read_file(self: "SevenZipArchiver", archive_file: str) -> bytes:
         """Read the contents of a comic archive."""
         try:
-            data = b""
             with py7zr.SevenZipFile(self.path, "r") as zf:
-                data = zf.read(archive_file)[archive_file].read()
-            return data
+                return zf.read(archive_file)[archive_file].read()
         except (py7zr.Bad7zFile, OSError) as e:
-            logger.warning(f"bad 7zip file [{e}]: {self.path} :: {archive_file}")
+            logger.warning("bad 7zip file [%s]: %s :: %s", e, self.path, archive_file)
             raise OSError from e
 
     def remove_file(self: "SevenZipArchiver", archive_file: str) -> bool:
@@ -227,20 +230,24 @@ class SevenZipArchiver(UnknownArchiver):
                 zf.writestr(data, archive_file)
             return True
         except (py7zr.Bad7zFile, OSError) as e:
-            logger.error(f"Error writing 7zip archive [{e}]: {self.path} :: {archive_file}")
+            logger.error(
+                "Error writing 7zip archive [%s]: %s :: %s",
+                e,
+                self.path,
+                archive_file,
+            )
             return False
 
-    def get_filename_list(self: "SevenZipArchiver") -> List[str]:
+    def get_filename_list(self: "SevenZipArchiver") -> list[str]:
         """Returns a list of the filenames in an archive."""
         try:
             with py7zr.SevenZipFile(self.path, "r") as zf:
-                namelist = zf.getnames()
-            return namelist
+                return zf.getnames()
         except (py7zr.Bad7zFile, OSError) as e:
-            logger.warning(f"Unable to get 7zip file list [{e}]: {self.path}")
+            logger.warning("Unable to get 7zip file list [%s]: %s", e, self.path)
             return []
 
-    def _rebuild(self: "SevenZipArchiver", exclude_list: List[str]) -> bool:
+    def _rebuild(self: "SevenZipArchiver", exclude_list: list[str]) -> bool:
         """Zip helper func.
 
         This recompresses the zip archive, without the files in the exclude_list
@@ -249,10 +256,12 @@ class SevenZipArchiver(UnknownArchiver):
             with py7zr.SevenZipFile(self.path, "r") as zip:
                 targets = [f for f in zip.getnames() if f not in exclude_list]
             with tempfile.NamedTemporaryFile(dir=self.path.parent, delete=False) as tmp_file:
-                with py7zr.SevenZipFile(tmp_file.file, mode="w") as zout:
-                    with py7zr.SevenZipFile(self.path, mode="r") as zin:
-                        for filename, buffer in zin.read(targets).items():
-                            zout.writef(buffer, filename)
+                with py7zr.SevenZipFile(tmp_file.file, mode="w") as zout, py7zr.SevenZipFile(
+                    self.path,
+                    mode="r",
+                ) as zin:
+                    for filename, buffer in zin.read(targets).items():
+                        zout.writef(buffer, filename)
                 self.path.unlink()
                 shutil.move(tmp_file.name, self.path)
             return True
@@ -272,7 +281,7 @@ class SevenZipArchiver(UnknownArchiver):
             # Remove any partial files created
             if self.path.exists():
                 self.path.unlink()
-            logger.warning(f"Error while copying to {self.path}: {e}")
+            logger.warning("Error while copying to '%s': %s", self.path, e)
             return False
 
 
@@ -285,7 +294,7 @@ class Comic:
     class ArchiveType:
         """Types of archives supported. Currently .cbr, .cbz, and .cb7."""
 
-        zip, sevenzip, rar, unknown = list(range(4))
+        zip, sevenzip, rar, unknown = list(range(4))  # noqa: RUF012
 
     def __init__(self: "Comic", path: str) -> None:
         self.path = Path(path)
@@ -293,7 +302,7 @@ class Comic:
         self.ci_xml_filename = "ComicInfo.xml"
         self.has_md: Optional[bool] = None
         self.page_count: Optional[int] = None
-        self.page_list: Optional[List[str]] = None
+        self.page_list: Optional[list[str]] = None
         self.metadata: Optional[Metadata] = None
 
         if self.zip_test():
@@ -367,7 +376,7 @@ class Comic:
             try:
                 image_data = self.archiver.read_file(filename)
             except OSError:
-                logger.exception(f"Error reading '{filename}' from '{self.path}'")
+                logger.exception("Error reading '%s' from '%s'", filename, self.path)
 
         return image_data
 
@@ -385,7 +394,7 @@ class Comic:
         suffix_list = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
         return name_path.suffix.casefold() in suffix_list and name_path.name[0] != "."
 
-    def get_page_name_list(self: "Comic", sort_list: bool = True) -> List[str]:
+    def get_page_name_list(self: "Comic", sort_list: bool = True) -> list[str]:
         """Returns a list of page names from an archive."""
         if self.page_list is None:
             # get the list file names in the archive, and sort

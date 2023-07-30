@@ -5,16 +5,16 @@
 import itertools
 from collections import defaultdict
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 
-def get_recursive_filelist(pathlist: List[Path]) -> List[Path]:
+def get_recursive_filelist(pathlist: list[Path]) -> list[Path]:
     """Returns a path list of comic archives.
 
     :param pathlist: A list of path objects
     :type pathlist:  list of Path
     """
-    filelist: List[Path] = []
+    filelist: list[Path] = []
     for path_str in pathlist:
         path = Path(path_str)
         if path.is_dir():
@@ -26,7 +26,7 @@ def get_recursive_filelist(pathlist: List[Path]) -> List[Path]:
     return sorted(filelist)
 
 
-def list_to_string(list_of_strings: List[str]) -> str:
+def list_to_string(list_of_strings: list[str]) -> str:
     """Function that takes a list of string and converts it to a string.
     For example: ["apple", "banana", "cherry"] is changed to "apple; banana; cherry".
 
@@ -71,9 +71,7 @@ def remove_articles(text: str) -> str:
         f"{word} " for word in text.split(" ") if word.casefold() not in articles
     )
 
-    new_text = new_text[:-1]
-
-    return new_text
+    return new_text[:-1]
 
 
 def unique_file(file_name: Path) -> Path:
