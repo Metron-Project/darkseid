@@ -144,6 +144,9 @@ select = [
 [tool.ruff.flake8-annotations]
 allow-star-arg-any = true
 
+[tool.ruff.flake8-tidy-imports]
+ban-relative-imports = "all"
+
 [tool.ruff.isort]
 combine-as-imports = true
 

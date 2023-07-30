@@ -7,8 +7,7 @@ from lxml import etree
 
 from darkseid.comicinfo import ComicInfo
 from darkseid.metadata import Arc, Basic, Credit, Metadata, Role, Series
-
-from .conftest import CI_XSD
+from tests.conftest import CI_XSD
 
 
 @pytest.fixture()
