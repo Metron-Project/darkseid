@@ -8,7 +8,6 @@ This should probably be re-written, but, well, it mostly works!
 import contextlib
 import re
 from pathlib import Path
-from typing import LiteralString
 from urllib.parse import unquote
 
 
@@ -24,7 +23,7 @@ class FileNameParser:
         self.remainder: str = ""
 
     @staticmethod
-    def repl(match: str) -> LiteralString:
+    def repl(match: str) -> str:
         return " " * len(match.group())
 
     def fix_spaces(self: "FileNameParser", string: str, remove_dashes: bool = True) -> str:
