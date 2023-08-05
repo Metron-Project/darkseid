@@ -3,7 +3,6 @@ import sys
 import zipfile
 from pathlib import Path
 
-import py7zr
 import pytest
 
 from darkseid.comic import Comic, UnknownArchiver
@@ -13,95 +12,6 @@ from tests.conftest import IMG_DIR
 # Uses to test image bytes
 PAGE_TMPL = str(IMG_DIR / "CaptainScience#1_{page_num}.jpg")
 PAGE_FIVE = PAGE_TMPL.format(page_num="05")
-
-#######
-# CB7 #
-#######
-
-
-def test_cb7_file_exists(fake_cb7: Comic) -> None:
-    """Test function to determine archive is a 7zip file."""
-    assert fake_cb7.is_sevenzip() is True
-
-
-def test_cb7_number_of_pages(fake_cb7: Comic) -> None:
-    """Test to determine number of pages in a cb7."""
-    assert fake_cb7.get_number_of_pages() == 5
-
-
-def test_cb7_file_is_writable(fake_cb7: Comic) -> None:
-    """Test to determine if a cb7 is writable."""
-    assert fake_cb7.is_writable() is True
-
-
-def test_cb7_writing_with_no_metadata(fake_cb7: Comic) -> None:
-    """Make sure writing no metadata to cb7 returns False."""
-    assert fake_cb7.write_metadata(None) is False
-
-
-# Skip test for windows, until some with a windows box can help debug this.
-@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
-def test_cb7_test_metadata(tmp_path: Path, fake_metadata: Metadata) -> None:
-    """Test to determine if a cb7 has metadata."""
-    # Create cb7 archive/
-    z_file: Path = tmp_path / "Captain Science v1 #001 (2000).cb7"
-    with py7zr.SevenZipFile(z_file, "w") as cb7:
-        cb7.writeall(IMG_DIR)
-
-    ca = Comic(z_file)
-
-    # verify archive has no metadata
-    res = ca.has_metadata()
-    assert res is False
-
-    # now let's test that we can write some
-    write_result = ca.write_metadata(fake_metadata)
-    assert write_result is True
-    assert ca.has_metadata() is True
-
-    # Verify what was written
-    new_md = ca.read_metadata()
-    assert new_md.series.name == fake_metadata.series.name
-    assert new_md.publisher.name == fake_metadata.publisher.name
-    assert new_md.series.volume == fake_metadata.series.volume
-    assert new_md.series.format == fake_metadata.series.format
-    assert new_md.issue == fake_metadata.issue
-    assert new_md.stories == fake_metadata.stories
-
-    # now remove what was just written
-    ca.remove_metadata()
-    assert ca.has_metadata() is False
-
-
-def test_removing_metadata_on_cb7_wo_metadata(fake_cb7: Comic) -> None:
-    """Make sure trying to remove metadata from
-    comic w/o any returns True.
-    """
-    assert fake_cb7.write_metadata(None) is False
-    assert fake_cb7.remove_metadata() is True
-
-
-def test_cb7_get_random_page(fake_cb7: Comic) -> None:
-    """Test to set if a page from a comic archive can be retrieved."""
-    page = fake_cb7.get_page(4)
-    with open(PAGE_FIVE, "rb") as cif:  # noqa: PTH123
-        image = cif.read()
-    assert image == page
-
-
-def test_cb7_metadata_from_filename(fake_cb7: Comic) -> None:
-    """Test to get metadata from comic archives filename."""
-    test_md = fake_cb7.metadata_from_filename()
-    assert test_md.series.name == "Captain Science"
-    assert test_md.issue == "1"
-
-
-def test_cb7_apply_file_info_to_metadata(fake_cb7: Comic) -> None:
-    """Test to apply archive info to the generic metadata."""
-    test_md = Metadata()
-    fake_cb7.apply_archive_info_to_metadata(test_md)
-    # TODO: Need to test calculate page sizes
-    assert test_md.page_count == "5"
 
 
 #######
@@ -136,7 +46,6 @@ def test_archive_from_img_dir(tmp_path: Path, fake_metadata: Metadata) -> None:
 def test_zip_file_exists(fake_cbz: Comic) -> None:
     """Test function that determines if a file is a zip file."""
     assert fake_cbz.is_zip() is True
-    assert fake_cbz.is_sevenzip() is False
 
 
 def test_whether_text_file_is_comic_archive(tmp_path: Path) -> None:
@@ -221,16 +130,6 @@ def test_archive_apply_file_info_to_metadata(fake_cbz: Comic) -> None:
     assert test_md.page_count == "5"
 
 
-# Skip test for windows, until some with a windows box can help debug this.
-@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
-def test_archive_export_to_cb7(tmp_path: Path, fake_cbz: Comic) -> None:
-    fn = tmp_path / "fake_export.cb7"
-    assert fake_cbz.export_as_cb7(fn) is True
-    ca = Comic(fn)
-    assert ca.is_sevenzip() is True
-    assert ca.get_number_of_pages() == 5
-
-
 #######
 # CBR #
 #######
@@ -244,7 +143,6 @@ def test_rar_write(fake_rar: Comic, fake_metadata: Metadata) -> None:
 def test_rar_file_exists(fake_rar: Comic) -> None:
     """Test function that determines if a file is a rar file."""
     assert fake_rar.is_zip() is False
-    assert fake_rar.is_sevenzip() is False
     assert fake_rar.is_rar() is True
 
 

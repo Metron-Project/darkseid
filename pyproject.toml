@@ -29,7 +29,6 @@ keywords = ["comics", "comic", "metadata", "tagging", "tagger"]
 python = "^3.9"
 Pillow = "^9.0.0"
 natsort = "^8.0.0"
-py7zr = "^0.20.0"
 rarfile = "^4.0"
 pycountry = "^22.3.5"
 
@@ -65,7 +64,7 @@ multi_line_output = 3
 line_length = 95
 default_section = "THIRDPARTY"
 known_first_party = []
-known_third_party = ["PIL", "lxml", "natsort", "py7zr", "pycountry", "pytest", "rarfile"]
+known_third_party = ["PIL", "lxml", "natsort", "pycountry", "pytest", "rarfile"]
 
 [tool.poetry.urls]
 "Homepage" = "https://github.com/Metron-Project/darkseid"
