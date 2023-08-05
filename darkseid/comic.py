@@ -12,7 +12,6 @@ import zipfile
 from pathlib import Path
 from typing import Optional, cast
 
-import py7zr
 import rarfile
 from natsort import natsorted, ns
 from PIL import Image
@@ -200,101 +199,15 @@ class ZipArchiver(UnknownArchiver):
 
 
 # ------------------------------------------------------------------
-class SevenZipArchiver(UnknownArchiver):
-    """7Z implementation."""
-
-    def __init__(self: "SevenZipArchiver", path: Path) -> None:
-        super().__init__(path)
-
-    def read_file(self: "SevenZipArchiver", archive_file: str) -> bytes:
-        """Read the contents of a comic archive."""
-        try:
-            with py7zr.SevenZipFile(self.path, "r") as zf:
-                return zf.read(archive_file)[archive_file].read()
-        except (py7zr.Bad7zFile, OSError) as e:
-            logger.warning("bad 7zip file [%s]: %s :: %s", e, self.path, archive_file)
-            raise OSError from e
-
-    def remove_file(self: "SevenZipArchiver", archive_file: str) -> bool:
-        """Returns a boolean when attempting to remove a file from an archive."""
-        return self._rebuild([archive_file])
-
-    def write_file(self: "SevenZipArchiver", archive_file: str, data: str) -> bool:
-        files = self.get_filename_list()
-        if archive_file in files:
-            self._rebuild([archive_file])
-
-        try:
-            # now just add the archive file as a new one
-            with py7zr.SevenZipFile(self.path, "a") as zf:
-                zf.writestr(data, archive_file)
-            return True
-        except (py7zr.Bad7zFile, OSError) as e:
-            logger.error(
-                "Error writing 7zip archive [%s]: %s :: %s",
-                e,
-                self.path,
-                archive_file,
-            )
-            return False
-
-    def get_filename_list(self: "SevenZipArchiver") -> list[str]:
-        """Returns a list of the filenames in an archive."""
-        try:
-            with py7zr.SevenZipFile(self.path, "r") as zf:
-                return zf.getnames()
-        except (py7zr.Bad7zFile, OSError) as e:
-            logger.warning("Unable to get 7zip file list [%s]: %s", e, self.path)
-            return []
-
-    def _rebuild(self: "SevenZipArchiver", exclude_list: list[str]) -> bool:
-        """Zip helper func.
-
-        This recompresses the zip archive, without the files in the exclude_list
-        """
-        try:
-            with py7zr.SevenZipFile(self.path, "r") as zip:
-                targets = [f for f in zip.getnames() if f not in exclude_list]
-            with tempfile.NamedTemporaryFile(dir=self.path.parent, delete=False) as tmp_file:
-                with py7zr.SevenZipFile(tmp_file.file, mode="w") as zout, py7zr.SevenZipFile(
-                    self.path,
-                    mode="r",
-                ) as zin:
-                    for filename, buffer in zin.read(targets).items():
-                        zout.writef(buffer, filename)
-                self.path.unlink()
-                shutil.move(tmp_file.name, self.path)
-            return True
-        except (py7zr.Bad7zFile, OSError) as e:
-            logger.warning("Exception[%s]: %s", e, self.path)
-            return False
-
-    def copy_from_archive(self: "SevenZipArchiver", other_archive: UnknownArchiver) -> bool:
-        """Replace the current zip with one copied from another archive."""
-        try:
-            with py7zr.SevenZipFile(self.path, "w") as zout:
-                for fname in other_archive.get_filename_list():
-                    if data := other_archive.read_file(fname):
-                        zout.writestr(data, fname)
-            return True
-        except (py7zr.Bad7zFile, OSError) as e:
-            # Remove any partial files created
-            if self.path.exists():
-                self.path.unlink()
-            logger.warning("Error while copying to '%s': %s", self.path, e)
-            return False
-
-
-# ------------------------------------------------------------------
 
 
 class Comic:
     """Comic implementation."""
 
     class ArchiveType:
-        """Types of archives supported. Currently .cbr, .cbz, and .cb7."""
+        """Types of archives supported. Currently .cbr and .cbz."""
 
-        zip, sevenzip, rar, unknown = list(range(4))  # noqa: RUF012
+        zip, rar, unknown = list(range(3))  # noqa: RUF012
 
     def __init__(self: "Comic", path: str) -> None:
         self.path = Path(path)
@@ -311,9 +224,6 @@ class Comic:
         elif self.rar_test():
             self.archive_type: int = self.ArchiveType.rar
             self.archiver = RarArchiver(self.path)
-        elif self.sevenzip_test():
-            self.archive_type: int = self.ArchiveType.sevenzip
-            self.archiver = SevenZipArchiver(self.path)
         else:
             self.archive_type = self.ArchiveType.unknown
             self.archiver = UnknownArchiver(self.path)
@@ -332,10 +242,6 @@ class Comic:
         """Test whether an archive is a rar file."""
         return rarfile.is_rarfile(self.path)
 
-    def sevenzip_test(self: "Comic") -> bool:
-        """Tests whether an archive is a sevenzipfile."""
-        return py7zr.is_7zfile(self.path)
-
     def zip_test(self: "Comic") -> bool:
         """Tests whether an archive is a zipfile."""
         return zipfile.is_zipfile(self.path)
@@ -343,10 +249,6 @@ class Comic:
     def is_rar(self: "Comic") -> bool:
         """Returns a boolean as to whether an archive is a rarfile."""
         return self.archive_type == self.ArchiveType.rar
-
-    def is_sevenzip(self: "Comic") -> bool:
-        """Returns a boolean as to whether an archive is a sevenzipfile."""
-        return self.archive_type == self.ArchiveType.sevenzip
 
     def is_zip(self: "Comic") -> bool:
         """Returns a boolean as to whether an archive is a zipfile."""
@@ -362,8 +264,7 @@ class Comic:
     def seems_to_be_a_comic_archive(self: "Comic") -> bool:
         """Returns a boolean as to whether the file is a comic archive."""
         return bool(
-            (self.is_zip() or self.is_sevenzip() or self.is_rar())
-            and (self.get_number_of_pages() > 0),
+            (self.is_zip() or self.is_rar()) and (self.get_number_of_pages() > 0),
         )
 
     def get_page(self: "Comic", index: int) -> Optional[bytes]:
@@ -549,18 +450,8 @@ class Comic:
 
         return metadata
 
-    def export_as_cb7(self: "Comic", new_7zip_filename: Path) -> bool:
-        """Export CBZ or CBR archives to CB7 format."""
-        if self.archive_type == self.ArchiveType.sevenzip:
-            # nothing to do, we're already a 7zip
-            return True
-
-        zip_archiver = SevenZipArchiver(new_7zip_filename)
-
-        return zip_archiver.copy_from_archive(self.archiver)
-
     def export_as_zip(self: "Comic", zipfilename: Path) -> bool:
-        """Export CBR or CB7 archives to CBZ format."""
+        """Export CBR archives to CBZ format."""
         if self.archive_type == self.ArchiveType.zip:
             # nothing to do, we're already a zip
             return True
