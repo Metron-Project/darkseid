@@ -6,6 +6,11 @@
 Welcome to Darkseid's documentation!
 ====================================
 
+Release v\ |version|.
+
+API Reference
+=============
+
 .. toctree::
    :maxdepth: 2
    

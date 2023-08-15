@@ -15,6 +15,9 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../.."))  # noqa: PTH100
 
+# This import needs to be *after* setting the sys path
+import darkseid  # noqa: E402, I001
+
 
 # -- Project information -----------------------------------------------------
 
@@ -23,7 +26,7 @@ copyright = "2021, Brian Pepple"
 author = "Brian Pepple"
 
 # The full version, including alpha/beta/rc tags
-release = "3.0.0"
+version = release = darkseid.__version__
 
 
 # -- General configuration ---------------------------------------------------
