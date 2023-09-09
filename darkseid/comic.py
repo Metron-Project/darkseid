@@ -186,7 +186,11 @@ class ZipArchiver(UnknownArchiver):
         try:
             with zipfile.ZipFile(self.path, mode="w", allowZip64=True) as zout:
                 for filename in other_archive.get_filename_list():
-                    data = other_archive.read_file(filename)
+                    try:
+                        data = other_archive.read_file(filename)
+                    except rarfile.BadRarFile:
+                        # Skip any bad images in the file.
+                        continue
                     if data is not None:
                         zout.writestr(filename, data)
             return True
