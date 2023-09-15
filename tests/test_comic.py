@@ -17,6 +17,27 @@ PAGE_FIVE = PAGE_TMPL.format(page_num="05")
 #######
 # CBZ #
 #######
+def test_archive_delete_page(tmp_path: Path, fake_metadata: Metadata) -> None:
+    z_file = tmp_path / "test.cbz"
+    with zipfile.ZipFile(z_file, "w") as zf:
+        for p in IMG_DIR.iterdir():
+            zf.write(p)
+    # Prep test file
+    ca = Comic(z_file)
+    test_md = Metadata()
+    test_md.set_default_page_list(ca.get_number_of_pages())
+    test_md.overlay(fake_metadata)
+    ca.write_metadata(test_md)
+
+    old_num_pages = ca.get_number_of_pages()
+    result = ca.remove_page(1)
+    ca.get_page_name_list()
+    num_pages = ca.get_number_of_pages()
+    assert result is True
+    assert old_num_pages - 1 == num_pages
+    assert ca.has_metadata()
+
+
 def test_archive_from_img_dir(tmp_path: Path, fake_metadata: Metadata) -> None:
     z_file: Path = tmp_path / "Aquaman v1 #001 (of 08) (1994).cbz"
     with zipfile.ZipFile(z_file, "w") as zf:

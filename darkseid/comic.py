@@ -376,6 +376,12 @@ class Comic:
             return self._successful_write(write_success, False, None)
         return True
 
+    def remove_page(self: "Comic", page_idx: int) -> bool:
+        """Remove page from the archive."""
+        page = self.get_page_name(page_idx)
+        write_success = self.archiver.remove_file(page)
+        return self._successful_write(write_success, False, None)
+
     def _successful_write(
         self: "Comic",
         write_success: bool,
