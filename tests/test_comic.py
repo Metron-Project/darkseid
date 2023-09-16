@@ -30,11 +30,11 @@ def test_archive_delete_page(tmp_path: Path, fake_metadata: Metadata) -> None:
     ca.write_metadata(test_md)
 
     old_num_pages = ca.get_number_of_pages()
-    result = ca.remove_page(1)
+    result = ca.remove_pages([1, 4])
     ca.get_page_name_list()
     num_pages = ca.get_number_of_pages()
     assert result is True
-    assert old_num_pages - 1 == num_pages
+    assert old_num_pages - 2 == num_pages
     assert ca.has_metadata()
 
 

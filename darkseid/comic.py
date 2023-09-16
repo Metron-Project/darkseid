@@ -43,6 +43,12 @@ class UnknownArchiver:
     def remove_file(self: "UnknownArchiver", archive_file: str) -> bool:  # noqa: ARG002
         return False
 
+    def remove_files(
+        self: "UnknownArchiver",
+        filename_lst: list[str],  # noqa: ARG002
+    ) -> bool:
+        return False
+
     def get_filename_list(self: "UnknownArchiver") -> list[str]:
         return []
 
@@ -73,6 +79,10 @@ class RarArchiver(UnknownArchiver):
             return b""
 
     def remove_file(self: "RarArchiver") -> bool:
+        """Rar files are read-only, so we return False."""
+        return False
+
+    def remove_files(self: "RarArchiver", filename_lst: list[str]) -> bool:  # noqa: ARG002
         """Rar files are read-only, so we return False."""
         return False
 
@@ -119,6 +129,10 @@ class ZipArchiver(UnknownArchiver):
     def remove_file(self: "ZipArchiver", archive_file: str) -> bool:
         """Returns a boolean when attempting to remove a file from an archive."""
         return self._rebuild([archive_file])
+
+    def remove_files(self: "ZipArchiver", filename_lst: list[str]) -> bool:
+        """Returns a boolean when attempting to remove a list of files from an archive."""
+        return self._rebuild(filename_lst)
 
     def write_file(self: "ZipArchiver", archive_file: str, data: str) -> bool:
         #  At the moment, no other option but to rebuild the whole
@@ -376,10 +390,15 @@ class Comic:
             return self._successful_write(write_success, False, None)
         return True
 
-    def remove_page(self: "Comic", page_idx: int) -> bool:
+    def remove_pages(self: "Comic", pages_index: list[int]) -> bool:
         """Remove page from the archive."""
-        page = self.get_page_name(page_idx)
-        write_success = self.archiver.remove_file(page)
+        if not pages_index:
+            return False
+        pages_name_lst = []
+        for idx in pages_index:
+            page_name = self.get_page_name(idx)
+            pages_name_lst.append(page_name)
+        write_success = self.archiver.remove_files(pages_name_lst)
         return self._successful_write(write_success, False, None)
 
     def _successful_write(
