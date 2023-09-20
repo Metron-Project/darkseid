@@ -144,8 +144,8 @@ class ComicInfo:
                 if et_entry is not None:
                     root.remove(et_entry)
 
-        def get_resource_list(resource: list[Basic]) -> str:
-            return list_to_string([i.name for i in resource]) if resource else ""
+        def get_resource_list(resource: list[Basic]) -> Optional[str]:
+            return list_to_string([i.name for i in resource]) if resource else None
 
         assign("Title", get_resource_list(md.stories))
         assign("Series", md.series.name)
