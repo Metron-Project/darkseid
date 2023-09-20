@@ -17,6 +17,12 @@ PAGE_FIVE = PAGE_TMPL.format(page_num="05")
 #######
 # CBZ #
 #######
+def test_comic_str(fake_cbz: Comic) -> None:
+    expected = "Captain Science #001.cbz"
+    result = str(fake_cbz)
+    assert expected == result
+
+
 def test_archive_delete_page(tmp_path: Path, fake_metadata: Metadata) -> None:
     z_file = tmp_path / "test.cbz"
     with zipfile.ZipFile(z_file, "w") as zf:
