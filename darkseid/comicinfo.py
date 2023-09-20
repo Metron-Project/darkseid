@@ -145,7 +145,7 @@ class ComicInfo:
                     root.remove(et_entry)
 
         def get_resource_list(resource: list[Basic]) -> str:
-            return list_to_string([i.name for i in resource])
+            return list_to_string([i.name for i in resource]) if resource else ""
 
         assign("Title", get_resource_list(md.stories))
         assign("Series", md.series.name)
