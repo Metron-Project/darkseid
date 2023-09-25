@@ -41,7 +41,7 @@ def remove_articles(text: str) -> str:
 
     :param str text: A string with articles (ex. 'and', 'a', 'the').
     """
-    articles = [
+    articles = {
         "&",
         "a",
         "am",
@@ -64,9 +64,8 @@ def remove_articles(text: str) -> str:
         "or",
         "so",
         "the",
-        "the",
         "with",
-    ]
+    }
     new_text = "".join(
         f"{word} " for word in text.split(" ") if word.casefold() not in articles
     )
