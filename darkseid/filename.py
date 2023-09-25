@@ -186,7 +186,7 @@ class FileNameParser:
         # for hints i.e. "TPB", "one-shot", "OS", "OGN", etc that might
         # be removed to help search online
         if issue_start == 0:
-            one_shot_words = ["tpb", "os", "one-shot", "ogn", "gn"]
+            one_shot_words = {"tpb", "os", "one-shot", "ogn", "gn"}
             with contextlib.suppress(ValueError):
                 last_word = series.split()[-1]
                 if last_word.casefold() in one_shot_words:
