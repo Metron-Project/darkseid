@@ -15,7 +15,7 @@ from darkseid.utils import list_to_string, xlate
 
 
 class ComicInfo:
-    ci_age_ratings: ClassVar[list[str]] = [
+    ci_age_ratings: ClassVar[set[str]] = {
         "Unknown",
         "Adults Only 18+",
         "Early Childhood",
@@ -31,45 +31,45 @@ class ComicInfo:
         "Rating Pending",
         "Teen",
         "X18+",
-    ]
+    }
 
-    ci_manga: ClassVar[list[str]] = ["Unknown", "Yes", "No", "YesAndRightToLeft"]
+    ci_manga: ClassVar[set[str]] = {"Unknown", "Yes", "No", "YesAndRightToLeft"}
 
-    writer_synonyms: ClassVar[list[str]] = [
+    writer_synonyms: ClassVar[set[str]] = {
         "writer",
         "plotter",
         "scripter",
         "script",
         "story",
         "plot",
-    ]
-    penciller_synonyms: ClassVar[list[str]] = [
+    }
+    penciller_synonyms: ClassVar[set[str]] = {
         "artist",
         "breakdowns",
         "illustrator",
         "layouts",
         "penciller",
         "penciler",
-    ]
-    inker_synonyms: ClassVar[list[str]] = [
+    }
+    inker_synonyms: ClassVar[set[str]] = {
         "artist",
         "embellisher",
         "finishes",
         "illustrator",
         "ink assists",
         "inker",
-    ]
-    colorist_synonyms: ClassVar[list[str]] = [
+    }
+    colorist_synonyms: ClassVar[set[str]] = {
         "colorist",
         "colourist",
         "colorer",
         "colourer",
         "color assists",
         "color flats",
-    ]
-    letterer_synonyms: ClassVar[list[str]] = ["letterer"]
-    cover_synonyms: ClassVar[list[str]] = ["cover", "covers", "coverartist", "cover artist"]
-    editor_synonyms: ClassVar[list[str]] = [
+    }
+    letterer_synonyms: ClassVar[set[str]] = {"letterer"}
+    cover_synonyms: ClassVar[set[str]] = {"cover", "covers", "coverartist", "cover artist"}
+    editor_synonyms: ClassVar[set[str]] = {
         "assistant editor",
         "associate editor",
         "consulting editor",
@@ -79,7 +79,7 @@ class ComicInfo:
         "group editor",
         "senior editor",
         "supervising editor",
-    ]
+    }
 
     def metadata_from_string(self: "ComicInfo", string: str) -> Metadata:
         tree = ET.ElementTree(ET.fromstring(string))  # noqa: S314
@@ -177,25 +177,25 @@ class ComicInfo:
         # supports
         for credit in md.credits:
             for r in credit.role:
-                if r.name.casefold() in set(self.writer_synonyms):
+                if r.name.casefold() in self.writer_synonyms:
                     credit_writer_list.append(credit.person.replace(",", ""))
 
-                if r.name.casefold() in set(self.penciller_synonyms):
+                if r.name.casefold() in self.penciller_synonyms:
                     credit_penciller_list.append(credit.person.replace(",", ""))
 
-                if r.name.casefold() in set(self.inker_synonyms):
+                if r.name.casefold() in self.inker_synonyms:
                     credit_inker_list.append(credit.person.replace(",", ""))
 
-                if r.name.casefold() in set(self.colorist_synonyms):
+                if r.name.casefold() in self.colorist_synonyms:
                     credit_colorist_list.append(credit.person.replace(",", ""))
 
-                if r.name.casefold() in set(self.letterer_synonyms):
+                if r.name.casefold() in self.letterer_synonyms:
                     credit_letterer_list.append(credit.person.replace(",", ""))
 
-                if r.name.casefold() in set(self.cover_synonyms):
+                if r.name.casefold() in self.cover_synonyms:
                     credit_cover_list.append(credit.person.replace(",", ""))
 
-                if r.name.casefold() in set(self.editor_synonyms):
+                if r.name.casefold() in self.editor_synonyms:
                     credit_editor_list.append(credit.person.replace(",", ""))
 
         # second, convert each list to string, and add to XML struct
