@@ -6,9 +6,9 @@ repos:
 -   hooks:
     -   id: ruff
     repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.0.284
+    rev: v0.0.292
 -   hooks:
     -   id: black
         language_version: python3.9
     repo: https://github.com/ambv/black
-    rev: 23.7.0
+    rev: 23.9.1
