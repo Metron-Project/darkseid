@@ -67,7 +67,8 @@ class Price(Validations):
     amount: Decimal
     country: str = field(default="US")
 
-    def validate_country(self: "Price", value: str, **_: any) -> str:
+    @staticmethod
+    def validate_country(value: str, **_: any) -> str:
         if value is None:
             return "US"
         value = value.strip()
@@ -105,7 +106,8 @@ class Series(Basic, Validations):
     format: Optional[str] = None
     language: Optional[str] = None  # 2 letter iso code
 
-    def validate_language(self: "Series", value: str, **_: any) -> Optional[str]:
+    @staticmethod
+    def validate_language(value: str, **_: any) -> Optional[str]:
         if not value:
             return None
         value = value.strip()
@@ -138,7 +140,8 @@ class GTIN(Validations):
     upc: Optional[int] = None
     isbn: Optional[int] = None
 
-    def validate_upc(self: "GTIN", value: int, **_: any) -> Optional[int]:
+    @staticmethod
+    def validate_upc(value: int, **_: any) -> Optional[int]:
         # sourcery skip: class-extract-method
         if value is None or not isinstance(value, int):
             return None
@@ -149,7 +152,8 @@ class GTIN(Validations):
 
         return value
 
-    def validate_isbn(self: "GTIN", value: int, **_: any) -> Optional[int]:
+    @staticmethod
+    def validate_isbn(value: int, **_: any) -> Optional[int]:
         if value is None or not isinstance(value, int):
             return None
 
