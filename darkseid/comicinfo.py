@@ -98,14 +98,15 @@ class ComicInfo:
         pattern = r"|".join(delimiters)
         return split(pattern, string)
 
-    def _get_root(self: "ComicInfo", xml: any) -> ET.Element:
-        if xml:
-            root = ET.ElementTree(ET.fromstring(xml)).getroot()  # noqa: S314
-        else:
-            # build a tree structure
-            root = ET.Element("ComicInfo")
-            root.attrib["xmlns:xsi"] = "https://www.w3.org/2001/XMLSchema-instance"
-            root.attrib["xmlns:xsd"] = "https://www.w3.org/2001/XMLSchema"
+    @staticmethod
+    def _get_root(xml: any) -> ET.Element:
+        root = (
+            ET.ElementTree(ET.fromstring(xml)).getroot()  # noqa: S314
+            if xml
+            else ET.Element("ComicInfo")
+        )
+        root.attrib["xmlns:xsi"] = "https://www.w3.org/2001/XMLSchema-instance"
+        root.attrib["xmlns:xsd"] = "https://www.w3.org/2001/XMLSchema"
 
         return root
 

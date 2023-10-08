@@ -93,6 +93,28 @@ def test_meta_write_to_file(test_meta_data: Metadata, tmp_path: Path) -> None:
     assert validate(tmp_file, CI_XSD) is True
 
 
+def test_meta_write_to_existing_file(test_meta_data: Metadata, tmp_path: Path) -> None:
+    # sourcery skip: extract-duplicate-method
+    """Test of writing the metadata to a file and then modifying comicinfo.xml"""
+    # Write test metadata to file
+    tmp_file = tmp_path / "test-write.xml"
+    ci = ComicInfo()
+    ci.write_to_external_file(tmp_file, test_meta_data)
+    assert tmp_file.read_text() is not None
+    assert validate(tmp_file, CI_XSD) is True
+    # Read the comicinfo.xml file and verify content
+    md = ci.read_from_external_file(tmp_file)
+    assert md.genres == test_meta_data.genres
+    # Modify the metadata and overwrite the existing comicinfo.xml
+    md.genres = []
+    ci.write_to_external_file(tmp_file, md)
+    assert tmp_file.read_text() is not None
+    assert validate(tmp_file, CI_XSD) is True
+    # Now reback the modified comicinfo.xml and verify
+    new_md = ci.read_from_external_file(tmp_file)
+    assert new_md.genres is None
+
+
 def test_invalid_age_write_to_file(tmp_path: Path) -> None:
     """Test writing of invalid age rating value to a file."""
     aquaman = Series("Aquaman")
