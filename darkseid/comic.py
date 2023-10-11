@@ -309,7 +309,8 @@ class Comic:
         num_pages = len(page_list)
         return None if num_pages == 0 or index >= num_pages else page_list[index]
 
-    def is_image(self: "Comic", name_path: Path) -> bool:
+    @staticmethod
+    def is_image(name_path: Path) -> bool:
         suffix_list = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
         return name_path.suffix.casefold() in suffix_list and name_path.name[0] != "."
 
