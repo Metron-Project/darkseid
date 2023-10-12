@@ -174,7 +174,7 @@ class ComicInfo:
         credit_cover_list: list[str] = []
         credit_editor_list: list[str] = []
 
-        # first, loop thru credits, and build a list for each role that CIX
+        # first, loop through credits, and build a list for each role that CIX
         # supports
         for credit in md.credits:
             for r in credit.role:
@@ -256,13 +256,13 @@ class ComicInfo:
             tag = root.find(name)
             return None if tag is None else tag.text
 
-        def string_to_resource(string: str) -> list[Basic]:
+        def string_to_resource(string: str) -> Optional[list[Basic]]:
             if string is not None:
                 # TODO: Make the delimiter also check for ','
                 return [Basic(x.strip()) for x in string.split(";")]
             return None
 
-        def string_to_arc(string: str) -> list[Arc]:
+        def string_to_arc(string: str) -> Optional[list[Arc]]:
             if string is not None:
                 return [Arc(x.strip()) for x in string.split(";")]
             return None
