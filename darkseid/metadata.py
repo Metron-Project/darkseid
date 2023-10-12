@@ -648,7 +648,8 @@ class Metadata:
             else (False, None)
         )
 
-    def _role_exists(self: "Metadata", new_role: Role, old_roles: list[Role]) -> bool:
+    @staticmethod
+    def _role_exists(new_role: Role, old_roles: list[Role]) -> bool:
         return any(role.name.casefold() == new_role.name.casefold() for role in old_roles)
 
     def add_credit(self: "Metadata", new_credit: Credit) -> None:
