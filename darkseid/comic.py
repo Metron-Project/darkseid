@@ -265,22 +265,22 @@ class Comic:
         return zipfile.is_zipfile(self.path)
 
     def is_rar(self: "Comic") -> bool:
-        """Returns a boolean as to whether an archive is a rarfile."""
+        """Returns a boolean whether an archive is a rarfile."""
         return self.archive_type == self.ArchiveType.rar
 
     def is_zip(self: "Comic") -> bool:
-        """Returns a boolean as to whether an archive is a zipfile."""
+        """Returns a boolean whether an archive is a zipfile."""
         return self.archive_type == self.ArchiveType.zip
 
     def is_writable(self: "Comic") -> bool:
-        """Returns a boolean as to whether an archive is writable."""
+        """Returns a boolean whether an archive is writable."""
         if self.archive_type in [self.ArchiveType.unknown, self.ArchiveType.rar]:
             return False
 
         return bool(os.access(self.path, os.W_OK))
 
     def seems_to_be_a_comic_archive(self: "Comic") -> bool:
-        """Returns a boolean as to whether the file is a comic archive."""
+        """Returns a boolean whether the file is a comic archive."""
         return bool(
             (self.is_zip() or self.is_rar()) and (self.get_number_of_pages() > 0),
         )
