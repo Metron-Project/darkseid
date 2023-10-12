@@ -48,7 +48,6 @@ class FileNameParser:
 
         if (match := re.search(r"(?<=\(of\s)\d+(?=\))", tmpstr, re.IGNORECASE)) and not found:
             count = match.group()
-            found = True
 
         return count.lstrip("0")
 
