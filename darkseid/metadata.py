@@ -89,7 +89,7 @@ class Price(Validations):
         stripping, it raises a ValueError.
 
         If the length of the value is 2, it tries to find the country object using the alpha-2
-        code. Otherwise, it tries to lookup the country object using the value. If the country
+        code. Otherwise, it tries to look up the country object using the value. If the country
         object is not found, it raises a ValueError.
 
         Args:
@@ -145,7 +145,7 @@ class Series(Basic, Validations):
     sort_name: Optional[str] = None
     volume: Optional[int] = None
     format: Optional[str] = None
-    language: Optional[str] = None  # 2 letter iso code
+    language: Optional[str] = None  # 2-letter iso code
 
     @staticmethod
     def validate_language(value: str, **_: any) -> Optional[str]:
@@ -154,7 +154,7 @@ class Series(Basic, Validations):
 
         If the value is empty, it returns None. Otherwise, it strips any leading or trailing
         whitespace from the value. If the length of the value is 2, it tries to find the
-        language object using the alpha-2 code. Otherwise, it tries to lookup the language
+        language object using the alpha-2 code. Otherwise, it tries to look up the language
         object using the value. If the language object is not found, it raises a ValueError.
 
         Args:
