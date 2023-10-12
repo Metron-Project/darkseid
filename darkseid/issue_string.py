@@ -17,7 +17,7 @@ class IssueString:
     """
 
     def __init__(self: "IssueString", text: str) -> None:
-        """Intialize a new IssueString."""
+        """Initialize a new IssueString."""
         # break up the issue number string into 2 parts: the numeric and suffix string.
         # (assumes that the numeric portion is always first)
 
@@ -37,7 +37,7 @@ class IssueString:
         start: int = 1 if text[0] == "-" else 0
         # if it's still not numeric at start skip it
         if text[start].isdigit() or text[start] == ".":
-            idx = self._find_splitpoint(text, start)
+            idx = self._find_split_point(text, start)
             idx = self._move_trailing_numeric_decimal_to_suffix(idx, text)
             idx = self._determine_if_number_after_minus_sign(idx, start)
 
@@ -69,7 +69,8 @@ class IssueString:
         # the suffix
         return 0 if idx == 1 and start == 1 else idx
 
-    def _find_splitpoint(self: "IssueString", text: str, start: int) -> int:
+    @staticmethod
+    def _find_split_point(text: str, start: int) -> int:
         # walk through the string, look for split point (the first non-numeric)
         decimal_count: int = 0
         for idx in range(start, len(text)):
