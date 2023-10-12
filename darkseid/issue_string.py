@@ -50,8 +50,8 @@ class IssueString:
         else:
             self.suffix = text
 
+    @staticmethod
     def _move_trailing_numeric_decimal_to_suffix(
-        self: "IssueString",
         idx: int,
         text: str,
     ) -> int:
@@ -60,8 +60,8 @@ class IssueString:
             idx -= 1
         return idx
 
+    @staticmethod
     def _determine_if_number_after_minus_sign(
-        self: "IssueString",
         idx: int,
         start: int,
     ) -> int:
