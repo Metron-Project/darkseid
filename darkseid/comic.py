@@ -78,7 +78,7 @@ class RarArchiver(UnknownArchiver):
             """If rar directory doesn't contain any data, return None."""
             return b""
 
-    def remove_file(self: "RarArchiver") -> bool:
+    def remove_file(self: "RarArchiver", archive_file: str) -> bool:
         """Rar files are read-only, so we return False."""
         return False
 
@@ -86,7 +86,7 @@ class RarArchiver(UnknownArchiver):
         """Rar files are read-only, so we return False."""
         return False
 
-    def write_file(self: "RarArchiver") -> bool:
+    def write_file(self: "RarArchiver", archive_file: str, data: str) -> bool:
         """Rar files are read-only, so we return False."""
         return False
 
@@ -98,7 +98,7 @@ class RarArchiver(UnknownArchiver):
         except rarfile.RarCannotExec as e:
             raise RarError(e) from e
 
-    def copy_from_archive(self: "RarArchiver") -> bool:
+    def copy_from_archive(self: "RarArchiver", other_archive: "UnknownArchiver") -> bool:
         """Rar files are read-only, so we return False."""
         return False
 
