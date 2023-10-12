@@ -104,7 +104,7 @@ class FileNameParser:
 
         # Now try to search for the likely issue number word in the list
 
-        # Intialize the word variable so that it's not unbound.
+        # Initialize the word variable so that it's not unbound.
         word: tuple[str, int, int] = ("", 0, 0)
         # first look for a word with "#" followed by digits with optional suffix
         # this is almost certainly the issue number
@@ -183,7 +183,7 @@ class FileNameParser:
         series = series.strip()
 
         # if we don't have an issue number (issue_start==0), look
-        # for hints i.e. "TPB", "one-shot", "OS", "OGN", etc that might
+        # for hints i.e. "TPB", "one-shot", "OS", "OGN", etc. that might
         # be removed to help search online
         if issue_start == 0:
             one_shot_words = {"tpb", "os", "one-shot", "ogn", "gn"}
@@ -199,7 +199,7 @@ class FileNameParser:
         filename = filename[issue_end:]
 
         year: str = ""
-        # look for four digit number with "(" ")" or "--" around it
+        # look for four-digit number with "(" ")" or "--" around it
         if match := re.search(r"(\(\d\d\d\d\))|(--\d\d\d\d--)", filename):
             year = match.group()
             # remove non-digits
@@ -214,7 +214,7 @@ class FileNameParser:
         volume: str,
         issue_end: int,
     ) -> str:
-        """Make a guess at where the the non-interesting stuff begins."""
+        """Make a guess at where the non-interesting stuff begins."""
         remainder: str = ""
 
         if "--" in filename:
@@ -255,7 +255,7 @@ class FileNameParser:
         self.issue, issue_start, issue_end = self.get_issue_number(filename)
         self.series, self.volume = self.get_series_name(filename, issue_start)
 
-        # provides proper value when the filename doesn't have a issue number
+        # provides proper value when the filename doesn't have an issue number
         if issue_end == 0:
             issue_end = len(self.series)
 
