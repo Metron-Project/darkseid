@@ -5,7 +5,7 @@
 import itertools
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional, Union  # Union type can be remove when Python3.9 support ends
+from typing import Optional, Union  # Union type can be removed when Python3.9 support ends
 
 
 def get_recursive_filelist(pathlist: list[Path]) -> list[Path]:
