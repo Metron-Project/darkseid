@@ -99,7 +99,8 @@ class RarArchiver(UnknownArchiver):
             raise RarError(e) from e
 
     def copy_from_archive(
-        self: "RarArchiver", other_archive: "UnknownArchiver",  # noqa: ARG002
+        self: "RarArchiver",
+        other_archive: "UnknownArchiver",  # noqa: ARG002
     ) -> bool:
         """Rar files are read-only, so we return False."""
         return False
