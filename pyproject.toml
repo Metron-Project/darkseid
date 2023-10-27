@@ -9,19 +9,19 @@ readme = "README.rst"
 packages = [{ include = "darkseid" }]
 include = [{ path = "tests", format = "sdist" }]
 classifiers = [
-  "Development Status :: 5 - Production/Stable",
-  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
-  "Natural Language :: English",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Topic :: Software Development :: Libraries",
-  "Topic :: Utilities",
-  "Operating System :: MacOS :: MacOS X",
-  "Operating System :: POSIX",
-  "Operating System :: POSIX :: BSD",
-  "Operating System :: POSIX :: Linux",
-  "Operating System :: Microsoft :: Windows",
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Utilities",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: POSIX",
+    "Operating System :: POSIX :: BSD",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
 ]
 keywords = ["comics", "comic", "metadata", "tagging", "tagger"]
 
@@ -33,14 +33,13 @@ rarfile = "^4.0"
 pycountry = "^22.3.5"
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.7.0"
 pytest = "^7.0.0"
 pytest-cov = "^2.12.1"
 seed-isort-config = "^2.2.0"
 pre-commit = "^2.14.0"
 tox = "^3.24.4"
 lxml = "^4.9.1"
-ruff = "^0.0.280"
+ruff = "^0.1.2"
 
 [tool.poetry.group.docs]
 optional = true
@@ -52,11 +51,6 @@ sphinxcontrib-napoleon = "^0.7"
 [build-system]
 requires = ["poetry-core>=1.1.0"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 95
-target-version = ["py39"]
-exclude = "/(.git|.mypy_cache|.pytest_cache|.venv|__pycache__|dist|node_modules|test-results|typings)/"
 
 [tool.isort]
 profile = "black"
@@ -75,68 +69,70 @@ source = ["darkseid"]
 branch = true
 concurrency = ["multiprocessing"]
 omit = [
-  ".git/*",
-  ".mypy_cache/*",
-  ".pytest_cache/*",
-  ".venv/*",
-  "*__pycache__*",
-  "dist/*",
-  "node_modules/*",
-  "tests/*",
-  "test-results/*",
-  "typings/*",
+    ".git/*",
+    ".mypy_cache/*",
+    ".pytest_cache/*",
+    ".venv/*",
+    "*__pycache__*",
+    "dist/*",
+    "node_modules/*",
+    "tests/*",
+    "test-results/*",
+    "typings/*",
 ]
 
 [tool.ruff]
-fix = true
 line-length = 95
 show-fixes = true
 target-version = "py39"
-ignore = ["A001", "A003"]
+
+[tool.ruff.lint]
 select = [
-  "A",
-  "ANN",
-  "ARG",
-  "B",
-  "BLE",
-  "C40",
-  "COM",
-  "CPY",
-  "DTZ",
-  "E",
-  "ERA",
-  "F",
-  "G",
-  "I",
-  "ICN",
-  "INP",
-  "ISC",
-  "N",
-  "NPY",
-  "PD",
-  "PGH",
-  "PIE",
-  "PLC",
-  "PLE",
-  "PLW",
-  "PT",
-  "PTH",
-  "PYI",
-  "Q",
-  "RET",
-  "RSE",
-  "RUF",
-  "S",
-  "SIM",
-  "SLF",
-  "T10",
-  "T20",
-  "TCH",
-  "TID",
-  "UP",
-  "W",
-  "YTT",
+    "A",
+    "ANN",
+    "ARG",
+    "B",
+    "BLE",
+    "C40",
+    "COM",
+    "DTZ",
+    "E",
+    "ERA",
+    "F",
+    "G",
+    "I",
+    "ICN",
+    "INP",
+    "ISC",
+    "N",
+    "NPY",
+    "PD",
+    "PGH",
+    "PIE",
+    "PLC",
+    "PLE",
+    "PLW",
+    "PT",
+    "PTH",
+    "PYI",
+    "Q",
+    "RET",
+    "RSE",
+    "RUF",
+    "S",
+    "SIM",
+    "SLF",
+    "T10",
+    "T20",
+    "TCH",
+    "TID",
+    "UP",
+    "W",
+    "YTT",
 ]
+ignore = ["COM812", "ISC001", "A001", "A003"]
+fixable = ["ALL"]
+unfixable = []
 
 [tool.ruff.flake8-annotations]
 allow-star-arg-any = true
