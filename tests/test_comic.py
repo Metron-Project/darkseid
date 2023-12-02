@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from darkseid.comic import Comic, UnknownArchiver
+from darkseid.archivers import UnknownArchiver
+from darkseid.comic import Comic
 from darkseid.metadata import Metadata
 from tests.conftest import IMG_DIR
 
