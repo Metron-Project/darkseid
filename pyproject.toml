@@ -82,12 +82,11 @@ omit = [
 ]
 
 [tool.ruff]
+fix = true
 line-length = 95
 show-fixes = true
 target-version = "py39"
-
-[tool.ruff.lint]
-select = [
+lint.select = [
     "A",
     "ANN",
     "ARG",
@@ -130,20 +129,20 @@ select = [
     "W",
     "YTT",
 ]
-ignore = ["COM812", "ISC001", "A001", "A003"]
-fixable = ["ALL"]
-unfixable = []
+lint.ignore = ["COM812", "ISC001", "A001", "A003"]
+lint.fixable = ["ALL"]
+lint.unfixable = []
 
-[tool.ruff.flake8-annotations]
+[tool.ruff.lint.flake8-annotations]
 allow-star-arg-any = true
 
-[tool.ruff.flake8-tidy-imports]
+[tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 combine-as-imports = true
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/test_*.py" = ["S101", "S320"]
 
 [tool.coverage.report]
