@@ -30,7 +30,7 @@ python = "^3.9"
 Pillow = "^10.0.1"
 natsort = "^8.0.0"
 rarfile = "^4.0"
-pycountry = "^22.3.5"
+pycountry = "^23.12.11"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0.0"

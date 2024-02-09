@@ -744,16 +744,14 @@ files = [
 
 [[package]]
 name = "pycountry"
-version = "22.3.5"
+version = "23.12.11"
 description = "ISO country, subdivision, language, currency and script definitions and their translations"
 optional = false
-python-versions = ">=3.6, <4"
+python-versions = ">=3.8"
 files = [
-    {file = "pycountry-22.3.5.tar.gz", hash = "sha256:b2163a246c585894d808f18783e19137cb70a0c18fb36748dc01fc6f109c1646"},
+    {file = "pycountry-23.12.11-py3-none-any.whl", hash = "sha256:2ff91cff4f40ff61086e773d61e72005fe95de4a57bfc765509db05695dc50ab"},
+    {file = "pycountry-23.12.11.tar.gz", hash = "sha256:00569d82eaefbc6a490a311bfa84a9c571cff9ddbf8b0a4f4e7b4f868b4ad925"},
 ]
-
-[package.dependencies]
-setuptools = "*"
 
 [[package]]
 name = "pygments"
@@ -1244,4 +1242,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "2486cb6b64a759dc12b62461ee014586793c1dce0d43db57cb0ad0b043da127d"
+content-hash = "7a140524773c29578fa7c26b1a081ee58d196e355fe0fa32b6dae435a82ec7ff"
