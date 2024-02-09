@@ -16,7 +16,7 @@ import sys
 sys.path.insert(0, os.path.abspath("../.."))  # noqa: PTH100
 
 # This import needs to be *after* setting the sys path
-import darkseid  # noqa: E402, I001
+import darkseid  # noqa: I001
 
 
 # -- Project information -----------------------------------------------------
