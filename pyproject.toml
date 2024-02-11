@@ -12,9 +12,9 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Natural Language :: English",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries",
     "Topic :: Utilities",
     "Operating System :: MacOS :: MacOS X",
@@ -26,7 +26,7 @@ classifiers = [
 keywords = ["comics", "comic", "metadata", "tagging", "tagger"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 Pillow = "^10.0.1"
 natsort = "^8.0.0"
 rarfile = "^4.0"
@@ -85,7 +85,7 @@ omit = [
 fix = true
 line-length = 95
 show-fixes = true
-target-version = "py39"
+target-version = "py310"
 lint.select = [
     "A",
     "ANN",
