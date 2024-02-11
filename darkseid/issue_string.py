@@ -7,8 +7,6 @@ e.g.: "12", "12.1", "0", "-1", "5AU", "100-2"
 
 # Copyright 2012-2014 Anthony Beville
 
-from typing import Optional
-
 
 class IssueString:
     """Class to handle various types of comic issue numbers.
@@ -21,13 +19,13 @@ class IssueString:
         # break up the issue number string into 2 parts: the numeric and suffix string.
         # (assumes that the numeric portion is always first)
 
-        self.num: Optional[float] = None
+        self.num: float | None = None
         self.suffix: str = ""
 
         if text is None:
             return
 
-        if isinstance(text, (int, float)):
+        if isinstance(text, int | float):
             text = str(text)
 
         if not text:
@@ -114,7 +112,7 @@ class IssueString:
 
         return num_s
 
-    def as_float(self: "IssueString") -> Optional[float]:
+    def as_float(self: "IssueString") -> float | None:
         """Return a float with no suffix.
 
         example: "1½" is returned as "1.5"
@@ -126,7 +124,7 @@ class IssueString:
             return self.num + 0.5 if self.num is not None else 0.5
         return self.num
 
-    def as_int(self: "IssueString") -> Optional[int]:
+    def as_int(self: "IssueString") -> int | None:
         """Returns the integer version of the float.
 
         :returns: String as an integer.

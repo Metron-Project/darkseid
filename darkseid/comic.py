@@ -8,7 +8,6 @@ import logging
 import os
 import zipfile
 from pathlib import Path
-from typing import Optional
 
 import rarfile
 from natsort import natsorted, ns
@@ -36,10 +35,10 @@ class Comic:
         self.path = Path(path)
 
         self.ci_xml_filename = "ComicInfo.xml"
-        self.has_md: Optional[bool] = None
-        self.page_count: Optional[int] = None
-        self.page_list: Optional[list[str]] = None
-        self.metadata: Optional[Metadata] = None
+        self.has_md: bool | None = None
+        self.page_count: int | None = None
+        self.page_list: list[str] | None = None
+        self.metadata: Metadata | None = None
 
         if self.zip_test():
             self.archive_type: int = self.ArchiveType.zip
@@ -90,7 +89,7 @@ class Comic:
             (self.is_zip() or self.is_rar()) and (self.get_number_of_pages() > 0),
         )
 
-    def get_page(self: "Comic", index: int) -> Optional[bytes]:
+    def get_page(self: "Comic", index: int) -> bytes | None:
         """Returns an image(page) from an archive."""
         image_data = None
 
@@ -104,7 +103,7 @@ class Comic:
 
         return image_data
 
-    def get_page_name(self: "Comic", index: int) -> Optional[str]:
+    def get_page_name(self: "Comic", index: int) -> str | None:
         """Returns the page name from an index."""
         if index is None:
             return None
@@ -165,7 +164,7 @@ class Comic:
 
         return self.metadata
 
-    def read_raw_metadata(self: "Comic") -> Optional[str]:
+    def read_raw_metadata(self: "Comic") -> str | None:
         if not self.has_metadata():
             return None
         try:
@@ -177,7 +176,7 @@ class Comic:
             raw_metadata = None
         return raw_metadata
 
-    def write_metadata(self: "Comic", metadata: Optional[Metadata]) -> bool:
+    def write_metadata(self: "Comic", metadata: Metadata | None) -> bool:
         """Write the metadata to the archive."""
         if metadata is None or not self.is_writable():
             return False
@@ -211,7 +210,7 @@ class Comic:
         self: "Comic",
         write_success: bool,
         has_md: bool,
-        metadata: Optional[Metadata],
+        metadata: Metadata | None,
     ) -> bool:
         if write_success:
             self.has_md = has_md

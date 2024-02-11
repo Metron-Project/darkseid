@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full
@@ -16,8 +17,7 @@ import sys
 sys.path.insert(0, os.path.abspath("../.."))  # noqa: PTH100
 
 # This import needs to be *after* setting the sys path
-import darkseid  # noqa: I001
-
+import darkseid
 
 # -- Project information -----------------------------------------------------
 

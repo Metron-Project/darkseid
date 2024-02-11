@@ -1,6 +1,5 @@
 from datetime import date
 from decimal import Decimal
-from typing import Optional
 
 import pytest
 
@@ -119,8 +118,8 @@ good_gtin = [
 
 @pytest.mark.parametrize(("upc", "isbn", "reason"), bad_gtin)
 def test_bad_gtin(
-    upc: Optional[int],
-    isbn: Optional[int],
+    upc: int | None,
+    isbn: int | None,
     reason: str,  # noqa: ARG001
 ) -> None:
     with pytest.raises(ValueError):  # noqa: PT011
@@ -129,8 +128,8 @@ def test_bad_gtin(
 
 @pytest.mark.parametrize(("upc", "isbn", "expected", "reason"), good_gtin)
 def test_good_gtin(
-    upc: Optional[int],
-    isbn: Optional[int],
+    upc: int | None,
+    isbn: int | None,
     expected: GTIN,
     reason: str,  # noqa: ARG001
 ) -> None:
