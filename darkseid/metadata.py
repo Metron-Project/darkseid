@@ -12,7 +12,7 @@ possible, however lossy it might be
 from dataclasses import dataclass, field, fields
 from datetime import date
 from decimal import Decimal
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 import pycountry
 
@@ -132,7 +132,7 @@ class Price(Validations):
 @dataclass
 class Basic:
     name: str
-    id_: Optional[int] = None
+    id_: int | None = None
 
 
 @dataclass
@@ -142,13 +142,13 @@ class Role(Basic):
 
 @dataclass
 class Series(Basic, Validations):
-    sort_name: Optional[str] = None
-    volume: Optional[int] = None
-    format: Optional[str] = None
-    language: Optional[str] = None  # 2-letter iso code
+    sort_name: str | None = None
+    volume: int | None = None
+    format: str | None = None
+    language: str | None = None  # 2-letter iso code
 
     @staticmethod
-    def validate_language(value: str, **_: any) -> Optional[str]:
+    def validate_language(value: str, **_: any) -> str | None:
         """
         Validates a language value.
 
@@ -191,23 +191,23 @@ class Series(Basic, Validations):
 
 @dataclass
 class Arc(Basic):
-    number: Optional[int] = None
+    number: int | None = None
 
 
 @dataclass
 class Credit:
     person: str
     role: list[Role]
-    id_: Optional[int] = None
+    id_: int | None = None
 
 
 @dataclass
 class GTIN(Validations):
-    upc: Optional[int] = None
-    isbn: Optional[int] = None
+    upc: int | None = None
+    isbn: int | None = None
 
     @staticmethod
-    def validate_upc(value: int, **_: any) -> Optional[int]:
+    def validate_upc(value: int, **_: any) -> int | None:
         """
         Validates a UPC (Universal Product Code) value.
 
@@ -245,7 +245,7 @@ class GTIN(Validations):
         return value
 
     @staticmethod
-    def validate_isbn(value: int, **_: any) -> Optional[int]:
+    def validate_isbn(value: int, **_: any) -> int | None:
         """
         Validates an ISBN (International Standard Book Number) value.
 
@@ -348,40 +348,40 @@ class Metadata:
     """
 
     is_empty: bool = True
-    tag_origin: Optional[str] = None
+    tag_origin: str | None = None
 
-    info_source: Optional[Basic] = None
-    series: Optional[Series] = None
-    issue: Optional[str] = None
-    collection_title: Optional[str] = None
+    info_source: Basic | None = None
+    series: Series | None = None
+    issue: str | None = None
+    collection_title: str | None = None
     stories: list[Basic] = field(default_factory=list)
-    publisher: Optional[Basic] = None
-    cover_date: Optional[date] = None
-    store_date: Optional[date] = None
+    publisher: Basic | None = None
+    cover_date: date | None = None
+    store_date: date | None = None
     prices: list[Price] = field(default_factory=list)
-    gtin: Optional[GTIN] = None
-    issue_count: Optional[int] = None
+    gtin: GTIN | None = None
+    issue_count: int | None = None
     genres: list[Basic] = field(default_factory=list)
-    comments: Optional[str] = None  # use same way as Summary in CIX
+    comments: str | None = None  # use same way as Summary in CIX
 
-    volume_count: Optional[str] = None
-    critical_rating: Optional[str] = None
-    country: Optional[str] = None
+    volume_count: str | None = None
+    critical_rating: str | None = None
+    country: str | None = None
 
-    alternate_series: Optional[str] = None
-    alternate_number: Optional[str] = None
-    alternate_count: Optional[int] = None
-    imprint: Optional[str] = None
-    notes: Optional[str] = None
-    web_link: Optional[str] = None
-    manga: Optional[str] = None
-    black_and_white: Optional[bool] = None
-    page_count: Optional[int] = None
-    age_rating: Optional[str] = None
+    alternate_series: str | None = None
+    alternate_number: str | None = None
+    alternate_count: int | None = None
+    imprint: str | None = None
+    notes: str | None = None
+    web_link: str | None = None
+    manga: str | None = None
+    black_and_white: bool | None = None
+    page_count: int | None = None
+    age_rating: str | None = None
 
     story_arcs: list[Arc] = field(default_factory=list)
-    series_group: Optional[str] = None
-    scan_info: Optional[str] = None
+    series_group: str | None = None
+    scan_info: str | None = None
 
     characters: list[Basic] = field(default_factory=list)
     teams: list[Basic] = field(default_factory=list)
@@ -634,7 +634,7 @@ class Metadata:
 
         return coverlist
 
-    def _existing_credit(self: "Metadata", creator: str) -> tuple[bool, Optional[int]]:
+    def _existing_credit(self: "Metadata", creator: str) -> tuple[bool, int | None]:
         return (
             next(
                 (

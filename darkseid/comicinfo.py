@@ -7,7 +7,7 @@
 import xml.etree.ElementTree as ET  # noqa: N817
 from datetime import date
 from re import split
-from typing import Any, ClassVar, Optional, Union, cast
+from typing import Any, ClassVar, cast
 
 from darkseid.issue_string import IssueString
 from darkseid.metadata import Arc, Basic, Credit, ImageMetadata, Metadata, Role, Series
@@ -88,7 +88,7 @@ class ComicInfo:
     def string_from_metadata(
         self: "ComicInfo",
         md: Metadata,
-        xml: Optional[any] = None,
+        xml: bytes = b"",
     ) -> str:
         tree = self.convert_metadata_to_xml(md, xml)
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
@@ -113,14 +113,14 @@ class ComicInfo:
     @classmethod
     def validate_age_rating(
         cls: type["ComicInfo"],
-        val: Optional[str] = None,
-    ) -> Optional[str]:
+        val: str | None = None,
+    ) -> str | None:
         if val is not None:
             return "Unknown" if val not in cls.ci_age_ratings else val
         return None
 
     @classmethod
-    def validate_manga(cls: type["ComicInfo"], val: Optional[str] = None) -> Optional[str]:
+    def validate_manga(cls: type["ComicInfo"], val: str | None = None) -> str | None:
         if val is not None:
             return "Unknown" if val not in cls.ci_manga else val
         return None
@@ -128,12 +128,12 @@ class ComicInfo:
     def convert_metadata_to_xml(
         self: "ComicInfo",
         md: Metadata,
-        xml: Optional[any] = None,
+        xml: bytes = b"",
     ) -> ET.ElementTree:
         root = self._get_root(xml)
 
         # helper func
-        def assign(cix_entry: str, md_entry: Optional[Union[str, int]]) -> None:
+        def assign(cix_entry: str, md_entry: str | int | None) -> None:
             if md_entry is not None and md_entry:
                 et_entry = root.find(cix_entry)
                 if et_entry is not None:
@@ -145,7 +145,7 @@ class ComicInfo:
                 if et_entry is not None:
                     root.remove(et_entry)
 
-        def get_resource_list(resource: list[Basic]) -> Optional[str]:
+        def get_resource_list(resource: list[Basic]) -> str | None:
             return list_to_string([i.name for i in resource]) if resource else None
 
         assign("Title", get_resource_list(md.stories))
@@ -252,17 +252,17 @@ class ComicInfo:
         if root.tag != "ComicInfo":
             raise ValueError("Metadata is not ComicInfo format")
 
-        def get(txt: str) -> Optional[Union[str, int]]:
+        def get(txt: str) -> str | int | None:
             tag = root.find(txt)
             return None if tag is None else tag.text
 
-        def string_to_resource(string: str) -> Optional[list[Basic]]:
+        def string_to_resource(string: str) -> list[Basic] | None:
             if string is not None:
                 # TODO: Make the delimiter also check for ','
                 return [Basic(x.strip()) for x in string.split(";")]
             return None
 
-        def string_to_arc(string: str) -> Optional[list[Arc]]:
+        def string_to_arc(string: str) -> list[Arc] | None:
             if string is not None:
                 return [Arc(x.strip()) for x in string.split(";")]
             return None
@@ -338,7 +338,7 @@ class ComicInfo:
         self: "ComicInfo",
         filename: str,
         md: Metadata,
-        xml: Optional[any] = None,
+        xml: bytes = b"",
     ) -> None:
         tree = self.convert_metadata_to_xml(md, xml)
         tree.write(filename, encoding="utf-8", xml_declaration=True)
