@@ -17,7 +17,7 @@ def get_recursive_filelist(pathlist: list[Path]) -> list[Path]:
     for path_str in pathlist:
         path = Path(path_str)
         if path.is_dir():
-            for comic_format in ["*.cbz", "*.cb7", "*.cbr"]:
+            for comic_format in ["*.cbz", "*.cbr"]:
                 filelist.extend(iter(path.rglob(comic_format)))
         else:
             filelist.append(path)
