@@ -30,10 +30,9 @@ class Comic:
 
         zip, rar, unknown = list(range(3))  # noqa: RUF012
 
-    def __init__(self: "Comic", path: str) -> None:
-        self.path = Path(path)
-
-        self.ci_xml_filename = "ComicInfo.xml"
+    def __init__(self: "Comic", path: Path | str) -> None:
+        self.path: Path | str = Path(path) if isinstance(path, str) else path
+        self.ci_xml_filename: str = "ComicInfo.xml"
         self.has_md: bool | None = None
         self.page_count: int | None = None
         self.page_list: list[str] | None = None
