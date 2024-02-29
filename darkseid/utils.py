@@ -78,13 +78,10 @@ def unique_file(file_name: Path) -> Path:
     :param Path file_name: A path objects
     """
     original_stem = file_name.stem
-
-    for i in itertools.count(1):
+    for i in itertools.count(1):  # noqa: RET503
         if not file_name.exists():
-            break
+            return file_name
         file_name = file_name.parent / f"{original_stem} ({i}){file_name.suffix}"
-
-    return file_name
 
 
 def xlate(data: int | str | None, is_int: bool = False) -> int | str | None:
