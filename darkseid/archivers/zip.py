@@ -94,7 +94,8 @@ class ZipArchiver(Archiver):
                             zout.writestr(item, buffer)
 
                 # replace with the new file
-                self.path.unlink()
+                self.path.unlink(missing_ok=True)
+                zout.close()  # Required on Windows
                 shutil.move(cast(str, zout.filename), self.path)
             return True
         except (zipfile.BadZipfile, OSError) as e:
