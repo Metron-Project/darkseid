@@ -17,8 +17,7 @@ from darkseid.archivers import UnknownArchiver
 from darkseid.archivers.rar import RarArchiver
 from darkseid.archivers.zip import ZipArchiver
 from darkseid.comicinfo import ComicInfo
-from darkseid.filename import FileNameParser
-from darkseid.metadata import Metadata, Series
+from darkseid.metadata import Metadata
 
 logger = logging.getLogger(__name__)
 
@@ -258,31 +257,6 @@ class Comic:
                             page["ImageWidth"] = str(width)
                         except OSError:
                             page["ImageSize"] = str(len(data))
-
-    def metadata_from_filename(self: "Comic", parse_scan_info: bool = True) -> Metadata:
-        """Attempts to get the metadata from the filename."""
-        metadata = Metadata()
-
-        fnp = FileNameParser()
-        fnp.parse_filename(self.path)
-
-        if fnp.issue != "":
-            metadata.issue = fnp.issue
-        if fnp.series != "":
-            series = Series(name=fnp.series)
-            if fnp.volume != "":
-                series.volume = fnp.volume
-            metadata.series = series
-        if fnp.year != "":
-            metadata.cover_date.year = fnp.year
-        if fnp.issue_count != "":
-            metadata.issue_count = fnp.issue_count
-        if parse_scan_info and fnp.remainder != "":
-            metadata.scan_info = fnp.remainder
-
-        metadata.is_empty = False
-
-        return metadata
 
     def export_as_zip(self: "Comic", zipfilename: Path) -> bool:
         """Export CBR archives to CBZ format."""

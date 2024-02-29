@@ -142,13 +142,6 @@ def test_cbz_get_random_page(fake_cbz: Comic) -> None:
     assert image == page
 
 
-def test_archive_metadata_from_filename(fake_cbz: Comic) -> None:
-    """Test to get metadata from comic archives filename."""
-    test_md = fake_cbz.metadata_from_filename()
-    assert test_md.series.name == "Captain Science"
-    assert test_md.issue == "1"
-
-
 @pytest.mark.skipif(sys.platform in ["win32"], reason="Skip Windows.")
 def test_archive_apply_file_info_to_metadata(fake_cbz: Comic) -> None:
     """Test to apply archive info to the generic metadata."""
@@ -190,15 +183,6 @@ def test_rar_read_metadata(fake_rar: Comic) -> None:
     assert md.issue == "1"
     assert md.series.volume == 1950
     assert md.page_count == 36
-
-
-# Skip test for Windows and MacOS.
-@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
-def test_rar_metadata_from_filename(fake_rar: Comic) -> None:
-    """Test to get metadata from comic archives filename."""
-    test_md = fake_rar.metadata_from_filename()
-    assert test_md.series.name == "Captain Science"
-    assert test_md.issue == "1"
 
 
 # Skip test for Windows and MacOS.
