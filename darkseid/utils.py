@@ -32,6 +32,7 @@ def list_to_string(list_of_strings: list[str]) -> str:
     :param list_of_strings: A list of strings.
     :type list_of_strings: list of str
     """
+    # TODO: Use a comma for the delimiter since a lot of servers don't recognize the semicolon.
     return "; ".join(map(str, list_of_strings))
 
 
