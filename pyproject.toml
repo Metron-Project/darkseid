@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "darkseid"
-version = "3.2.2"
+version = "4.0.0"
 description = "A library to interact with comic archives"
 authors = ["Brian Pepple <bdpepple@gmail.com>"]
 license = "GPL-3.0-or-later"
