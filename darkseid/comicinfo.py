@@ -256,15 +256,30 @@ class ComicInfo:
             tag = root.find(txt)
             return None if tag is None else tag.text
 
+        def clean_resource_list(string: str) -> list[str]:
+            res = list(map(str.strip, (filter(None, split(r',|"(.*?)"', string)))))
+            # Remove empty values
+            for item in res:
+                if not item:
+                    res.remove(item)
+            return res
+
         def string_to_resource(string: str) -> list[Basic] | None:
             if string is not None:
-                # TODO: Make the delimiter also check for ','
-                return [Basic(x.strip()) for x in string.split(";")]
+                res: list[str | Basic] = clean_resource_list(string)
+                # Now let's add the dataclass
+                for count, item in enumerate(res):
+                    res[count] = Basic(item)
+                return res
             return None
 
         def string_to_arc(string: str) -> list[Arc] | None:
             if string is not None:
-                return [Arc(x.strip()) for x in string.split(";")]
+                res: list[str | Arc] = clean_resource_list(string)
+                # Now let's add the dataclass
+                for count, item in enumerate(res):
+                    res[count] = Arc(item)
+                return res
             return None
 
         md = Metadata()
