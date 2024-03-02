@@ -27,13 +27,13 @@ def get_recursive_filelist(pathlist: list[Path]) -> list[Path]:
 
 def list_to_string(list_of_strings: list[str]) -> str:
     """Function that takes a list of string and converts it to a string.
-    For example: ["apple", "banana", "cherry"] is changed to "apple; banana; cherry".
+    For example: ["apple", "banana", "cherry, inc"] is changed
+    to 'apple; banana; "cherry, inc"'.
 
     :param list_of_strings: A list of strings.
     :type list_of_strings: list of str
     """
-    # TODO: Use a comma for the delimiter since a lot of servers don't recognize the semicolon.
-    return "; ".join(map(str, list_of_strings))
+    return ", ".join((f'"{item}"' if "," in item else item) for item in list_of_strings)
 
 
 def remove_articles(text: str) -> str:

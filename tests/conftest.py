@@ -27,13 +27,13 @@ def fake_metadata() -> Metadata:
     md.stories = [Basic("A Crash of Symbols")]
     md.publisher = Basic("DC Comics")
     md.cover_date = date(1994, 12, 1)
-    md.story_arcs = [Arc("Final Crisis")]
+    md.story_arcs = [Arc("Final Crisis, Inc")]
     md.characters = [
         Basic("Aquaman"),
         Basic("Mera"),
         Basic("Garth"),
     ]
-    md.teams = [Basic("Justice League"), Basic("Teen Titans")]
+    md.teams = [Basic("Justice League"), Basic("Infinity, Inc")]
     md.comments = "Just some sample metadata."
     md.black_and_white = True
     md.is_empty = False

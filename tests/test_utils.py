@@ -22,12 +22,20 @@ def test_file_name_for_articles(
     assert result == expected
 
 
-def test_list_to_string() -> None:
-    thislist = ["apple", "banana", "cherry"]
-    expected_result = "apple; banana; cherry"
+test_string_lists = [
+    pytest.param(["apple", "banana", "cherry"], "Normal string list", "apple, banana, cherry"),
+    pytest.param(
+        ["Outsiders", "Infinity, Inc.", "Teen Titans"],
+        "String list with comma value",
+        'Outsiders, "Infinity, Inc.", Teen Titans',
+    ),
+]
 
-    result = utils.list_to_string(thislist)
-    assert result == expected_result
+
+@pytest.mark.parametrize(("test_list", "reason", "expected"), test_string_lists)
+def test_list_to_string(test_list: list[str], reason: str, expected: str) -> None:  # noqa: ARG001
+    result = utils.list_to_string(test_list)
+    assert result == expected
 
 
 def test_unique_name(tmp_path: Path) -> None:
