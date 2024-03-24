@@ -31,7 +31,7 @@ def test_metadata_print_str(fake_metadata: Metadata) -> None:
     credits = [],
     reprints = [],
     tags = [],
-    pages = [],\n)"""  # noqa: E501
+    pages = [],\n)"""
     assert str(fake_metadata) == expect_res
 
 

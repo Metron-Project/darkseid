@@ -170,7 +170,7 @@ class Comic:
             # Convert bytes to str. Is it safe to decode with utf-8?
             raw_metadata = tmp_raw_metadata.decode("utf-8")
         except OSError:
-            logger.error("Error reading in raw CIX!")
+            logger.exception("Error reading in raw CIX!")
             raw_metadata = None
         return raw_metadata
 
@@ -239,11 +239,7 @@ class Comic:
 
         if calc_page_sizes:
             for page in metadata.pages:
-                if (
-                    "ImageSize" not in page
-                    or "ImageHeight" not in page
-                    or "ImageWidth" not in page
-                ):
+                if "ImageSize" not in page or "ImageHeight" not in page or "ImageWidth" not in page:
                     idx = int(page["Image"])
                     data = self.get_page(idx)
                     if data is not None:

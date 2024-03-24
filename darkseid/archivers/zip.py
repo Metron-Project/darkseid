@@ -24,9 +24,8 @@ class ZipArchiver(Archiver):
             with zipfile.ZipFile(self.path, mode="r") as zf:
                 return zf.read(archive_file)
         except (zipfile.BadZipfile, OSError) as e:
-            logger.error(
-                "Error reading zip archive [%s]: %s :: %s",
-                e,
+            logger.exception(
+                "Error reading zip archive %s :: %s",
                 self.path,
                 archive_file,
             )
@@ -57,23 +56,23 @@ class ZipArchiver(Archiver):
                 compression=zipfile.ZIP_DEFLATED,
             ) as zf:
                 zf.writestr(archive_file, data)
-            return True
-        except (zipfile.BadZipfile, OSError) as e:
-            logger.error(
-                "Error writing zip archive [%s]: %s :: %s",
-                e,
+        except (zipfile.BadZipfile, OSError):
+            logger.exception(
+                "Error writing zip archive %s :: %s",
                 self.path,
                 archive_file,
             )
             return False
+        else:
+            return True
 
     def get_filename_list(self: "ZipArchiver") -> list[str]:
         """Returns a list of the filenames in an archive."""
         try:
             with zipfile.ZipFile(self.path, mode="r") as zf:
                 return zf.namelist()
-        except (zipfile.BadZipfile, OSError) as e:
-            logger.error("Error listing files in zip archive [%s]: %s", e, self.path)
+        except (zipfile.BadZipfile, OSError):
+            logger.exception("Error listing files in zip archive: %s", self.path)
             return []
 
     def _rebuild(self: "ZipArchiver", exclude_list: list[str]) -> bool:
@@ -97,10 +96,11 @@ class ZipArchiver(Archiver):
                 self.path.unlink(missing_ok=True)
                 zout.close()  # Required on Windows
                 shutil.move(cast(str, zout.filename), self.path)
-            return True
-        except (zipfile.BadZipfile, OSError) as e:
-            logger.error("Error rebuilding zip file [%s]: %s", e, self.path)
+        except (zipfile.BadZipfile, OSError):
+            logger.exception("Error rebuilding zip file: %s", self.path)
             return False
+        else:
+            return True
 
     def copy_from_archive(self: "ZipArchiver", other_archive: Archiver) -> bool:
         """Replace the current zip with one copied from another archive."""
@@ -114,10 +114,11 @@ class ZipArchiver(Archiver):
                         continue
                     if data is not None:
                         zout.writestr(filename, data)
-            return True
         except (zipfile.BadZipfile, OSError) as e:
             # Remove any partial files created
             if self.path.exists():
                 self.path.unlink()
             logger.warning("Error while copying to %s: %s", self.path, e)
             return False
+        else:
+            return True

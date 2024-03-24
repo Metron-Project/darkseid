@@ -1,3 +1,4 @@
+# ruff: noqa: TRY003, C901, PLR0915
 """A class for internal metadata storage.
 
 The goal of this class is to handle ALL the data that might come from various
@@ -114,18 +115,22 @@ class Price(Validations):
             return "US"
         value = value.strip()
         if not value:
-            raise ValueError("No value given for country")
+            msg = "No value given for country"
+            raise ValueError(msg)
 
-        if len(value) == 2:
+        country_len = 2
+        if len(value) == country_len:
             obj = pycountry.countries.get(alpha_2=value)
         else:
             try:
                 obj = pycountry.countries.lookup(value)
             except LookupError as e:
-                raise ValueError(f"Couldn't find country for {value}") from e
+                msg = f"Couldn't find country for {value}"
+                raise ValueError(msg) from e
 
         if obj is None:
-            raise ValueError(f"Couldn't get country code for {value}")
+            msg = f"Couldn't get country code for {value}"
+            raise ValueError(msg)
         return obj.alpha_2
 
 
@@ -177,15 +182,19 @@ class Series(Basic, Validations):
         if not value:
             return None
         value = value.strip()
-        if len(value) == 2:
+        country_len = 2
+
+        if len(value) == country_len:
             obj = pycountry.languages.get(alpha_2=value)
         else:
             try:
                 obj = pycountry.languages.lookup(value)
             except LookupError as e:
-                raise ValueError(f"Couldn't find language for {value}") from e
+                msg = f"Couldn't find language {value}"
+                raise ValueError(msg) from e
         if obj is None:
-            raise ValueError(f"Couldn't get language code for {value}")
+            msg = f"Couldn't find language {value}"
+            raise ValueError(msg)
         return obj.alpha_2
 
 
@@ -240,7 +249,8 @@ class GTIN(Validations):
 
         int_str = str(value)
         if len(int_str) > MAX_UPC:
-            raise ValueError(f"UPC has a length greater than {MAX_UPC}")
+            msg = f"UPC has a length greater than {MAX_UPC}"
+            raise ValueError(msg)
 
         return value
 
@@ -277,7 +287,8 @@ class GTIN(Validations):
 
         int_str = str(value)
         if len(int_str) > MAX_ISBN:
-            raise ValueError(f"ISBN has a length greater than {MAX_ISBN}")
+            msg = f"ISBN has a length greater than {MAX_ISBN}"
+            raise ValueError(msg)
 
         return value
 
@@ -598,7 +609,7 @@ class Metadata:
             index = metadata.get_archive_page_index(1)
             print(index)  # Output: 1
             ```
-        """  # noqa: E501
+        """
 
         # convert the displayed page number to the page index of the file in the archive
         return int(self.pages[pagenum]["Image"]) if pagenum < len(self.pages) else 0
@@ -622,11 +633,9 @@ class Metadata:
             cover_indices = metadata.get_cover_page_index_list()
             print(cover_indices)  # Output: [0]
             ```
-        """  # noqa: E501
+        """
         coverlist = [
-            int(p["Image"])
-            for p in self.pages
-            if "Type" in p and p["Type"] == PageType.FrontCover
+            int(p["Image"]) for p in self.pages if "Type" in p and p["Type"] == PageType.FrontCover
         ]
 
         if not coverlist:
