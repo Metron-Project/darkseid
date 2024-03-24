@@ -18,12 +18,13 @@ class RarArchiver(Archiver):
         try:
             with rarfile.RarFile(self.path) as rf:
                 data: bytes = rf.read(archive_file)
-            return data
         except rarfile.RarCannotExec as e:
             raise RarError(e) from e
         except io.UnsupportedOperation:
             """If rar directory doesn't contain any data, return None."""
             return b""
+        else:
+            return data
 
     def remove_file(self: "RarArchiver", archive_file: str) -> bool:  # noqa: ARG002
         """Rar files are read-only, so we return False."""

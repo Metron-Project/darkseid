@@ -1,8 +1,8 @@
+# ruff: noqa: C901, PLR0912, PLR0915, TRY003, EM101
 """A class to encapsulate ComicRack's ComicInfo.xml data."""
 
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2020 Brian Pepple
-
 
 import xml.etree.ElementTree as ET  # noqa: N817
 from datetime import date
@@ -68,7 +68,12 @@ class ComicInfo:
         "color flats",
     }
     letterer_synonyms: ClassVar[set[str]] = {"letterer"}
-    cover_synonyms: ClassVar[set[str]] = {"cover", "covers", "coverartist", "cover artist"}
+    cover_synonyms: ClassVar[set[str]] = {
+        "cover",
+        "covers",
+        "coverartist",
+        "cover artist",
+    }
     editor_synonyms: ClassVar[set[str]] = {
         "assistant editor",
         "associate editor",

@@ -1,4 +1,5 @@
 """Tests for ComicInfo Tags."""
+
 from datetime import date
 from pathlib import Path
 

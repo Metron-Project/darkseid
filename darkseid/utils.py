@@ -66,9 +66,7 @@ def remove_articles(text: str) -> str:
         "the",
         "with",
     }
-    new_text = "".join(
-        f"{word} " for word in text.split(" ") if word.casefold() not in articles
-    )
+    new_text = "".join(f"{word} " for word in text.split(" ") if word.casefold() not in articles)
 
     return new_text[:-1]
 
@@ -91,7 +89,8 @@ def xlate(data: int | str | None, is_int: bool = False) -> int | str | None:
     if is_int:
         i = str(data).translate(
             defaultdict(
-                lambda: None, zip((ord(c) for c in "1234567890"), "1234567890", strict=False)
+                lambda: None,
+                zip((ord(c) for c in "1234567890"), "1234567890", strict=False),
             ),
         )
         if i == "0":

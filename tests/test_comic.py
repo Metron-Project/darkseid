@@ -1,4 +1,5 @@
 """Tests for comic archive files."""
+
 import sys
 import zipfile
 from pathlib import Path
