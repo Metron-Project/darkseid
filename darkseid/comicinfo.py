@@ -15,76 +15,90 @@ from darkseid.utils import list_to_string, xlate
 
 
 class ComicInfo:
-    ci_age_ratings: ClassVar[set[str]] = {
-        "Unknown",
-        "Adults Only 18+",
-        "Early Childhood",
-        "Everyone",
-        "Everyone 10+",
-        "G",
-        "Kids to Adults",
-        "M",
-        "MA15+",
-        "Mature 17+",
-        "PG",
-        "R18+",
-        "Rating Pending",
-        "Teen",
-        "X18+",
-    }
+    ci_age_ratings: ClassVar[frozenset[str]] = frozenset(
+        {
+            "Unknown",
+            "Adults Only 18+",
+            "Early Childhood",
+            "Everyone",
+            "Everyone 10+",
+            "G",
+            "Kids to Adults",
+            "M",
+            "MA15+",
+            "Mature 17+",
+            "PG",
+            "R18+",
+            "Rating Pending",
+            "Teen",
+            "X18+",
+        }
+    )
 
-    ci_manga: ClassVar[set[str]] = {"Unknown", "Yes", "No", "YesAndRightToLeft"}
+    ci_manga: ClassVar[frozenset[str]] = frozenset({"Unknown", "Yes", "No", "YesAndRightToLeft"})
 
-    writer_synonyms: ClassVar[set[str]] = {
-        "writer",
-        "plotter",
-        "scripter",
-        "script",
-        "story",
-        "plot",
-    }
-    penciller_synonyms: ClassVar[set[str]] = {
-        "artist",
-        "breakdowns",
-        "illustrator",
-        "layouts",
-        "penciller",
-        "penciler",
-    }
-    inker_synonyms: ClassVar[set[str]] = {
-        "artist",
-        "embellisher",
-        "finishes",
-        "illustrator",
-        "ink assists",
-        "inker",
-    }
-    colorist_synonyms: ClassVar[set[str]] = {
-        "colorist",
-        "colourist",
-        "colorer",
-        "colourer",
-        "color assists",
-        "color flats",
-    }
-    letterer_synonyms: ClassVar[set[str]] = {"letterer"}
-    cover_synonyms: ClassVar[set[str]] = {
-        "cover",
-        "covers",
-        "coverartist",
-        "cover artist",
-    }
-    editor_synonyms: ClassVar[set[str]] = {
-        "assistant editor",
-        "associate editor",
-        "consulting editor",
-        "editor",
-        "editor in chief",
-        "executive editor",
-        "group editor",
-        "senior editor",
-        "supervising editor",
-    }
+    writer_synonyms: ClassVar[frozenset[str]] = frozenset(
+        {
+            "writer",
+            "plotter",
+            "scripter",
+            "script",
+            "story",
+            "plot",
+        }
+    )
+    penciller_synonyms: ClassVar[frozenset[str]] = frozenset(
+        {
+            "artist",
+            "breakdowns",
+            "illustrator",
+            "layouts",
+            "penciller",
+            "penciler",
+        }
+    )
+    inker_synonyms: ClassVar[frozenset[str]] = frozenset(
+        {
+            "artist",
+            "embellisher",
+            "finishes",
+            "illustrator",
+            "ink assists",
+            "inker",
+        }
+    )
+    colorist_synonyms: ClassVar[frozenset[str]] = frozenset(
+        {
+            "colorist",
+            "colourist",
+            "colorer",
+            "colourer",
+            "color assists",
+            "color flats",
+        }
+    )
+    letterer_synonyms: ClassVar[frozenset[str]] = frozenset({"letterer"})
+    cover_synonyms: ClassVar[frozenset[str]] = frozenset(
+        {
+            "cover",
+            "covers",
+            "coverartist",
+            "cover artist",
+        }
+    )
+    editor_synonyms: ClassVar[frozenset[str]] = frozenset(
+        {
+            "assistant editor",
+            "associate editor",
+            "consulting editor",
+            "editor",
+            "editor in chief",
+            "executive editor",
+            "group editor",
+            "senior editor",
+            "supervising editor",
+        }
+    )
 
     def metadata_from_string(self: "ComicInfo", string: str) -> Metadata:
         tree = ET.ElementTree(ET.fromstring(string))  # noqa: S314
