@@ -41,31 +41,33 @@ def remove_articles(text: str) -> str:
 
     :param str text: A string with articles (ex. 'and', 'a', 'the').
     """
-    articles = {
-        "&",
-        "a",
-        "am",
-        "an",
-        "and",
-        "as",
-        "at",
-        "be",
-        "but",
-        "by",
-        "for",
-        "if",
-        "is",
-        "issue",
-        "it",
-        "it's",
-        "its",
-        "itself",
-        "of",
-        "or",
-        "so",
-        "the",
-        "with",
-    }
+    articles = frozenset(
+        {
+            "&",
+            "a",
+            "am",
+            "an",
+            "and",
+            "as",
+            "at",
+            "be",
+            "but",
+            "by",
+            "for",
+            "if",
+            "is",
+            "issue",
+            "it",
+            "it's",
+            "its",
+            "itself",
+            "of",
+            "or",
+            "so",
+            "the",
+            "with",
+        }
+    )
     new_text = "".join(f"{word} " for word in text.split(" ") if word.casefold() not in articles)
 
     return new_text[:-1]
