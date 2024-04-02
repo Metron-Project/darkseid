@@ -164,14 +164,16 @@ class ComicInfo:
                 if et_entry is not None:
                     root.remove(et_entry)
 
-        def get_resource_list(resource: list[Basic]) -> str | None:
+        def get_resource_list(resource: list[Basic] | list[Arc]) -> str | None:
             return list_to_string([i.name for i in resource]) if resource else None
 
         assign("Title", get_resource_list(md.stories))
-        assign("Series", md.series.name)
+        if md.series is not None:
+            assign("Series", md.series.name)
         assign("Number", md.issue)
         assign("Count", md.issue_count)
-        assign("Volume", md.series.volume)
+        if md.series is not None:
+            assign("Volume", md.series.volume)
         assign("AlternateSeries", md.alternate_series)
         assign("AlternateNumber", md.alternate_number)
         assign("SeriesGroup", md.series_group)
@@ -233,9 +235,10 @@ class ComicInfo:
         assign("Genre", get_resource_list(md.genres))
         assign("Web", md.web_link)
         assign("PageCount", md.page_count)
-        if md.series.language:
+        if md.series is not None:
             assign("LanguageISO", md.series.language)
-        assign("Format", md.series.format)
+        if md.series is not None:
+            assign("Format", md.series.format)
         assign("BlackAndWhite", "Yes" if md.black_and_white else None)
         assign("Manga", self.validate_manga(md.manga))
         assign("Characters", get_resource_list(md.characters))

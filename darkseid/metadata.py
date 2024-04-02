@@ -69,7 +69,7 @@ class ImageMetadata(TypedDict, total=False):
     Type: str
     Bookmark: str
     DoublePage: bool
-    Image: int
+    Image: int | str
     ImageSize: str
     ImageHeight: str
     ImageWidth: str
