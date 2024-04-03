@@ -141,6 +141,11 @@ class Basic:
 
 
 @dataclass
+class Universe(Basic):
+    designation: str | None = None
+
+
+@dataclass
 class Role(Basic):
     primary: bool = False
 
@@ -397,6 +402,7 @@ class Metadata:
     characters: list[Basic] = field(default_factory=list)
     teams: list[Basic] = field(default_factory=list)
     locations: list[Basic] = field(default_factory=list)
+    universes: list[Universe] = field(default_factory=list)
 
     credits: list[Credit] = field(default_factory=list)
     reprints: list[Basic] = field(default_factory=list)
@@ -429,7 +435,7 @@ class Metadata:
                 self.is_empty = False
                 break
 
-    def overlay(self: "Metadata", new_md: "Metadata") -> None:
+    def overlay(self: "Metadata", new_md: "Metadata") -> None:  # noqa: PLR0912
         """
         Overlays a metadata object on this one.
 
@@ -501,6 +507,8 @@ class Metadata:
             assign("teams", new_md.teams)
         if len(new_md.locations) > 0:
             assign("locations", new_md.locations)
+        if len(new_md.universes) > 0:
+            assign("universes", new_md.universes)
         if len(new_md.reprints) > 0:
             assign("reprints", new_md.reprints)
         assign("comments", new_md.comments)

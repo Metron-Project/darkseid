@@ -28,6 +28,7 @@ def test_metadata_print_str(fake_metadata: Metadata) -> None:
     characters = [Basic(name='Aquaman', id_=None), Basic(name='Mera', id_=None), Basic(name='Garth', id_=None)],
     teams = [Basic(name='Justice League', id_=None), Basic(name='Infinity, Inc', id_=None)],
     locations = [],
+    universes = [Universe(name='ABC', id_=25, designation='Earth 25')],
     credits = [],
     reprints = [],
     tags = [],
@@ -50,6 +51,7 @@ def test_metadata_overlay(fake_metadata: Metadata, fake_overlay_metadata: Metada
     assert md.reprints == fake_overlay_metadata.reprints
     assert md.prices == fake_metadata.prices
     assert md.collection_title == fake_metadata.collection_title
+    assert md.universes == fake_metadata.universes
 
 
 def test_metadata_credits(fake_metadata: Metadata) -> None:

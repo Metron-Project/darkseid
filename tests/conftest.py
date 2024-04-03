@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from darkseid.comic import Comic
-from darkseid.metadata import Arc, Basic, Metadata, Price, Series
+from darkseid.metadata import Arc, Basic, Metadata, Price, Series, Universe
 
 TEST_FILES_PATH = Path("tests/test_files")
 IMG_DIR = TEST_FILES_PATH / "Captain_Science_001"
@@ -34,6 +34,7 @@ def fake_metadata() -> Metadata:
         Basic("Garth"),
     ]
     md.teams = [Basic("Justice League"), Basic("Infinity, Inc")]
+    md.universes = [Universe(id_=25, name="ABC", designation="Earth 25")]
     md.comments = "Just some sample metadata."
     md.black_and_white = True
     md.is_empty = False
