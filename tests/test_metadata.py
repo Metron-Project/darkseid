@@ -15,6 +15,7 @@ COVER = "Cover"
 def test_metadata_print_str(fake_metadata: Metadata) -> None:
     expect_res = """Metadata(
     is_empty = False,
+    alt_sources = [],
     series = Series(name='Aquaman', id_=None, sort_name='Aquaman', volume=1, format='Annual', language=None),
     issue = '0',
     stories = [Basic(name='A Crash of Symbols', id_=None)],
