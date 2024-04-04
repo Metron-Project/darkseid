@@ -121,9 +121,10 @@ class MetronInfo:
             primary_node.attrib["source"] = primary.name
             if alt_lst:
                 for alt in alt_lst:
-                    alt_node = ET.SubElement(id_node, "Alternative")
-                    alt_node.text = str(alt.id_)
-                    alt_node.attrib["source"] = alt.name
+                    if self.valid_info_source(alt):
+                        alt_node = ET.SubElement(id_node, "Alternative")
+                        alt_node.text = str(alt.id_)
+                        alt_node.attrib["source"] = alt.name
 
         def assign_gtin(gtin: GTIN) -> None:
             gtin_node = get_parent_node("GTIN")
