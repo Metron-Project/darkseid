@@ -1,10 +1,24 @@
 import xml.etree.ElementTree as ET  # noqa: N817
-from datetime import date
+from datetime import date, datetime, timezone
+from decimal import Decimal
 from pathlib import Path
+from typing import cast
 
-from defusedxml.ElementTree import fromstring
+from defusedxml.ElementTree import fromstring, parse
 
-from darkseid.metadata import GTIN, Arc, Basic, Credit, Metadata, Price, Series, Universe
+from darkseid.issue_string import IssueString
+from darkseid.metadata import (
+    GTIN,
+    Arc,
+    Basic,
+    Credit,
+    ImageMetadata,
+    Metadata,
+    Price,
+    Role,
+    Series,
+    Universe,
+)
 
 
 class MetronInfo:
@@ -236,6 +250,217 @@ class MetronInfo:
         # wrap it in an ElementTree instance, and save as XML
         return ET.ElementTree(root)
 
+    @staticmethod
+    def convert_xml_to_metadata(tree: ET.ElementTree) -> Metadata:  # noqa: C901, PLR0915
+        root = tree.getroot()
+
+        if root.tag != "MetronInfo":
+            msg = "XML is not a MetronInfo schema"
+            raise ValueError(msg)
+
+        def get_id_from_attrib(attrib: dict[str, str]) -> int | None:
+            return int(attrib["id"]) if attrib and "id" in attrib else None
+
+        def get(element: str) -> str | None:
+            tag = root.find(element)
+            return None if tag is None else tag.text
+
+        def get_gtin() -> GTIN | None:
+            resource = root.find("GTIN")
+            if resource is None:
+                return None
+
+            gtin = GTIN()
+            found = False
+            for item in resource:
+                if item.text:
+                    match item.tag:
+                        case "UPC":
+                            gtin.upc = int(item.text)
+                        case "ISBN":
+                            gtin.isbn = int(item.text)
+                        case _:
+                            # This shouldn't occur if the xml is valid.
+                            pass
+
+            return gtin if found else None
+
+        def get_info_sources() -> Basic | None:
+            id_node = root.find("ID")
+            if id_node is None:
+                return None
+            primary_node = id_node.find("Primary")
+            if primary_node is None:
+                return None
+            return Basic(primary_node.attrib.get("source"), int(primary_node.text))
+
+        def get_alt_sources() -> list[Basic] | None:
+            id_node = root.find("ID")
+            if id_node is None:
+                return None
+            alt_nodes = id_node.findall("Alternative")
+            if alt_nodes is None:
+                return None
+            alt_lst = []
+            for alt_node in alt_nodes:
+                alt = Basic(alt_node.attrib.get("source"), int(alt_node.text))
+                alt_lst.append(alt)
+            return alt_lst
+
+        def get_resource(element: str) -> Basic | None:
+            resource = root.find(element)
+            if resource is None:
+                return None
+            attrib = resource.attrib
+            return Basic(resource.text, get_id_from_attrib(attrib))
+
+        def get_resource_list(element: str) -> list[Basic]:
+            resource = root.find(element)
+            if resource is None:
+                return []
+
+            resource_list = []
+            for item in resource:
+                attrib = item.attrib
+                resource_list.append(Basic(item.text, get_id_from_attrib(attrib)))
+            return resource_list
+
+        def get_prices() -> list[Price]:
+            resource = root.find("Prices")
+            if resource is None:
+                return []
+
+            resource_list = []
+            for item in resource:
+                attrib = item.attrib
+                # TODO: Isn't country attrib required? Need to verify and modify this if necessary.
+                if attrib and "country" in attrib:
+                    resource_list.append(Price(Decimal(item.text), attrib["country"]))
+                else:
+                    resource_list.append(Price(Decimal(item.text)))
+            return resource_list
+
+        def get_series() -> Series | None:
+            resource = root.find("Series")
+            if resource is None:
+                return None
+
+            series_md = Series("None")  # Needs dummy name to init.
+            attrib = resource.attrib
+            series_md.id_ = get_id_from_attrib(attrib)
+            if attrib and "lang" in attrib:
+                series_md.language = attrib["lang"]
+
+            for item in resource:
+                match item.tag:
+                    case "Name":
+                        series_md.name = item.text
+                    case "SortName":
+                        series_md.sort_name = item.text
+                    case "Volume":
+                        series_md.volume = int(item.text)
+                    case "Format":
+                        series_md.format = item.text
+                    case _:
+                        pass
+
+            return series_md
+
+        def get_arcs() -> list[Arc]:
+            arcs_node = root.find("Arcs")
+            resources = arcs_node.findall("Arc")
+            if resources is None:
+                return []
+
+            arcs_list = []
+            for resource in resources:
+                name = resource.find("Name")
+                number = resource.find("Number")
+                attrib = resource.attrib
+                arc = Arc(
+                    name.text,
+                    get_id_from_attrib(attrib),
+                    int(number.text) if number is not None else None,
+                )
+                arcs_list.append(arc)
+            return arcs_list
+
+        def get_credits() -> list[Credit] | None:
+            credits_node = root.find("Credits")
+            if credits_node is None:
+                return None
+            resources = credits_node.findall("Credit")
+            if resources is None:
+                return None
+
+            credits_list = []
+            for resource in resources:
+                # Let's create the role list first.
+                roles_node = resource.find("Roles")
+                roles = roles_node.findall("Role")
+                role_list = []
+                if roles is not None:
+                    for role in roles:
+                        r_attrib = role.attrib
+                        role_obj = Role(role.text, get_id_from_attrib(r_attrib))
+                        role_list.append(role_obj)
+
+                # Now let's create the Credit.
+                creator = resource.find("Creator")
+                attrib = creator.attrib
+                credit = Credit(creator.text, role_list, get_id_from_attrib(attrib))
+                credits_list.append(credit)
+            return credits_list
+
+        md = Metadata()
+        md.info_source = get_info_sources()
+        md.alt_sources = get_alt_sources()
+        md.publisher = get_resource("Publisher")
+        md.series = get_series()
+        md.collection_title = get("CollectionTitle")
+        md.issue = IssueString(get("Number")).as_string()
+        md.stories = get_resource_list("Stories")
+        md.comments = get("Summary")
+        md.prices = get_prices()
+        if cov_date := get("CoverDate"):
+            md.cover_date = (
+                datetime.strptime(cov_date, "%Y-%m-%d").replace(tzinfo=timezone.utc).date()
+            )
+        if store_date := get("StoreDate"):
+            md.store_date = (
+                datetime.strptime(store_date, "%Y-%m-%d").replace(tzinfo=timezone.utc).date()
+            )
+        p_count = get("PageCount")
+        md.page_count = int(p_count) if p_count is not None and p_count.isdigit() else None
+        md.notes = get("Notes")
+        md.genres = get_resource_list("Genres")
+        md.tags = get_resource_list("Tags")
+        md.story_arcs = get_arcs()
+        md.characters = get_resource_list("Characters")
+        md.teams = get_resource_list("Teams")
+        md.locations = get_resource_list("Locations")
+        md.reprints = get_resource_list("Reprints")
+        md.gtin = get_gtin()
+        md.age_rating = get("AgeRating")
+        md.web_link = get("URL")
+        md.credits = get_credits()
+
+        # parse page data now
+        pages_node = root.find("Pages")
+        if pages_node is not None:
+            for page in pages_node:
+                p: dict[str, str | int] = page.attrib
+                if "Image" in p:
+                    p["Image"] = int(p["Image"])
+                md.pages.append(cast(ImageMetadata, p))
+
+        md.is_empty = False
+        return md
+
     def write_xml(self, filename: Path, md: Metadata, xml=None) -> None:
         tree = self.convert_metadata_to_xml(md, xml)
         tree.write(filename, encoding="UTF-8", xml_declaration=True)
+
+    def read_xml(self, filename: Path) -> Metadata:
+        tree = parse(filename)
+        return self.convert_xml_to_metadata(tree)

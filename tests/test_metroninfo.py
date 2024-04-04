@@ -75,3 +75,26 @@ def test_meta_write_to_file(test_meta_data: Metadata, tmp_path: Path) -> None:
     MetronInfo().write_xml(tmp_file, test_meta_data)
     assert tmp_file.read_text() is not None
     assert validate(tmp_file, MI_XSD) is True
+
+
+def test_read_from_file(test_meta_data: Metadata, tmp_path: Path) -> None:
+    """Test to read in the data from a file."""
+    tmp_file = tmp_path / "test-read.xml"
+    # Write metadata to file
+    MetronInfo().write_xml(tmp_file, test_meta_data)
+    # Read the metadat from the file
+    new_md = MetronInfo().read_xml(tmp_file)
+
+    assert new_md is not None
+    assert new_md.info_source == test_meta_data.info_source
+    assert new_md.alt_sources == test_meta_data.alt_sources
+    assert new_md.series.name == test_meta_data.series.name
+    assert new_md.series.language == new_md.series.language
+    assert new_md.issue == test_meta_data.issue
+    assert new_md.stories == test_meta_data.stories
+    assert new_md.cover_date == test_meta_data.cover_date
+    assert new_md.credits[0] == test_meta_data.credits[0]
+    assert new_md.characters == test_meta_data.characters
+    assert new_md.teams == test_meta_data.teams
+    assert new_md.story_arcs == test_meta_data.story_arcs
+    assert new_md.locations == test_meta_data.locations
