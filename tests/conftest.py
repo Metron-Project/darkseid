@@ -11,6 +11,7 @@ TEST_FILES_PATH = Path("tests/test_files")
 IMG_DIR = TEST_FILES_PATH / "Captain_Science_001"
 ARCHIVE_PATH = TEST_FILES_PATH / "Captain Science #001.cbz"
 CI_XSD = TEST_FILES_PATH / "ComicInfo.xsd"
+MI_XSD = TEST_FILES_PATH / "MetronInfo.xsd"
 RAR_PATH = TEST_FILES_PATH / "Captain Science #001-cix-cbi.cbr"
 
 
