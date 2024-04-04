@@ -178,8 +178,8 @@ class MetronInfo:
         # OK, let's create the xml
         if self.valid_info_source(md.info_source):
             assign_info_source(md.info_source, md.alt_sources)
-        if md.publisher:
-            assign_basic_resource("Publisher", md.publisher)
+        # We always need a Publisher for it to be valid.
+        assign_basic_resource("Publisher", md.publisher if md.publisher else Basic("Unknown"))
         assign_series(md.series)
         assign("CollectionTitle", md.collection_title)
         assign("Number", md.issue)
