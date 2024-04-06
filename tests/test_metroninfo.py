@@ -1,12 +1,13 @@
 """Tests for MetronInfo Tags."""
 
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from darkseid.metadata import Arc, Basic, Credit, Metadata, Role, Series, Universe
+from darkseid.metadata import GTIN, Arc, Basic, Credit, Metadata, Price, Role, Series, Universe
 from darkseid.metroninfo import MetronInfo
 from tests.conftest import MI_XSD
 
@@ -51,10 +52,14 @@ def test_meta_data(test_credits: list[Credit]) -> Metadata:
     md.locations = [Basic("Atlantis", 9876), Basic("Metropolis")]
     md.genres = [Basic("Super-Hero", 987)]
     md.story_arcs = [
-        Arc("Crisis on Infinite Earths"),
+        Arc("Crisis on Infinite Earths", 54, 1),
         Arc("Death of Aquagirl"),
     ]
-    md.universes = [Universe("ABC", 24, "Earth 25")]
+    md.gtin = GTIN(upc=1234567890, isbn=9876543210)
+    md.prices = [Price(Decimal("3.99")), Price(Decimal("2.60"), "GB")]
+    md.universes = [Universe("ABC", 24, "Earth 25"), Universe("Earth 10")]
+    md.tags = [Basic("Foo", 1), Basic("Bar")]
+    md.reprints = [Basic("Inhumans (2009) #1", 1), Basic("Inhumans (2009) #2")]
     md.age_rating = "Teen"
     for c in test_credits:
         md.add_credit(c)
@@ -75,6 +80,28 @@ def test_meta_write_to_file(test_meta_data: Metadata, tmp_path: Path) -> None:
     MetronInfo().write_xml(tmp_file, test_meta_data)
     assert tmp_file.read_text() is not None
     assert validate(tmp_file, MI_XSD) is True
+
+
+def test_meta_write_to_existing_file(test_meta_data: Metadata, tmp_path: Path) -> None:
+    # sourcery skip: extract-duplicate-method
+    """Test of writing the metadata to a file and then modifying comicinfo.xml"""
+    # Write test metadata to file
+    tmp_file = tmp_path / "test-write.xml"
+    ci = MetronInfo()
+    ci.write_xml(tmp_file, test_meta_data)
+    assert tmp_file.read_text() is not None
+    assert validate(tmp_file, MI_XSD) is True
+    # Read the comicinfo.xml file and verify content
+    md = ci.read_xml(tmp_file)
+    assert md.genres == test_meta_data.genres
+    # Modify the metadata and overwrite the existing comicinfo.xml
+    md.genres.append(Basic("Bad Value"))
+    ci.write_xml(tmp_file, md)
+    assert tmp_file.read_text() is not None
+    assert validate(tmp_file, MI_XSD) is True
+    # Now read back the modified comicinfo.xml and verify
+    new_md = ci.read_xml(tmp_file)
+    assert new_md.genres == test_meta_data.genres
 
 
 def test_read_from_file(test_meta_data: Metadata, tmp_path: Path) -> None:
