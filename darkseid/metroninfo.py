@@ -237,8 +237,8 @@ class MetronInfo:
             for p in prices:
                 child_node = ET.SubElement(price_node, "Price")
                 child_node.text = str(p.amount)
-                if p.country:
-                    child_node.attrib["country"] = p.country
+                # There will always be a country code, default is `US`
+                child_node.attrib["country"] = p.country
 
         def assign_universes(universes: list[Universe]) -> None:
             universes_node = get_parent_node("Universes")
