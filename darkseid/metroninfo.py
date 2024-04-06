@@ -102,6 +102,14 @@ class MetronInfo:
         }
     )
 
+    def metadata_from_string(self: "MetronInfo", string: str) -> Metadata:
+        tree = ET.ElementTree(fromstring(string))
+        return self.convert_xml_to_metadata(tree)
+
+    def string_from_metadata(self: "MetronInfo", md: Metadata, xml: bytes = b"") -> str:
+        tree = self.convert_metadata_to_xml(md, xml)
+        return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
+
     @staticmethod
     def _get_root(xml) -> ET.Element:
         if xml:

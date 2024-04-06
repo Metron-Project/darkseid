@@ -7,6 +7,7 @@ import io
 import logging
 import os
 import zipfile
+from enum import Enum, auto
 from pathlib import Path
 
 import rarfile
@@ -18,8 +19,14 @@ from darkseid.archivers.rar import RarArchiver
 from darkseid.archivers.zip import ZipArchiver
 from darkseid.comicinfo import ComicInfo
 from darkseid.metadata import Metadata
+from darkseid.metroninfo import MetronInfo
 
 logger = logging.getLogger(__name__)
+
+
+class MetaDataStyle(Enum):
+    CIX = auto()  # ComicInfo.xml
+    MIX = auto()  # MetronInfo.xml
 
 
 class Comic:
@@ -33,7 +40,9 @@ class Comic:
     def __init__(self: "Comic", path: Path | str) -> None:
         self.path: Path | str = Path(path) if isinstance(path, str) else path
         self.ci_xml_filename: str = "ComicInfo.xml"
-        self.has_md: bool | None = None
+        self.mi_xml_filename: str = "MetronInfo.xml"
+        self.has_cix: bool | None = None
+        self.has_mix: bool | None = None
         self.page_count: int | None = None
         self.page_list: list[str] | None = None
         self.metadata: Metadata | None = None
@@ -53,7 +62,8 @@ class Comic:
 
     def reset_cache(self: "Comic") -> None:
         """Clears the cached data."""
-        self.has_md = None
+        self.has_cix = None
+        self.has_mix = None
         self.page_count = None
         self.page_list = None
         self.metadata = None
@@ -86,6 +96,42 @@ class Comic:
         return bool(
             (self.is_zip() or self.is_rar()) and (self.get_number_of_pages() > 0),
         )
+
+    def read_metadata(self: "Comic", style: MetaDataStyle) -> Metadata:
+        match style:
+            case MetaDataStyle.CIX:
+                return self._read_cix()
+            case MetaDataStyle.MIX:
+                return self._read_mix()
+            case _:
+                return Metadata()
+
+    def write_metadata(self: "Comic", md: Metadata, style: MetaDataStyle) -> bool:
+        match style:
+            case MetaDataStyle.CIX:
+                return self._write_cix(md)
+            case MetaDataStyle.MIX:
+                return self._write_mix(md)
+            case _:
+                return False
+
+    def remove_metadata(self: "Comic", style: MetaDataStyle) -> bool:
+        match style:
+            case MetaDataStyle.CIX:
+                return self._remove_cix()
+            case MetaDataStyle.MIX:
+                return self._remove_mix()
+            case _:
+                return False
+
+    def has_metadata(self: "Comic", style: MetaDataStyle) -> bool:
+        match style:
+            case MetaDataStyle.CIX:
+                return self._has_comicinfo()
+            case MetaDataStyle.MIX:
+                return self._has_metroninfo()
+            case _:
+                return False
 
     def get_page(self: "Comic", index: int) -> bytes | None:
         """Returns an image(page) from an archive."""
@@ -142,10 +188,11 @@ class Comic:
             self.page_count = len(self.get_page_name_list())
         return self.page_count
 
-    def read_metadata(self: "Comic") -> Metadata:
+    # ComicInfo.xml
+    def _read_cix(self: "Comic") -> Metadata:
         """Reads the metadata from an archive if present."""
         if self.metadata is None:
-            raw_metadata = self.read_raw_metadata()
+            raw_metadata = self._read_raw_cix()
             if raw_metadata is None or raw_metadata == "":
                 self.metadata = Metadata()
             else:
@@ -162,8 +209,8 @@ class Comic:
 
         return self.metadata
 
-    def read_raw_metadata(self: "Comic") -> str | None:
-        if not self.has_metadata():
+    def _read_raw_cix(self: "Comic") -> str | None:
+        if not self.has_metadata(MetaDataStyle.CIX):
             return None
         try:
             tmp_raw_metadata = self.archiver.read_file(self.ci_xml_filename)
@@ -174,24 +221,96 @@ class Comic:
             raw_metadata = None
         return raw_metadata
 
-    def write_metadata(self: "Comic", metadata: Metadata | None) -> bool:
-        """Write the metadata to the archive."""
+    def _write_cix(self: "Comic", metadata: Metadata | None) -> bool:
+        """Write the ComicInfo.xml to the archive."""
         if metadata is None or not self.is_writable():
             return False
         self.apply_archive_info_to_metadata(metadata, calc_page_sizes=True)
-        if raw_cix := self.read_raw_metadata():
+        if raw_cix := self._read_raw_cix():
             md_string = ComicInfo().string_from_metadata(metadata, raw_cix.encode("utf-8"))
         else:
             md_string = ComicInfo().string_from_metadata(metadata)
         write_success = self.archiver.write_file(self.ci_xml_filename, md_string)
-        return self._successful_write(write_success, True, metadata)
+        return self._successful_write(write_success, has_cix=True, metadata=metadata)
 
-    def remove_metadata(self: "Comic") -> bool:
-        """Remove the metadata from the archive if present."""
-        if self.has_metadata():
+    def _remove_cix(self: "Comic") -> bool:
+        """Remove the ComicInfo.xml from the archive if present."""
+        if self.has_metadata(MetaDataStyle.CIX):
             write_success = self.archiver.remove_file(self.ci_xml_filename)
-            return self._successful_write(write_success, False, None)
+            return self._successful_write(write_success, has_cix=False)
         return True
+
+    def _has_comicinfo(self: "Comic") -> bool:
+        if self.has_cix is None:
+            if not self.seems_to_be_a_comic_archive():
+                self.has_cix = False
+            elif self.ci_xml_filename in self.archiver.get_filename_list():
+                self.has_cix = True
+            else:
+                self.has_cix = False
+        return self.has_cix
+
+    # MetronInfo.xml
+    def _read_mix(self: "Comic") -> Metadata:
+        """Reads the MetronInfo metadata from an archive if present."""
+        if self.metadata is None:
+            raw_metadata = self._read_raw_mix()
+            if raw_metadata is None or raw_metadata == "":
+                self.metadata = Metadata()
+            else:
+                self.metadata = MetronInfo().metadata_from_string(raw_metadata)
+
+            # validate the existing page list (make sure count is correct)
+            if len(self.metadata.pages) not in [0, self.get_number_of_pages()]:
+                # pages array doesn't match the actual number of images we're seeing
+                # in the archive, so discard the data
+                self.metadata.pages = []
+
+            if len(self.metadata.pages) == 0:
+                self.metadata.set_default_page_list(self.get_number_of_pages())
+
+        return self.metadata
+
+    def _read_raw_mix(self: "Comic") -> str | None:
+        if not self.has_metadata(MetaDataStyle.MIX):
+            return None
+        try:
+            tmp_raw_metadata = self.archiver.read_file(self.mi_xml_filename)
+            # Convert bytes to str. Is it safe to decode with utf-8?
+            raw_metadata = tmp_raw_metadata.decode("utf-8")
+        except OSError:
+            logger.exception("Error reading in raw MIX!")
+            raw_metadata = None
+        return raw_metadata
+
+    def _write_mix(self: "Comic", metadata: Metadata | None) -> bool:
+        """Write the ComicInfo.xml to the archive."""
+        if metadata is None or not self.is_writable():
+            return False
+        self.apply_archive_info_to_metadata(metadata, calc_page_sizes=True)
+        if raw_mix := self._read_raw_mix():
+            md_string = MetronInfo().string_from_metadata(metadata, raw_mix.encode("utf-8"))
+        else:
+            md_string = MetronInfo().string_from_metadata(metadata)
+        write_success = self.archiver.write_file(self.mi_xml_filename, md_string)
+        return self._successful_write(write_success, has_mix=True, metadata=metadata)
+
+    def _remove_mix(self: "Comic") -> bool:
+        """Remove the ComicInfo.xml from the archive if present."""
+        if self.has_metadata(MetaDataStyle.MIX):
+            write_success = self.archiver.remove_file(self.mi_xml_filename)
+            return self._successful_write(write_success)
+        return True
+
+    def _has_metroninfo(self: "Comic") -> bool:
+        if self.has_mix is None:
+            if not self.seems_to_be_a_comic_archive():
+                self.has_mix = False
+            elif self.mi_xml_filename in self.archiver.get_filename_list():
+                self.has_mix = True
+            else:
+                self.has_mix = False
+        return self.has_mix
 
     def remove_pages(self: "Comic", pages_index: list[int]) -> bool:
         """Remove page from the archive."""
@@ -202,32 +321,21 @@ class Comic:
             page_name = self.get_page_name(idx)
             pages_name_lst.append(page_name)
         write_success = self.archiver.remove_files(pages_name_lst)
-        return self._successful_write(write_success, False, None)
+        return self._successful_write(write_success)
 
     def _successful_write(
         self: "Comic",
         write_success: bool,
-        has_md: bool,
-        metadata: Metadata | None,
+        has_cix: bool = False,
+        has_mix: bool = False,
+        metadata: Metadata | None = None,
     ) -> bool:
         if write_success:
-            self.has_md = has_md
+            self.has_cix = has_cix
+            self.has_mix = has_mix
             self.metadata = metadata
         self.reset_cache()
         return write_success
-
-    def has_metadata(self: "Comic") -> bool:
-        """Checks to see if the archive has metadata."""
-        if self.has_md is None:
-            self.has_md = bool(
-                self.seems_to_be_a_comic_archive()
-                and (
-                    not self.seems_to_be_a_comic_archive()
-                    or self.ci_xml_filename in self.archiver.get_filename_list()
-                ),
-            )
-
-        return self.has_md
 
     def apply_archive_info_to_metadata(
         self: "Comic",
@@ -253,12 +361,12 @@ class Comic:
                         except OSError:
                             page["ImageSize"] = str(len(data))
 
-    def export_as_zip(self: "Comic", zipfilename: Path) -> bool:
+    def export_as_zip(self: "Comic", zip_filename: Path) -> bool:
         """Export CBR archives to CBZ format."""
         if self.archive_type == self.ArchiveType.zip:
             # nothing to do, we're already a zip
             return True
 
-        zip_archiver = ZipArchiver(zipfilename)
+        zip_archiver = ZipArchiver(zip_filename)
 
         return zip_archiver.copy_from_archive(self.archiver)

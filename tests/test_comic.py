@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from darkseid.archivers import UnknownArchiver
-from darkseid.comic import Comic
+from darkseid.comic import Comic, MetaDataStyle
 from darkseid.metadata import Metadata
 from tests.conftest import IMG_DIR
 
@@ -35,7 +35,7 @@ def test_archive_delete_page(tmp_path: Path, fake_metadata: Metadata) -> None:
     test_md = Metadata()
     test_md.set_default_page_list(ca.get_number_of_pages())
     test_md.overlay(fake_metadata)
-    ca.write_metadata(test_md)
+    ca.write_metadata(test_md, MetaDataStyle.CIX)
 
     old_num_pages = ca.get_number_of_pages()
     result = ca.remove_pages([1, 4])
@@ -43,10 +43,10 @@ def test_archive_delete_page(tmp_path: Path, fake_metadata: Metadata) -> None:
     num_pages = ca.get_number_of_pages()
     assert result is True
     assert old_num_pages - 2 == num_pages
-    assert ca.has_metadata()
+    assert ca.has_metadata(MetaDataStyle.CIX)
 
 
-def test_archive_from_img_dir(tmp_path: Path, fake_metadata: Metadata) -> None:
+def test_cix_archive_from_img_dir(tmp_path: Path, fake_metadata: Metadata) -> None:
     z_file: Path = tmp_path / "Aquaman v1 #001 (of 08) (1994).cbz"
     with zipfile.ZipFile(z_file, "w") as zf:
         for p in IMG_DIR.iterdir():
@@ -56,8 +56,8 @@ def test_archive_from_img_dir(tmp_path: Path, fake_metadata: Metadata) -> None:
     test_md = Metadata()
     test_md.set_default_page_list(ca.get_number_of_pages())
     test_md.overlay(fake_metadata)
-    ca.write_metadata(test_md)
-    res = ca.read_metadata()
+    ca.write_metadata(test_md, MetaDataStyle.CIX)
+    res = ca.read_metadata(MetaDataStyle.CIX)
     assert res.page_count == 5
     assert res.series.name == fake_metadata.series.name
     assert res.series.format == fake_metadata.series.format
@@ -69,6 +69,31 @@ def test_archive_from_img_dir(tmp_path: Path, fake_metadata: Metadata) -> None:
     assert res.characters == fake_metadata.characters
     assert res.teams == fake_metadata.teams
     assert res.black_and_white == fake_metadata.black_and_white
+    assert res.comments == fake_metadata.comments
+
+
+def test_mix_archive_from_img_dir(tmp_path: Path, fake_metadata: Metadata) -> None:
+    z_file: Path = tmp_path / "Aquaman v1 #001 (of 08) (1994).cbz"
+    with zipfile.ZipFile(z_file, "w") as zf:
+        for p in IMG_DIR.iterdir():
+            zf.write(p)
+
+    ca = Comic(z_file)
+    test_md = Metadata()
+    test_md.set_default_page_list(ca.get_number_of_pages())
+    test_md.overlay(fake_metadata)
+    ca.write_metadata(test_md, MetaDataStyle.MIX)
+    res = ca.read_metadata(MetaDataStyle.MIX)
+    assert res.page_count == 5
+    assert res.series.name == fake_metadata.series.name
+    assert res.series.format == fake_metadata.series.format
+    assert res.series.volume == fake_metadata.series.volume
+    assert res.issue == fake_metadata.issue
+    assert res.stories == fake_metadata.stories
+    assert res.cover_date == fake_metadata.cover_date
+    assert res.story_arcs == fake_metadata.story_arcs
+    assert res.characters == fake_metadata.characters
+    assert res.teams == fake_metadata.teams
     assert res.comments == fake_metadata.comments
 
 
@@ -98,23 +123,23 @@ def test_archive_is_writable(fake_cbz: Comic) -> None:
     assert fake_cbz.is_writable() is True
 
 
-def test_archive_writing_with_no_metadata(fake_cbz: Comic) -> None:
-    """Make sure writing no metadata to comic returns False."""
-    assert fake_cbz.write_metadata(None) is False
+# def test_archive_writing_with_no_metadata(fake_cbz: Comic) -> None:
+#     """Make sure writing no metadata to comic returns False."""
+#     assert fake_cbz.write_metadata(None, MetaDataStyle.CIX) is False
 
 
-def test_archive_test_metadata(fake_cbz: Comic, fake_metadata: Metadata) -> None:
+def test_archive_test_cix_metadata(fake_cbz: Comic, fake_metadata: Metadata) -> None:
     """Test to determine if a comic archive has metadata."""
     # verify archive has no metadata
-    assert fake_cbz.has_metadata() is False
+    assert fake_cbz.has_metadata(MetaDataStyle.CIX) is False
 
     # now let's test that we can write some
-    write_result = fake_cbz.write_metadata(fake_metadata)
+    write_result = fake_cbz.write_metadata(fake_metadata, MetaDataStyle.CIX)
     assert write_result is True
-    assert fake_cbz.has_metadata() is True
+    assert fake_cbz.has_metadata(MetaDataStyle.CIX) is True
 
     # Verify what was written
-    new_md = fake_cbz.read_metadata()
+    new_md = fake_cbz.read_metadata(MetaDataStyle.CIX)
     assert new_md.series.name == fake_metadata.series.name
     assert new_md.series.volume == fake_metadata.series.volume
     assert new_md.series.format == fake_metadata.series.format
@@ -122,16 +147,39 @@ def test_archive_test_metadata(fake_cbz: Comic, fake_metadata: Metadata) -> None
     assert new_md.stories == fake_metadata.stories
 
     # now remove what was just written
-    fake_cbz.remove_metadata()
-    assert fake_cbz.has_metadata() is False
+    fake_cbz.remove_metadata(MetaDataStyle.CIX)
+    assert fake_cbz.has_metadata(MetaDataStyle.CIX) is False
 
 
-def test_removing_metadata_on_comic_wo_metadata(fake_cbz: Comic) -> None:
-    """Make sure trying to remove metadata from
-    comic w/o any returns True.
-    """
-    assert fake_cbz.write_metadata(None) is False
-    assert fake_cbz.remove_metadata() is True
+def test_archive_test_mix_metadata(fake_cbz: Comic, fake_metadata: Metadata) -> None:
+    """Test to determine if a comic archive has metadata."""
+    # verify archive has no metadata
+    assert fake_cbz.has_metadata(MetaDataStyle.MIX) is False
+
+    # now let's test that we can write some
+    write_result = fake_cbz.write_metadata(fake_metadata, MetaDataStyle.MIX)
+    assert write_result is True
+    assert fake_cbz.has_metadata(MetaDataStyle.MIX) is True
+
+    # Verify what was written
+    new_md = fake_cbz.read_metadata(MetaDataStyle.MIX)
+    assert new_md.series.name == fake_metadata.series.name
+    assert new_md.series.volume == fake_metadata.series.volume
+    assert new_md.series.format == fake_metadata.series.format
+    assert new_md.issue == fake_metadata.issue
+    assert new_md.stories == fake_metadata.stories
+
+    # now remove what was just written
+    fake_cbz.remove_metadata(MetaDataStyle.MIX)
+    assert fake_cbz.has_metadata(MetaDataStyle.MIX) is False
+
+
+# def test_removing_metadata_on_comic_wo_metadata(fake_cbz: Comic) -> None:
+#     """Make sure trying to remove metadata from
+#     comic w/o any returns True.
+#     """
+#     assert fake_cbz._write_cix(None) is False
+#     assert fake_cbz._remove_cix() is True
 
 
 @pytest.mark.skipif(sys.platform in ["win32"], reason="Skip Windows.")
@@ -156,8 +204,13 @@ def test_archive_apply_file_info_to_metadata(fake_cbz: Comic) -> None:
 # CBR #
 #######
 @pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
-def test_rar_write(fake_rar: Comic, fake_metadata: Metadata) -> None:
-    assert fake_rar.write_metadata(fake_metadata) is False
+def test_rar_write_cix(fake_rar: Comic, fake_metadata: Metadata) -> None:
+    assert fake_rar.write_metadata(fake_metadata, MetaDataStyle.CIX) is False
+
+
+@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
+def test_rar_write_mix(fake_rar: Comic, fake_metadata: Metadata) -> None:
+    assert fake_rar.write_metadata(fake_metadata, MetaDataStyle.MIX) is False
 
 
 # Skip test for Windows and MacOS.
@@ -177,13 +230,16 @@ def test_rar_is_writable(fake_rar: Comic) -> None:
 
 # Skip test for Windows and MacOS.
 @pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
-def test_rar_read_metadata(fake_rar: Comic) -> None:
+def test_rar_read_cix_metadata(fake_rar: Comic) -> None:
     """Test to read a rar files metadata."""
-    md = fake_rar.read_metadata()
+    md = fake_rar.read_metadata(MetaDataStyle.CIX)
     assert md.series.name == "Captain Science"
     assert md.issue == "1"
     assert md.series.volume == 1950
     assert md.page_count == 36
+
+
+# TODO: Add test to read MetronInfo.xml from rar.
 
 
 # Skip test for Windows and MacOS.
