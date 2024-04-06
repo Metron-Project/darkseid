@@ -117,10 +117,6 @@ class MetronInfo:
         return val is not None and val.name in cls.mix_info_sources
 
     @classmethod
-    def valid_genre(cls, val: Basic) -> bool:
-        return val.name in cls.mix_genres
-
-    @classmethod
     def list_contains_valid_genre(cls, vals: list[Basic]) -> bool:
         return any(val.name in cls.mix_genres for val in vals)
 
