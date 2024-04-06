@@ -23,17 +23,83 @@ from darkseid.metadata import (
 
 class MetronInfo:
     mix_info_sources = frozenset(
-        {
-            "Comic Vine",
-            "Grand Comics Database",
-            "Marvel",
-            "Metron",
-            "League of Comic Geeks",
-        }
+        {"Comic Vine", "Grand Comics Database", "Marvel", "Metron", "League of Comic Geeks"}
     )
     mix_age_ratings = frozenset({"Unknown", "Everyone", "Teen", "Teen Plus", "Mature"})
     mix_series_format = frozenset(
-        {"Annual", "Graphic Novel", "Limited", "One-Shot", "Series", "Trade Paperback"}
+        {
+            "Annual",
+            "Graphic Novel",
+            "Limited Series",
+            "One-Shot",
+            "Series",
+            "Trade Paperback",
+            "Hardcover",
+        }
+    )
+    mix_genres = frozenset(
+        {
+            "Adult",
+            "Crime",
+            "Espionage",
+            "Fantasy",
+            "Historical",
+            "Horror",
+            "Humor",
+            "Manga",
+            "Parody",
+            "Romance",
+            "Science Fiction",
+            "Sport",
+            "Super-Hero",
+            "War",
+            "Western",
+        }
+    )
+    mix_roles = frozenset(
+        {
+            "Writer",
+            "Script",
+            "Story",
+            "Plot",
+            "Interviewer",
+            "Artist",
+            "Penciller",
+            "Breakdowns",
+            "Illustrator" "Layouts",
+            "Inker",
+            "Embellisher",
+            "Finishes",
+            "Ink Assists",
+            "Colorist",
+            "Color Separations",
+            "Color Assists",
+            "Color Flats",
+            "Digital Art Technician",
+            "Gray Tone",
+            "Letterer",
+            "Cover",
+            "Editor",
+            "Consulting Editor",
+            "Assistant Editor",
+            "Associate Editor",
+            "Group Editor",
+            "Senior Editor",
+            "Managing Editor",
+            "Collection Editor",
+            "Production",
+            "Designer",
+            "Logo Design",
+            "Translator",
+            "Supervising Editor",
+            "Executive Editor",
+            "Editor In Chief",
+            "President",
+            "Publisher",
+            "Chief Creative Officer",
+            "Executive Producer",
+            "Other",
+        }
     )
 
     @staticmethod
@@ -49,6 +115,14 @@ class MetronInfo:
     @classmethod
     def valid_info_source(cls, val: Basic | None = None) -> bool:
         return val is not None and val.name in cls.mix_info_sources
+
+    @classmethod
+    def valid_genre(cls, val: Basic) -> bool:
+        return val.name in cls.mix_genres
+
+    @classmethod
+    def list_contains_valid_genre(cls, vals: list[Basic]) -> bool:
+        return any(val.name in cls.mix_genres for val in vals)
 
     @classmethod
     def valid_age_rating(cls, val: str | None = None) -> str | None:
@@ -91,6 +165,16 @@ class MetronInfo:
                 if val.id_:
                     child_node.attrib["id"] = str(val.id_)
 
+        def assign_genres(vals: list[Basic]) -> None:
+            genres_node = get_parent_node("Genres")
+            for val in vals:
+                # Let's only write the valid genres.
+                if val.name in self.mix_genres:
+                    genre_node = ET.SubElement(genres_node, "Genre")
+                    genre_node.text = val.name
+                    if val.id_:
+                        genre_node.attrib["id"] = str(val.id_)
+
         def assign_basic_resource(element: str, val: Basic) -> None:
             resource_node = get_parent_node(element)
             resource_node.text = val.name
@@ -126,7 +210,10 @@ class MetronInfo:
             volume_node = ET.SubElement(series_node, "Volume")
             volume_node.text = str(series.volume)
             format_node = ET.SubElement(series_node, "Format")
-            format_node.text = series.format
+            # Let's use a default of `Series` if invalid format.
+            format_node.text = (
+                series.format if series.format in self.mix_series_format else "Series"
+            )
 
         def assign_info_source(primary: Basic, alt_lst: list[Basic]) -> None:
             id_node = get_parent_node("ID")
@@ -185,7 +272,8 @@ class MetronInfo:
                 roles_node = ET.SubElement(credit_node, "Roles")
                 for r in item.role:
                     role_node = ET.SubElement(roles_node, "Role")
-                    role_node.text = r.name
+                    # If the role is a valid value, let's use `Other`.
+                    role_node.text = r.name if r.name in self.mix_roles else "Other"
                     if r.id_:
                         role_node.attrib["id"] = str(r.id_)
 
@@ -206,8 +294,8 @@ class MetronInfo:
         assign("StoreDate", md.store_date)
         assign("PageCount", md.page_count)
         assign("Notes", md.notes)
-        if md.genres:
-            assign_basic_children("Genres", "Genre", md.genres)
+        if md.genres and self.list_contains_valid_genre(md.genres):
+            assign_genres(md.genres)
         if md.tags:
             assign_basic_children("Tags", "Tag", md.tags)
         if md.story_arcs:
