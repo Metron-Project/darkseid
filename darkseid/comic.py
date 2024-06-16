@@ -297,12 +297,12 @@ class Comic:
                         except OSError:
                             page["ImageSize"] = str(len(data))
 
-    def export_as_zip(self: Comic, zipfilename: Path) -> bool:
+    def export_as_zip(self: Comic, zip_filename: Path) -> bool:
         """Export CBR archives to CBZ format."""
         if self.archive_type == self.ArchiveType.zip:
             # nothing to do, we're already a zip
             return True
 
-        zip_archiver = ZipArchiver(zipfilename)
+        zip_archiver = ZipArchiver(zip_filename)
 
         return zip_archiver.copy_from_archive(self.archiver)
