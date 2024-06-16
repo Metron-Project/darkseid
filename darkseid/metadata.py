@@ -1,4 +1,4 @@
-# ruff: noqa: TRY003, C901, PLR0915
+# ruff: noqa: C901, PLR0915
 """A class for internal metadata storage.
 
 The goal of this class is to handle ALL the data that might come from various
@@ -23,6 +23,7 @@ import pycountry
 
 MAX_UPC = 17
 MAX_ISBN = 13
+COUNTRY_LEN = 2
 
 
 class Validations:
@@ -81,6 +82,14 @@ class ImageMetadata(TypedDict, total=False):
 
 @dataclass
 class Price(Validations):
+    """
+    A data class representing a price with validations.
+
+    Attributes:
+        amount (Decimal): The amount associated with the price.
+        country (str): The country associated with the price, defaults to "US".
+    """
+
     amount: Decimal
     country: str = field(default="US")
 
@@ -105,16 +114,9 @@ class Price(Validations):
             str: The validated country code.
 
         Raises:
-            ValueError: Raised when the value is empty, or when the country object cannot be
-            found.
-
-        Example:
-            ```python
-            country = "US"
-            validated_country = Validations.validate_country(country)
-            print(validated_country)  # Output: "US"
-            ```
+            ValueError: Raised when the country code cannot be found or when no value is given for the country.
         """
+
         if value is None:
             return "US"
         value = value.strip()
@@ -122,8 +124,7 @@ class Price(Validations):
             msg = "No value given for country"
             raise ValueError(msg)
 
-        country_len = 2
-        if len(value) == country_len:
+        if len(value) == COUNTRY_LEN:
             obj = pycountry.countries.get(alpha_2=value)
         else:
             try:
@@ -140,22 +141,63 @@ class Price(Validations):
 
 @dataclass
 class Basic:
+    """
+    A data class representing basic information.
+
+    Attributes:
+        name (str): The name associated with the basic information.
+        id_ (int | None): The ID associated with the basic information, defaults to None.
+    """
+
     name: str
     id_: int | None = None
 
 
 @dataclass
 class Universe(Basic):
+    """
+    A data class representing a universe.
+
+    Attributes:
+        name (str): The name associated with the basic information.
+        id_ (int | None): The ID associated with the basic information, defaults to None.
+        designation (str | None): The designation of the universe, defaults to None.
+    """
+
     designation: str | None = None
 
 
 @dataclass
 class Role(Basic):
+    """
+    A data class representing a role.
+
+    Attributes:
+        name (str): The name associated with the basic information.
+        id_ (int | None): The ID associated with the basic information, defaults to None.
+        primary (bool): Indicates if the role is primary, defaults to False.
+    """
+
     primary: bool = False
 
 
 @dataclass
 class Series(Basic, Validations):
+    """
+    A data class representing a series with basic information and validations.
+
+    Attributes:
+        name (str): The name associated with the basic information.
+        id_ (int | None): The ID associated with the basic information, defaults to None.
+        sort_name (str | None): The sort name of the series, defaults to None.
+        volume (int | None): The volume of the series, defaults to None.
+        format (str | None): The format of the series, defaults to None.
+        language (str | None): The 2-letter ISO code of the language, defaults to None.
+
+    Static Methods:
+        validate_language(value: str, **_: any) -> str | None: Validates a language value.
+    """
+
     sort_name: str | None = None
     volume: int | None = None
     format: str | None = None
@@ -180,20 +222,13 @@ class Series(Basic, Validations):
 
         Raises:
             ValueError: Raised when the language object cannot be found.
-
-        Example:
-            ```python
-            language = "en"
-            validated_language = Validations.validate_language(language)
-            print(validated_language)  # Output: "en"
-            ```
         """
+
         if not value:
             return None
         value = value.strip()
-        country_len = 2
 
-        if len(value) == country_len:
+        if len(value) == COUNTRY_LEN:
             obj = pycountry.languages.get(alpha_2=value)
         else:
             try:
@@ -209,11 +244,29 @@ class Series(Basic, Validations):
 
 @dataclass
 class Arc(Basic):
+    """
+    A data class representing an arc with basic information.
+
+    Attributes:
+        name (str): The name associated with the basic information.
+        id_ (int | None): The ID associated with the basic information, defaults to None.
+        number (int | None): The number of the arc, defaults to None.
+    """
+
     number: int | None = None
 
 
 @dataclass
 class Credit:
+    """
+    A data class representing a creator credit.
+
+    Attributes:
+        person (str): The name of the person associated with the credit.
+        role (list[Role]): The list of roles associated with the credit.
+        id_ (int | None): The ID associated with the credit, defaults to None.
+    """
+
     person: str
     role: list[Role]
     id_: int | None = None
@@ -221,6 +274,18 @@ class Credit:
 
 @dataclass
 class GTIN(Validations):
+    """
+    A data class representing a GTIN (Global Trade Item Number) with validations.
+
+    Attributes:
+        upc (int | None): The UPC (Universal Product Code) associated with the GTIN, defaults to None.
+        isbn (int | None): The ISBN (International Standard Book Number) associated with the GTIN, defaults to None.
+
+    Static Methods:
+        validate_upc(value: int, **_: any) -> int | None: Validates a UPC (Universal Product Code) value.
+        validate_isbn(value: int, **_: any) -> int | None: Validates an ISBN (International Standard Book Number) value.
+    """
+
     upc: int | None = None
     isbn: int | None = None
 
@@ -238,20 +303,12 @@ class GTIN(Validations):
             **_ (any): Additional keyword arguments (ignored).
 
         Returns:
-            Optional[int]: The validated UPC value, or None if the value is None or not an
-            instance of int.
+            Optional[int]: The validated UPC value, or None if the value is None or not an instance of int.
 
         Raises:
-            ValueError: Raised when the length of the UPC value is greater than the maximum
-            allowed length.
-
-        Example:
-            ```python
-            upc = 1234567890
-            validated_upc = Validations.validate_upc(upc)
-            print(validated_upc)  # Output: 1234567890
-            ```
+            ValueError: Raised when the length of the UPC value is greater than the maximum allowed length.
         """
+
         # sourcery skip: class-extract-method
         if value is None or not isinstance(value, int):
             return None
@@ -277,20 +334,12 @@ class GTIN(Validations):
             **_ (any): Additional keyword arguments (ignored).
 
         Returns:
-            Optional[int]: The validated ISBN value, or None if the value is None or not an
-            instance of int.
+            Optional[int]: The validated ISBN value, or None if the value is None or not an instance of int.
 
         Raises:
-            ValueError: Raised when the length of the ISBN value is greater than the maximum
-            allowed length.
-
-        Example:
-            ```python
-            isbn = 1234567890
-            validated_isbn = Validations.validate_isbn(isbn)
-            print(validated_isbn)  # Output: 1234567890
-            ```
+            ValueError: Raised when the length of the ISBN value is greater than the maximum allowed length.
         """
+
         if value is None or not isinstance(value, int):
             return None
 
@@ -656,6 +705,16 @@ class Metadata:
         return coverlist
 
     def _existing_credit(self: Metadata, creator: str) -> tuple[bool, int | None]:
+        """
+        Checks if a credit with the specified creator already exists in the Metadata.
+
+        Args:
+            creator (str): The creator to check for in the existing credits.
+
+        Returns:
+            tuple[bool, int | None]: A tuple containing a boolean indicating if the credit exists and the index of the existing credit, or None if not found.
+        """
+
         return (
             next(
                 (
@@ -671,9 +730,33 @@ class Metadata:
 
     @staticmethod
     def _role_exists(new_role: Role, old_roles: list[Role]) -> bool:
+        """
+        Checks if a role already exists in the list of old roles.
+
+        Args:
+            new_role (Role): The new role to check for in the old roles list.
+            old_roles (list[Role]): The list of old roles to check against.
+
+        Returns:
+            bool: True if the role already exists, False otherwise.
+        """
+
         return any(role.name.casefold() == new_role.name.casefold() for role in old_roles)
 
     def add_credit(self: Metadata, new_credit: Credit) -> None:
+        """
+        Adds a new credit to the Metadata.
+
+        If a credit with the same person already exists, the roles from the new credit are added to the existing credit.
+        If the person is new, the new credit is appended to the list of credits.
+
+        Args:
+            new_credit (Credit): The new credit to add to the Metadata.
+
+        Returns:
+            None
+        """
+
         exist, idx = self._existing_credit(new_credit.person)
         if exist:
             existing_credit: Credit = self.credits[idx]
@@ -684,6 +767,10 @@ class Metadata:
             self.credits.append(new_credit)
 
     def __str__(self: Metadata) -> str:
+        """
+        Returns a string representation of the Metadata object with its attributes and values.
+        """
+
         cls = self.__class__
         cls_name = cls.__name__
         indent = " " * 4
