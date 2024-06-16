@@ -53,8 +53,10 @@ class Validations:
 
 
 class PageType:
-    """These page info classes are exactly the same as the CIX scheme, since
-    it's unique.
+    """
+    Defines constants for different types of pages.
+
+    This class provides a set of predefined page types for categorizing pages in a publication.
     """
 
     FrontCover = "FrontCover"
@@ -71,6 +73,12 @@ class PageType:
 
 
 class ImageMetadata(TypedDict, total=False):
+    """
+    Defines the structure of ImageMetadata using TypedDict.
+
+    This class represents the metadata associated with an image.
+    """
+
     Type: str
     Bookmark: str
     DoublePage: bool
