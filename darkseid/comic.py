@@ -32,6 +32,16 @@ class Comic:
         zip, rar, unknown = list(range(3))  # noqa: RUF012
 
     def __init__(self: Comic, path: Path | str) -> None:
+        """
+        Initializes a Comic object with the provided path.
+
+        Args:
+            path (Path | str): The path to the comic file.
+
+        Returns:
+            None
+        """
+
         self.path: Path | str = Path(path) if isinstance(path, str) else path
         self.ci_xml_filename: str = "ComicInfo.xml"
         self.has_md: bool | None = None
@@ -50,6 +60,10 @@ class Comic:
             self.archiver = UnknownArchiver(self.path)
 
     def __str__(self: Comic) -> str:
+        """
+        Returns the name of the comic file.
+        """
+
         return f"{self.path.name}"
 
     def reset_cache(self: Comic) -> None:
@@ -114,6 +128,16 @@ class Comic:
 
     @staticmethod
     def is_image(name_path: Path) -> bool:
+        """
+        Checks if the given path is an image file based on its suffix.
+
+        Args:
+            name_path (Path): The path to check.
+
+        Returns:
+            bool: True if the path is an image file, False otherwise.
+        """
+
         suffix_list = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
         return name_path.suffix.casefold() in suffix_list and name_path.name[0] != "."
 
@@ -164,6 +188,13 @@ class Comic:
         return self.metadata
 
     def read_raw_metadata(self: Comic) -> str | None:
+        """
+        Reads the raw metadata from the comic file.
+
+        Returns:
+            str | None: The raw metadata as a string, or None if metadata is not available or an error occurs.
+        """
+
         if not self.has_metadata():
             return None
         try:
@@ -211,6 +242,18 @@ class Comic:
         has_md: bool,
         metadata: Metadata | None,
     ) -> bool:
+        """
+        Updates the state based on the success of a write operation.
+
+        Args:
+            write_success (bool): Indicates if the write operation was successful.
+            has_md (bool): Indicates if metadata is present.
+            metadata (Metadata | None): The metadata object.
+
+        Returns:
+            bool: The success status of the write operation.
+        """
+
         if write_success:
             self.has_md = has_md
             self.metadata = metadata
