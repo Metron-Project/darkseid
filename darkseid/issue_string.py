@@ -7,6 +7,8 @@ e.g.: "12", "12.1", "0", "-1", "5AU", "100-2"
 
 # Copyright 2012-2014 Anthony Beville
 
+from __future__ import annotations
+
 
 class IssueString:
     """Class to handle various types of comic issue numbers.
@@ -14,7 +16,7 @@ class IssueString:
     :param str text: The issue number.
     """
 
-    def __init__(self: "IssueString", text: str) -> None:
+    def __init__(self: IssueString, text: str) -> None:
         """Initialize a new IssueString."""
         # break up the issue number string into 2 parts: the numeric and suffix string.
         # (assumes that the numeric portion is always first)
@@ -84,7 +86,7 @@ class IssueString:
 
         return idx
 
-    def as_string(self: "IssueString", pad: int = 0) -> str:
+    def as_string(self: IssueString, pad: int = 0) -> str:
         """Returns a string with left-side zero padding.
 
         :param int pad: The number of left-side zeroes to pad with.
@@ -112,7 +114,7 @@ class IssueString:
 
         return num_s
 
-    def as_float(self: "IssueString") -> float | None:
+    def as_float(self: IssueString) -> float | None:
         """Return a float with no suffix.
 
         example: "1½" is returned as "1.5"
@@ -124,7 +126,7 @@ class IssueString:
             return self.num + 0.5 if self.num is not None else 0.5
         return self.num
 
-    def as_int(self: "IssueString") -> int | None:
+    def as_int(self: IssueString) -> int | None:
         """Returns the integer version of the float.
 
         :returns: String as an integer.

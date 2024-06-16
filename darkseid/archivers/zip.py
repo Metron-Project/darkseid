@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 import logging
 import shutil
 import tempfile
 import zipfile
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 from typing import cast
 
 import rarfile
@@ -15,10 +20,10 @@ logger = logging.getLogger(__name__)
 class ZipArchiver(Archiver):
     """ZIP implementation."""
 
-    def __init__(self: "ZipArchiver", path: Path) -> None:
+    def __init__(self: ZipArchiver, path: Path) -> None:
         super().__init__(path)
 
-    def read_file(self: "ZipArchiver", archive_file: str) -> bytes:
+    def read_file(self: ZipArchiver, archive_file: str) -> bytes:
         """Read the contents of a comic archive."""
         try:
             with zipfile.ZipFile(self.path, mode="r") as zf:
@@ -31,15 +36,15 @@ class ZipArchiver(Archiver):
             )
             raise OSError from e
 
-    def remove_file(self: "ZipArchiver", archive_file: str) -> bool:
+    def remove_file(self: ZipArchiver, archive_file: str) -> bool:
         """Returns a boolean when attempting to remove a file from an archive."""
         return self._rebuild([archive_file])
 
-    def remove_files(self: "ZipArchiver", filename_lst: list[str]) -> bool:
+    def remove_files(self: ZipArchiver, filename_lst: list[str]) -> bool:
         """Returns a boolean when attempting to remove a list of files from an archive."""
         return self._rebuild(filename_lst)
 
-    def write_file(self: "ZipArchiver", archive_file: str, data: str) -> bool:
+    def write_file(self: ZipArchiver, archive_file: str, data: str) -> bool:
         #  At the moment, no other option but to rebuild the whole
         #  zip archive w/o the indicated file. Very sucky, but maybe
         # another solution can be found
@@ -66,7 +71,7 @@ class ZipArchiver(Archiver):
         else:
             return True
 
-    def get_filename_list(self: "ZipArchiver") -> list[str]:
+    def get_filename_list(self: ZipArchiver) -> list[str]:
         """Returns a list of the filenames in an archive."""
         try:
             with zipfile.ZipFile(self.path, mode="r") as zf:
@@ -75,7 +80,7 @@ class ZipArchiver(Archiver):
             logger.exception("Error listing files in zip archive: %s", self.path)
             return []
 
-    def _rebuild(self: "ZipArchiver", exclude_list: list[str]) -> bool:
+    def _rebuild(self: ZipArchiver, exclude_list: list[str]) -> bool:
         """Zip helper func.
 
         This recompresses the zip archive, without the files in the exclude_list
@@ -102,7 +107,7 @@ class ZipArchiver(Archiver):
         else:
             return True
 
-    def copy_from_archive(self: "ZipArchiver", other_archive: Archiver) -> bool:
+    def copy_from_archive(self: ZipArchiver, other_archive: Archiver) -> bool:
         """Replace the current zip with one copied from another archive."""
         try:
             with zipfile.ZipFile(self.path, mode="w", allowZip64=True) as zout:

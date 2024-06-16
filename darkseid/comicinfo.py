@@ -3,6 +3,7 @@
 
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2020 Brian Pepple
+from __future__ import annotations
 
 import xml.etree.ElementTree as ET  # noqa: N817
 from datetime import date
@@ -100,12 +101,12 @@ class ComicInfo:
         }
     )
 
-    def metadata_from_string(self: "ComicInfo", string: str) -> Metadata:
+    def metadata_from_string(self: ComicInfo, string: str) -> Metadata:
         tree = ET.ElementTree(ET.fromstring(string))  # noqa: S314
         return self.convert_xml_to_metadata(tree)
 
     def string_from_metadata(
-        self: "ComicInfo",
+        self: ComicInfo,
         md: Metadata,
         xml: bytes = b"",
     ) -> str:
@@ -113,7 +114,7 @@ class ComicInfo:
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
 
     @classmethod
-    def _split_sting(cls: type["ComicInfo"], string: str, delimiters: list[str]) -> list[str]:
+    def _split_sting(cls: type[ComicInfo], string: str, delimiters: list[str]) -> list[str]:
         pattern = r"|".join(delimiters)
         return split(pattern, string)
 
@@ -131,7 +132,7 @@ class ComicInfo:
 
     @classmethod
     def validate_age_rating(
-        cls: type["ComicInfo"],
+        cls: type[ComicInfo],
         val: str | None = None,
     ) -> str | None:
         if val is not None:
@@ -139,13 +140,13 @@ class ComicInfo:
         return None
 
     @classmethod
-    def validate_manga(cls: type["ComicInfo"], val: str | None = None) -> str | None:
+    def validate_manga(cls: type[ComicInfo], val: str | None = None) -> str | None:
         if val is not None:
             return "Unknown" if val not in cls.ci_manga else val
         return None
 
     def convert_metadata_to_xml(
-        self: "ComicInfo",
+        self: ComicInfo,
         md: Metadata,
         xml: bytes = b"",
     ) -> ET.ElementTree:
@@ -268,7 +269,7 @@ class ComicInfo:
         # wrap it in an ElementTree instance, and save as XML
         return ET.ElementTree(root)
 
-    def convert_xml_to_metadata(self: "ComicInfo", tree: ET.ElementTree) -> Metadata:
+    def convert_xml_to_metadata(self: ComicInfo, tree: ET.ElementTree) -> Metadata:
         root = tree.getroot()
 
         if root.tag != "ComicInfo":
@@ -372,7 +373,7 @@ class ComicInfo:
         return md
 
     def write_to_external_file(
-        self: "ComicInfo",
+        self: ComicInfo,
         filename: str,
         md: Metadata,
         xml: bytes = b"",
@@ -380,6 +381,6 @@ class ComicInfo:
         tree = self.convert_metadata_to_xml(md, xml)
         tree.write(filename, encoding="utf-8", xml_declaration=True)
 
-    def read_from_external_file(self: "ComicInfo", filename: str) -> Metadata:
+    def read_from_external_file(self: ComicInfo, filename: str) -> Metadata:
         tree = ET.parse(filename)  # noqa: S314
         return self.convert_xml_to_metadata(tree)

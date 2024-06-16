@@ -2,6 +2,7 @@
 
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2019 Brian Pepple
+from __future__ import annotations
 
 import io
 import logging
@@ -30,7 +31,7 @@ class Comic:
 
         zip, rar, unknown = list(range(3))  # noqa: RUF012
 
-    def __init__(self: "Comic", path: Path | str) -> None:
+    def __init__(self: Comic, path: Path | str) -> None:
         self.path: Path | str = Path(path) if isinstance(path, str) else path
         self.ci_xml_filename: str = "ComicInfo.xml"
         self.has_md: bool | None = None
@@ -48,46 +49,46 @@ class Comic:
             self.archive_type = self.ArchiveType.unknown
             self.archiver = UnknownArchiver(self.path)
 
-    def __str__(self: "Comic") -> str:
+    def __str__(self: Comic) -> str:
         return f"{self.path.name}"
 
-    def reset_cache(self: "Comic") -> None:
+    def reset_cache(self: Comic) -> None:
         """Clears the cached data."""
         self.has_md = None
         self.page_count = None
         self.page_list = None
         self.metadata = None
 
-    def rar_test(self: "Comic") -> bool:
+    def rar_test(self: Comic) -> bool:
         """Test whether an archive is a rar file."""
         return rarfile.is_rarfile(self.path)
 
-    def zip_test(self: "Comic") -> bool:
+    def zip_test(self: Comic) -> bool:
         """Tests whether an archive is a zipfile."""
         return zipfile.is_zipfile(self.path)
 
-    def is_rar(self: "Comic") -> bool:
+    def is_rar(self: Comic) -> bool:
         """Returns a boolean whether an archive is a rarfile."""
         return self.archive_type == self.ArchiveType.rar
 
-    def is_zip(self: "Comic") -> bool:
+    def is_zip(self: Comic) -> bool:
         """Returns a boolean whether an archive is a zipfile."""
         return self.archive_type == self.ArchiveType.zip
 
-    def is_writable(self: "Comic") -> bool:
+    def is_writable(self: Comic) -> bool:
         """Returns a boolean whether an archive is writable."""
         if self.archive_type in [self.ArchiveType.unknown, self.ArchiveType.rar]:
             return False
 
         return bool(os.access(self.path, os.W_OK))
 
-    def seems_to_be_a_comic_archive(self: "Comic") -> bool:
+    def seems_to_be_a_comic_archive(self: Comic) -> bool:
         """Returns a boolean whether the file is a comic archive."""
         return bool(
             (self.is_zip() or self.is_rar()) and (self.get_number_of_pages() > 0),
         )
 
-    def get_page(self: "Comic", index: int) -> bytes | None:
+    def get_page(self: Comic, index: int) -> bytes | None:
         """Returns an image(page) from an archive."""
         image_data = None
 
@@ -101,7 +102,7 @@ class Comic:
 
         return image_data
 
-    def get_page_name(self: "Comic", index: int) -> str | None:
+    def get_page_name(self: Comic, index: int) -> str | None:
         """Returns the page name from an index."""
         if index is None:
             return None
@@ -116,7 +117,7 @@ class Comic:
         suffix_list = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
         return name_path.suffix.casefold() in suffix_list and name_path.name[0] != "."
 
-    def get_page_name_list(self: "Comic", sort_list: bool = True) -> list[str]:
+    def get_page_name_list(self: Comic, sort_list: bool = True) -> list[str]:
         """Returns a list of page names from an archive."""
         if self.page_list is None:
             # get the list file names in the archive, and sort
@@ -136,13 +137,13 @@ class Comic:
 
         return self.page_list
 
-    def get_number_of_pages(self: "Comic") -> int:
+    def get_number_of_pages(self: Comic) -> int:
         """Returns the number of pages in an archive."""
         if self.page_count is None:
             self.page_count = len(self.get_page_name_list())
         return self.page_count
 
-    def read_metadata(self: "Comic") -> Metadata:
+    def read_metadata(self: Comic) -> Metadata:
         """Reads the metadata from an archive if present."""
         if self.metadata is None:
             raw_metadata = self.read_raw_metadata()
@@ -162,7 +163,7 @@ class Comic:
 
         return self.metadata
 
-    def read_raw_metadata(self: "Comic") -> str | None:
+    def read_raw_metadata(self: Comic) -> str | None:
         if not self.has_metadata():
             return None
         try:
@@ -174,7 +175,7 @@ class Comic:
             raw_metadata = None
         return raw_metadata
 
-    def write_metadata(self: "Comic", metadata: Metadata | None) -> bool:
+    def write_metadata(self: Comic, metadata: Metadata | None) -> bool:
         """Write the metadata to the archive."""
         if metadata is None or not self.is_writable():
             return False
@@ -186,14 +187,14 @@ class Comic:
         write_success = self.archiver.write_file(self.ci_xml_filename, md_string)
         return self._successful_write(write_success, True, metadata)
 
-    def remove_metadata(self: "Comic") -> bool:
+    def remove_metadata(self: Comic) -> bool:
         """Remove the metadata from the archive if present."""
         if self.has_metadata():
             write_success = self.archiver.remove_file(self.ci_xml_filename)
             return self._successful_write(write_success, False, None)
         return True
 
-    def remove_pages(self: "Comic", pages_index: list[int]) -> bool:
+    def remove_pages(self: Comic, pages_index: list[int]) -> bool:
         """Remove page from the archive."""
         if not pages_index:
             return False
@@ -205,7 +206,7 @@ class Comic:
         return self._successful_write(write_success, False, None)
 
     def _successful_write(
-        self: "Comic",
+        self: Comic,
         write_success: bool,
         has_md: bool,
         metadata: Metadata | None,
@@ -216,7 +217,7 @@ class Comic:
         self.reset_cache()
         return write_success
 
-    def has_metadata(self: "Comic") -> bool:
+    def has_metadata(self: Comic) -> bool:
         """Checks to see if the archive has metadata."""
         if self.has_md is None:
             self.has_md = bool(
@@ -230,7 +231,7 @@ class Comic:
         return self.has_md
 
     def apply_archive_info_to_metadata(
-        self: "Comic",
+        self: Comic,
         metadata: Metadata,
         calc_page_sizes: bool = False,
     ) -> None:
@@ -253,7 +254,7 @@ class Comic:
                         except OSError:
                             page["ImageSize"] = str(len(data))
 
-    def export_as_zip(self: "Comic", zipfilename: Path) -> bool:
+    def export_as_zip(self: Comic, zipfilename: Path) -> bool:
         """Export CBR archives to CBZ format."""
         if self.archive_type == self.ArchiveType.zip:
             # nothing to do, we're already a zip

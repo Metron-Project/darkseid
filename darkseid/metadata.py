@@ -9,10 +9,14 @@ possible, however lossy it might be
 
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2020 Brian Pepple
+from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
-from datetime import date
-from decimal import Decimal
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from datetime import date
+    from decimal import Decimal
 from typing import TypedDict
 
 import pycountry
@@ -22,7 +26,7 @@ MAX_ISBN = 13
 
 
 class Validations:
-    def __post_init__(self: "Validations") -> None:
+    def __post_init__(self: Validations) -> None:
         """
         Run validation methods if declared.
 
@@ -409,7 +413,7 @@ class Metadata:
     tags: list[Basic] = field(default_factory=list)
     pages: list[ImageMetadata] = field(default_factory=list)
 
-    def __post_init__(self: "Metadata") -> None:
+    def __post_init__(self: Metadata) -> None:
         """
         Executes the post-initialization process for a Metadata instance.
 
@@ -435,7 +439,7 @@ class Metadata:
                 self.is_empty = False
                 break
 
-    def overlay(self: "Metadata", new_md: "Metadata") -> None:  # noqa: PLR0912
+    def overlay(self: Metadata, new_md: Metadata) -> None:  # noqa: PLR0912
         """
         Overlays a metadata object on this one.
 
@@ -525,7 +529,7 @@ class Metadata:
         if len(new_md.pages) > 0:
             assign("pages", new_md.pages)
 
-    def overlay_credits(self: "Metadata", new_credits: list[Credit]) -> None:
+    def overlay_credits(self: Metadata, new_credits: list[Credit]) -> None:
         """
         Overlays the credits from a new metadata object on the current metadata object.
 
@@ -559,7 +563,7 @@ class Metadata:
                 c.primary = bool("primary" in c and c.primary)
                 self.add_credit(c)
 
-    def set_default_page_list(self: "Metadata", count: int) -> None:
+    def set_default_page_list(self: Metadata, count: int) -> None:
         """
         Generates a default page list for the Metadata object.
 
@@ -593,7 +597,7 @@ class Metadata:
                 page_dict["Type"] = PageType.FrontCover
             self.pages.append(page_dict)
 
-    def get_archive_page_index(self: "Metadata", pagenum: int) -> int:
+    def get_archive_page_index(self: Metadata, pagenum: int) -> int:
         """
         Converts the displayed page number to the page index of the file in the archive.
 
@@ -622,7 +626,7 @@ class Metadata:
         # convert the displayed page number to the page index of the file in the archive
         return int(self.pages[pagenum]["Image"]) if pagenum < len(self.pages) else 0
 
-    def get_cover_page_index_list(self: "Metadata") -> list[int]:
+    def get_cover_page_index_list(self: Metadata) -> list[int]:
         """
         Returns a list of archive page indices of cover pages.
 
@@ -651,7 +655,7 @@ class Metadata:
 
         return coverlist
 
-    def _existing_credit(self: "Metadata", creator: str) -> tuple[bool, int | None]:
+    def _existing_credit(self: Metadata, creator: str) -> tuple[bool, int | None]:
         return (
             next(
                 (
@@ -669,7 +673,7 @@ class Metadata:
     def _role_exists(new_role: Role, old_roles: list[Role]) -> bool:
         return any(role.name.casefold() == new_role.name.casefold() for role in old_roles)
 
-    def add_credit(self: "Metadata", new_credit: Credit) -> None:
+    def add_credit(self: Metadata, new_credit: Credit) -> None:
         exist, idx = self._existing_credit(new_credit.person)
         if exist:
             existing_credit: Credit = self.credits[idx]
@@ -679,7 +683,7 @@ class Metadata:
         else:
             self.credits.append(new_credit)
 
-    def __str__(self: "Metadata") -> str:
+    def __str__(self: Metadata) -> str:
         cls = self.__class__
         cls_name = cls.__name__
         indent = " " * 4
