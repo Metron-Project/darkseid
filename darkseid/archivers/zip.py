@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 import logging
 import shutil
 import tempfile
 import zipfile
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 from typing import cast
 
 import rarfile
@@ -13,13 +18,38 @@ logger = logging.getLogger(__name__)
 
 
 class ZipArchiver(Archiver):
-    """ZIP implementation."""
+    """
+    Handles archiving operations specific to ZIP files.
 
-    def __init__(self: "ZipArchiver", path: Path) -> None:
+    This class provides methods for reading, writing, and removing files within a ZIP archive.
+    """
+
+    def __init__(self: ZipArchiver, path: Path) -> None:
+        """
+        Initializes a ZipArchiver object with the provided path.
+
+        Args:
+            path (Path): The path associated with the Zip file.
+
+        Returns:
+            None
+        """
         super().__init__(path)
 
-    def read_file(self: "ZipArchiver", archive_file: str) -> bytes:
-        """Read the contents of a comic archive."""
+    def read_file(self: ZipArchiver, archive_file: str) -> bytes:
+        """
+        Reads the contents of a file from the ZIP archive.
+
+        Args:
+            archive_file (str): The file to read from the archive.
+
+        Returns:
+            bytes: The content of the file as bytes.
+
+        Raises:
+            OSError: If an error occurs during reading.
+        """
+
         try:
             with zipfile.ZipFile(self.path, mode="r") as zf:
                 return zf.read(archive_file)
@@ -31,15 +61,44 @@ class ZipArchiver(Archiver):
             )
             raise OSError from e
 
-    def remove_file(self: "ZipArchiver", archive_file: str) -> bool:
-        """Returns a boolean when attempting to remove a file from an archive."""
+    def remove_file(self: ZipArchiver, archive_file: str) -> bool:
+        """
+        Removes a file from the ZIP archive.
+
+        Args:
+            archive_file (str): The file to remove from the archive.
+
+        Returns:
+            bool: True if the file was successfully removed, False otherwise.
+        """
+
         return self._rebuild([archive_file])
 
-    def remove_files(self: "ZipArchiver", filename_lst: list[str]) -> bool:
-        """Returns a boolean when attempting to remove a list of files from an archive."""
+    def remove_files(self: ZipArchiver, filename_lst: list[str]) -> bool:
+        """
+        Removes multiple files from the ZIP archive.
+
+        Args:
+            filename_lst (list[str]): The list of files to remove from the archive.
+
+        Returns:
+            bool: True if all files were successfully removed, False otherwise.
+        """
+
         return self._rebuild(filename_lst)
 
-    def write_file(self: "ZipArchiver", archive_file: str, data: str) -> bool:
+    def write_file(self: ZipArchiver, archive_file: str, data: str) -> bool:
+        """
+        Writes data to a file in the ZIP archive.
+
+        Args:
+            archive_file (str): The file to write to in the archive.
+            data (str): The data to write to the file.
+
+        Returns:
+            bool: True if the write operation was successful, False otherwise.
+        """
+
         #  At the moment, no other option but to rebuild the whole
         #  zip archive w/o the indicated file. Very sucky, but maybe
         # another solution can be found
@@ -66,8 +125,17 @@ class ZipArchiver(Archiver):
         else:
             return True
 
-    def get_filename_list(self: "ZipArchiver") -> list[str]:
-        """Returns a list of the filenames in an archive."""
+    def get_filename_list(self: ZipArchiver) -> list[str]:
+        """
+        Returns a list of filenames in the ZIP archive.
+
+        Returns:
+            list[str]: A list of filenames in the archive.
+
+        Raises:
+            OSError: If an error occurs during retrieval.
+        """
+
         try:
             with zipfile.ZipFile(self.path, mode="r") as zf:
                 return zf.namelist()
@@ -75,11 +143,17 @@ class ZipArchiver(Archiver):
             logger.exception("Error listing files in zip archive: %s", self.path)
             return []
 
-    def _rebuild(self: "ZipArchiver", exclude_list: list[str]) -> bool:
-        """Zip helper func.
-
-        This recompresses the zip archive, without the files in the exclude_list
+    def _rebuild(self: ZipArchiver, exclude_list: list[str]) -> bool:
         """
+        Rebuilds the ZIP archive excluding specified files.
+
+        Args:
+            exclude_list (list[str]): The list of files to exclude from the rebuild.
+
+        Returns:
+            bool: True if the rebuild was successful, False otherwise.
+        """
+
         try:
             with zipfile.ZipFile(
                 tempfile.NamedTemporaryFile(dir=self.path.parent, delete=False),
@@ -102,8 +176,17 @@ class ZipArchiver(Archiver):
         else:
             return True
 
-    def copy_from_archive(self: "ZipArchiver", other_archive: Archiver) -> bool:
-        """Replace the current zip with one copied from another archive."""
+    def copy_from_archive(self: ZipArchiver, other_archive: Archiver) -> bool:
+        """
+        Copies files from another archive to the ZIP archive.
+
+        Args:
+            other_archive (Archiver): The archive to copy files from.
+
+        Returns:
+            bool: True if the copy operation was successful, False otherwise.
+        """
+
         try:
             with zipfile.ZipFile(self.path, mode="w", allowZip64=True) as zout:
                 for filename in other_archive.get_filename_list():
