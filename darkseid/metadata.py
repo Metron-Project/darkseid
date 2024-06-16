@@ -602,15 +602,15 @@ class Metadata:
             print(metadata.credits)  # Output: [Credit(person="John Doe", role="Writer")]
             ```
         """
-        for c in new_credits:
+        for credit in new_credits:
             # Remove credit role if person is blank
-            if c.person == "":
+            if credit.person == "":
                 for r in reversed(self.credits):
-                    if r.role.casefold() == c.role.casefold():
+                    if r.role.casefold() == credit.role.casefold():
                         self.credits.remove(r)
             else:
-                c.primary = bool("primary" in c and c.primary)
-                self.add_credit(c)
+                credit.primary = bool("primary" in credit and credit.primary)
+                self.add_credit(credit)
 
     def set_default_page_list(self: Metadata, count: int) -> None:
         """
