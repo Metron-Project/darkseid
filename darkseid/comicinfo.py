@@ -10,6 +10,8 @@ from datetime import date
 from re import split
 from typing import Any, ClassVar, cast
 
+from defusedxml.ElementTree import fromstring, parse
+
 from darkseid.issue_string import IssueString
 from darkseid.metadata import Arc, Basic, Credit, ImageMetadata, Metadata, Role, Series
 from darkseid.utils import list_to_string, xlate
@@ -118,7 +120,7 @@ class ComicInfo:
             Metadata: The parsed Metadata object.
         """
 
-        tree = ET.ElementTree(ET.fromstring(string))  # noqa: S314
+        tree = ET.ElementTree(fromstring(string))
         return self.convert_xml_to_metadata(tree)
 
     def string_from_metadata(
@@ -533,5 +535,5 @@ class ComicInfo:
             Metadata: The Metadata object extracted from the file.
         """
 
-        tree = ET.parse(filename)  # noqa: S314
+        tree = parse(filename)
         return self.convert_xml_to_metadata(tree)
