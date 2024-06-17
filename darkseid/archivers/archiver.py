@@ -37,7 +37,7 @@ class Archiver:
             bytes: The content of the file as bytes.
 
         Raises:
-            NotImplementedError
+            NotImplementedError: Method or function hasn't been implemented yet.
         """
 
         raise NotImplementedError
