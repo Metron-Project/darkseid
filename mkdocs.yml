@@ -1,0 +1,72 @@
+site_name: Darkseid
+site_url: https://darkseid.readthedocs.io/en/latest/
+site_description: A python library to interact with comic archives.
+site_author: Brian Pepple
+
+copyright: GPL-3.0
+
+repo_url: https://github.com/Metron-Project/darkseid
+repo_name: Metron-Project/darkseid
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - navigation.expand
+    - navigation.top
+  icon:
+    repo: material/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+
+markdown_extensions:
+  - pymdownx.highlight:
+      auto_title: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
+  - Archivers:
+      - Unknown Archive: darkseid/archivers/__init__.md
+      - Archiver: darkseid/archivers/archiver.md
+      - Rar: darkseid/archivers/rar.md
+      - Zip: darkseid/archivers/zip.md
+  - Darkseid:
+      - Comic: darkseid/comic.md
+      - ComicInfo: darkseid/comicinfo.md
+      - Exceptions: darkseid/exceptions.md
+      - IssueString: darkseid/issue_string.md
+      - Metadata: darkseid/metadata.md
+      - Utils: darkseid/utils.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            show_root_heading: True
+            show_root_full_path: False
+            show_category_heading: True
+            # Docstrings
+            docstring_style: google
+            docstring_section_style: spacy
+            line_length: 100
+            merge_init_into_class: True
+            show_signature_annotations: True
+            # Additional
+            show_source: False
+  - include-markdown
