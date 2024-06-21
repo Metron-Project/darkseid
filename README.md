@@ -12,7 +12,9 @@ A [Python](https://www.python.org/) library to interact with comic archives.
 ```bash
 pipx install darkeid
 ```
+
 or
+
 ```bash
 pip install darkeid
 ```
@@ -23,4 +25,6 @@ pip install darkeid
 
 ## Bugs/Requests
 
-Please use the [GitHub issue tracker](https://github.com/Metron-Project/darkseid/issues) to submit bugs or request features.
+Please use the
+[GitHub issue tracker](https://github.com/Metron-Project/darkseid/issues) to
+submit bugs or request features.
