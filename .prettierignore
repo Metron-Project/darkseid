@@ -1,4 +1,5 @@
 dist
+docs/darkseid
 .git
 .idea
 .mypy_cache
@@ -11,4 +12,3 @@ __pycache__
 /test-results
 .tox
 .venv*
-docs/darkseid
