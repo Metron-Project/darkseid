@@ -11,3 +11,4 @@ __pycache__
 /test-results
 .tox
 .venv*
+docs/darkseid
