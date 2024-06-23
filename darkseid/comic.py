@@ -417,7 +417,7 @@ class Comic:
         if calc_page_sizes:
             for page in metadata.pages:
                 if "ImageSize" not in page or "ImageHeight" not in page or "ImageWidth" not in page:
-                    idx = int(page["Image"])
+                    idx = int(page["Image"])  # type: ignore
                     data = self.get_page(idx)
                     if data is not None:
                         try:
