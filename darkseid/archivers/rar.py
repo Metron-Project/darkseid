@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 import rarfile
 
-from darkseid.archivers import Archiver
+from darkseid.archivers.archiver import Archiver
 from darkseid.exceptions import RarError
 
 
