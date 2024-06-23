@@ -227,3 +227,46 @@ def test_unknown_archive(tmp_path: Path) -> None:
     assert ca.get_filename_list() == []
     assert ca.remove_file(txt_fn) is False
     assert ca.copy_from_archive(oa) is False
+
+
+@pytest.mark.parametrize(
+    ("comic_path", "expected_path"),
+    [
+        ("/home/bpepple/comics/comic1", Path("/home/bpepple/comics/comic1")),
+        ("/home/bpepple/comics/comic2", Path("/home/bpepple/comics/comic2")),
+        ("/home/bpepple/comics/comic3", Path("/home/bpepple/comics/comic3")),
+    ],
+    ids=["comic1_path", "comic2_path", "comic3_path"],
+)
+def test_comic_path_happy_path(comic_path, expected_path):
+    # Arrange
+    comic = Comic(comic_path)
+
+    # Act
+    result = comic.path
+
+    # Assert
+    assert result == expected_path
+
+
+@pytest.mark.parametrize(
+    ("comic_path", "expected_path"),
+    [
+        ("/", Path("/")),
+        ("", Path("")),  # noqa: PTH201
+        (
+            "/home/bpepple/comics/very/long/path/to/comic",
+            Path("/home/bpepple/comics/very/long/path/to/comic"),
+        ),
+    ],
+    ids=["root_path", "empty_path", "long_path"],
+)
+def test_comic_path_edge_cases(comic_path, expected_path):
+    # Arrange
+    comic = Comic(comic_path)
+
+    # Act
+    result = comic.path
+
+    # Assert
+    assert result == expected_path
