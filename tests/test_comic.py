@@ -149,7 +149,7 @@ def test_archive_apply_file_info_to_metadata(fake_cbz: Comic) -> None:
     test_md = Metadata()
     fake_cbz.apply_archive_info_to_metadata(test_md)
     # TODO: Need to test calculate page sizes
-    assert test_md.page_count == "5"
+    assert test_md.page_count == 5
 
 
 #######

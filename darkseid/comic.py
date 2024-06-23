@@ -412,7 +412,7 @@ class Comic:
             None
         """
 
-        metadata.page_count = str(self.get_number_of_pages())
+        metadata.page_count = self.get_number_of_pages()
 
         if calc_page_sizes:
             for page in metadata.pages:
