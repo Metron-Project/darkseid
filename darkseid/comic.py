@@ -47,7 +47,7 @@ class Comic:
         Returns:
             None
         """
-        self._path: Path | str = Path(path) if isinstance(path, str) else path
+        self._path: Path = Path(path) if isinstance(path, str) else path
         self._ci_xml_filename: str = "ComicInfo.xml"
         self._has_md: bool | None = None
         self._page_count: int | None = None
