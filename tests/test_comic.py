@@ -160,7 +160,7 @@ def test_rar_write(fake_rar: Comic, fake_metadata: Metadata) -> None:
     assert fake_rar.write_metadata(fake_metadata) is False
 
 
-# Skip test for Windows and MacOS.
+# Skip test for Windows and macOS.
 @pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_rar_file_exists(fake_rar: Comic) -> None:
     """Test function that determines if a file is a rar file."""
@@ -168,14 +168,14 @@ def test_rar_file_exists(fake_rar: Comic) -> None:
     assert fake_rar.is_rar() is True
 
 
-# Skip test for Windows and MacOS.
+# Skip test for Windows and macOS.
 @pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_rar_is_writable(fake_rar: Comic) -> None:
     """Test to determine if rar archive is writable."""
     assert fake_rar.is_writable() is False
 
 
-# Skip test for Windows and MacOS.
+# Skip test for Windows and macOS.
 @pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_rar_read_metadata(fake_rar: Comic) -> None:
     """Test to read a rar files metadata."""
@@ -186,14 +186,14 @@ def test_rar_read_metadata(fake_rar: Comic) -> None:
     assert md.page_count == 36
 
 
-# Skip test for Windows and MacOS.
+# Skip test for Windows and macOS.
 @pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_rar_number_of_pages(fake_rar: Comic) -> None:
     """Test to determine number of pages in a comic archive."""
     assert fake_rar.get_number_of_pages() == 36
 
 
-# Skip test for Windows and MacOS.
+# Skip test for Windows and macOS.
 @pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_rar_get_random_page(fake_rar: Comic) -> None:
     """Test to set if a page from a comic archive can be retrieved."""
@@ -203,7 +203,7 @@ def test_rar_get_random_page(fake_rar: Comic) -> None:
     assert image == page
 
 
-# Skip test for Windows and MacOS.
+# Skip test for Windows and macOS.
 @pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
 def test_rar_export_to_zip(tmp_path: Path, fake_rar: Comic) -> None:
     fn = tmp_path / "fake_export.cbz"
