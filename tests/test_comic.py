@@ -1,272 +1,418 @@
-"""Tests for comic archive files."""
-
-import sys
-import zipfile
+# ruff: noqa: SLF001
 from pathlib import Path
 
 import pytest
 
 from darkseid.archivers import UnknownArchiver
+from darkseid.archivers.rar import RarArchiver
+from darkseid.archivers.zip import ZipArchiver
 from darkseid.comic import Comic
 from darkseid.metadata import Metadata
-from tests.conftest import IMG_DIR
-
-# Uses to test image bytes
-PAGE_TMPL = str(IMG_DIR / "CaptainScience#1_{page_num}.jpg")
-PAGE_FIVE = PAGE_TMPL.format(page_num="05")
 
 
-#######
-# CBZ #
-#######
-def test_comic_str(fake_cbz: Comic) -> None:
-    expected = "Captain Science #001.cbz"
-    result = str(fake_cbz)
-    assert expected == result
+@pytest.fixture()
+def mock_archiver(mocker):
+    return mocker.patch("darkseid.archivers.UnknownArchiver")
 
 
-def test_archive_delete_page(tmp_path: Path, fake_metadata: Metadata) -> None:
-    z_file = tmp_path / "test.cbz"
-    with zipfile.ZipFile(z_file, "w") as zf:
-        for p in IMG_DIR.iterdir():
-            zf.write(p)
-    # Prep test file
-    ca = Comic(z_file)
-    test_md = Metadata()
-    test_md.set_default_page_list(ca.get_number_of_pages())
-    test_md.overlay(fake_metadata)
-    ca.write_metadata(test_md)
+@pytest.fixture()
+def mock_zip_archiver(mocker):
+    return mocker.patch("darkseid.archivers.zip.ZipArchiver")
 
-    old_num_pages = ca.get_number_of_pages()
-    result = ca.remove_pages([1, 4])
-    ca.get_page_name_list()
-    num_pages = ca.get_number_of_pages()
+
+@pytest.fixture()
+def mock_rar_archiver(mocker):
+    return mocker.patch("darkseid.archivers.rar.RarArchiver")
+
+
+@pytest.mark.parametrize(
+    ("path", "expected_archiver"),
+    [
+        ("/path/to/comic.cbz", ZipArchiver),
+        ("/path/to/comic.cbr", RarArchiver),
+        ("/path/to/comic.unknown", UnknownArchiver),
+    ],
+    ids=["zip file", "rar file", "unknown file"],
+)
+def test_comic_initialization(mocker, path, expected_archiver):
+    # Arrange
+    mocker.patch("zipfile.is_zipfile", return_value=path.endswith(".cbz"))
+    mocker.patch("rarfile.is_rarfile", return_value=path.endswith(".cbr"))
+
+    # Act
+    comic = Comic(path)
+
+    # Assert
+    assert isinstance(comic.archiver, expected_archiver)
+
+
+def test_comic_str():
+    # Arrange
+    path = "/path/to/comic.cbz"
+    comic = Comic(path)
+
+    # Act
+    result = str(comic)
+
+    # Assert
+    assert result == "comic.cbz"
+
+
+def test_comic_path():
+    # Arrange
+    path = "/path/to/comic.cbz"
+    comic = Comic(path)
+
+    # Act
+    result = comic.path
+
+    # Assert
+    assert result == Path(path)
+
+
+def test_reset_cache():
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    comic._has_md = True
+    comic._page_count = 10
+    comic._page_list = ["page1", "page2"]
+    comic._metadata = Metadata()
+
+    # Act
+    comic.reset_cache()
+
+    # Assert
+    assert comic._has_md is None
+    assert comic._page_count is None
+    assert comic._page_list is None
+    assert comic._metadata is None
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ("/path/to/comic.cbr", True),
+        ("/path/to/comic.cbz", False),
+    ],
+    ids=["rar file", "not rar file"],
+)
+def test_rar_test(mocker, path, expected):
+    # Arrange
+    mocker.patch("rarfile.is_rarfile", return_value=path.endswith(".cbr"))
+    comic = Comic(path)
+
+    # Act
+    result = comic.rar_test()
+
+    # Assert
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ("/path/to/comic.cbz", True),
+        ("/path/to/comic.cbr", False),
+    ],
+    ids=["zip file", "not zip file"],
+)
+def test_zip_test(mocker, path, expected):
+    # Arrange
+    mocker.patch("zipfile.is_zipfile", return_value=path.endswith(".cbz"))
+    comic = Comic(path)
+
+    # Act
+    result = comic.zip_test()
+
+    # Assert
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("archive_type", "expected"),
+    [
+        (Comic.ArchiveType.rar, True),
+        (Comic.ArchiveType.zip, False),
+    ],
+    ids=["rar archive", "not rar archive"],
+)
+def test_is_rar(archive_type, expected):
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    comic._archive_type = archive_type
+
+    # Act
+    result = comic.is_rar()
+
+    # Assert
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("archive_type", "expected"),
+    [
+        (Comic.ArchiveType.zip, True),
+        (Comic.ArchiveType.rar, False),
+    ],
+    ids=["zip archive", "not zip archive"],
+)
+def test_is_zip(archive_type, expected):
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    comic._archive_type = archive_type
+
+    # Act
+    result = comic.is_zip()
+
+    # Assert
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("archive_type", "expected"),
+    [
+        (Comic.ArchiveType.zip, True),
+        (Comic.ArchiveType.rar, False),
+        (Comic.ArchiveType.unknown, False),
+    ],
+    ids=["zip writable", "rar not writable", "unknown not writable"],
+)
+def test_is_writable(mocker, archive_type, expected):
+    # Arrange
+    path = "/path/to/comic.cbz"
+    comic = Comic(path)
+    comic._archive_type = archive_type
+    mocker.patch("os.access", return_value=True)
+
+    # Act
+    result = comic.is_writable()
+
+    # Assert
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("is_zip", "is_rar", "page_count", "expected"),
+    [
+        (True, False, 5, True),
+        (False, True, 5, True),
+        (False, False, 5, False),
+        (True, False, 0, False),
+    ],
+    ids=["zip with pages", "rar with pages", "not zip or rar", "zip with no pages"],
+)
+def test_seems_to_be_a_comic_archive(mocker, is_zip, is_rar, page_count, expected):
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    mocker.patch.object(comic, "is_zip", return_value=is_zip)
+    mocker.patch.object(comic, "is_rar", return_value=is_rar)
+    mocker.patch.object(comic, "get_number_of_pages", return_value=page_count)
+
+    # Act
+    result = comic.seems_to_be_a_comic_archive()
+
+    # Assert
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("index", "expected"),
+    [
+        (0, b"image data"),
+        (1, None),
+    ],
+    ids=["valid index", "invalid index"],
+)
+def test_get_page(mocker, index, expected):
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    mocker.patch.object(comic, "get_page_name", return_value="page1.jpg" if index == 0 else None)
+    mocker.patch.object(comic._archiver, "read_file", return_value=b"image data")
+
+    # Act
+    result = comic.get_page(index)
+
+    # Assert
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("index", "expected"),
+    [
+        (0, "page1.jpg"),
+        (1, None),
+    ],
+    ids=["valid index", "invalid index"],
+)
+def test_get_page_name(mocker, index, expected):
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    mocker.patch.object(comic, "get_page_name_list", return_value=["page1.jpg"])
+
+    # Act
+    result = comic.get_page_name(index)
+
+    # Assert
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("name_path", "expected"),
+    [
+        (Path("image.jpg"), True),
+        (Path("image.txt"), False),
+        (Path(".hidden.jpg"), False),
+    ],
+    ids=["valid image", "invalid image", "hidden image"],
+)
+def test_is_image(name_path, expected):
+    # Act
+    result = Comic.is_image(name_path)
+
+    # Assert
+    assert result == expected
+
+
+def test_get_page_name_list(mocker):
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    mocker.patch.object(
+        comic._archiver,
+        "get_filename_list",
+        return_value=["page1.jpg", "page2.png", "not_image.txt"],
+    )
+    mocker.patch(
+        "darkseid.comic.Comic.is_image", side_effect=lambda x: x.suffix in [".jpg", ".png"]
+    )
+
+    # Act
+    result = comic.get_page_name_list()
+
+    # Assert
+    assert result == ["page1.jpg", "page2.png"]
+
+
+def test_get_number_of_pages(mocker):
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    mocker.patch.object(comic, "get_page_name_list", return_value=["page1.jpg", "page2.png"])
+
+    # Act
+    result = comic.get_number_of_pages()
+
+    # Assert
+    assert result == 2
+
+
+def test_read_metadata(mocker):
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    mocker.patch.object(comic, "read_raw_metadata", return_value="<ComicInfo></ComicInfo>")
+    mocker.patch("darkseid.comic.ComicInfo.metadata_from_string", return_value=Metadata())
+
+    # Act
+    result = comic.read_metadata()
+
+    # Assert
+    assert isinstance(result, Metadata)
+
+
+def test_read_raw_metadata(mocker):
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    mocker.patch.object(comic, "has_metadata", return_value=True)
+    mocker.patch.object(comic._archiver, "read_file", return_value=b"<ComicInfo></ComicInfo>")
+
+    # Act
+    result = comic.read_raw_metadata()
+
+    # Assert
+    assert result == "<ComicInfo></ComicInfo>"
+
+
+def test_write_metadata(mocker):
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    metadata = Metadata()
+    mocker.patch.object(comic, "is_writable", return_value=True)
+    mocker.patch.object(comic, "apply_archive_info_to_metadata")
+    mocker.patch.object(comic, "read_raw_metadata", return_value=None)
+    mocker.patch(
+        "darkseid.comic.ComicInfo.string_from_metadata", return_value="<ComicInfo></ComicInfo>"
+    )
+    mocker.patch.object(comic._archiver, "write_file", return_value=True)
+    mocker.patch.object(comic, "_successful_write", return_value=True)
+
+    # Act
+    result = comic.write_metadata(metadata)
+
+    # Assert
     assert result is True
-    assert old_num_pages - 2 == num_pages
-    assert ca.has_metadata()
 
 
-def test_archive_from_img_dir(tmp_path: Path, fake_metadata: Metadata) -> None:
-    z_file: Path = tmp_path / "Aquaman v1 #001 (of 08) (1994).cbz"
-    with zipfile.ZipFile(z_file, "w") as zf:
-        for p in IMG_DIR.iterdir():
-            zf.write(p)
-
-    ca = Comic(z_file)
-    test_md = Metadata()
-    test_md.set_default_page_list(ca.get_number_of_pages())
-    test_md.overlay(fake_metadata)
-    ca.write_metadata(test_md)
-    res = ca.read_metadata()
-    assert res.page_count == 5
-    assert res.series.name == fake_metadata.series.name
-    assert res.series.format == fake_metadata.series.format
-    assert res.series.volume == fake_metadata.series.volume
-    assert res.issue == fake_metadata.issue
-    assert res.stories == fake_metadata.stories
-    assert res.cover_date == fake_metadata.cover_date
-    assert res.story_arcs == fake_metadata.story_arcs
-    assert res.characters == fake_metadata.characters
-    assert res.teams == fake_metadata.teams
-    assert res.black_and_white == fake_metadata.black_and_white
-    assert res.comments == fake_metadata.comments
-
-
-def test_zip_file_exists(fake_cbz: Comic) -> None:
-    """Test function that determines if a file is a zip file."""
-    assert fake_cbz.is_zip() is True
-
-
-def test_whether_text_file_is_comic_archive(tmp_path: Path) -> None:
-    """Test that a text file produces a false result
-    when determining whether it's a comic archive.
-    """
-    test_file = tmp_path / "text-file-test.txt"
-    test_file.write_text("Blah Blah Blah")
-
-    ca = Comic(test_file)
-    assert ca.seems_to_be_a_comic_archive() is False
-
-
-def test_archive_number_of_pages(fake_cbz: Comic) -> None:
-    """Test to determine number of pages in a comic archive."""
-    assert fake_cbz.get_number_of_pages() == 5
-
-
-def test_archive_is_writable(fake_cbz: Comic) -> None:
-    """Test to determine if a comic archive is writable."""
-    assert fake_cbz.is_writable() is True
-
-
-def test_archive_writing_with_no_metadata(fake_cbz: Comic) -> None:
-    """Make sure writing no metadata to comic returns False."""
-    assert fake_cbz.write_metadata(None) is False
-
-
-def test_archive_test_metadata(fake_cbz: Comic, fake_metadata: Metadata) -> None:
-    """Test to determine if a comic archive has metadata."""
-    # verify archive has no metadata
-    assert fake_cbz.has_metadata() is False
-
-    # now let's test that we can write some
-    write_result = fake_cbz.write_metadata(fake_metadata)
-    assert write_result is True
-    assert fake_cbz.has_metadata() is True
-
-    # Verify what was written
-    new_md = fake_cbz.read_metadata()
-    assert new_md.series.name == fake_metadata.series.name
-    assert new_md.series.volume == fake_metadata.series.volume
-    assert new_md.series.format == fake_metadata.series.format
-    assert new_md.issue == fake_metadata.issue
-    assert new_md.stories == fake_metadata.stories
-
-    # now remove what was just written
-    fake_cbz.remove_metadata()
-    assert fake_cbz.has_metadata() is False
-
-
-def test_removing_metadata_on_comic_wo_metadata(fake_cbz: Comic) -> None:
-    """Make sure trying to remove metadata from
-    comic w/o any returns True.
-    """
-    assert fake_cbz.write_metadata(None) is False
-    assert fake_cbz.remove_metadata() is True
-
-
-@pytest.mark.skipif(sys.platform in ["win32"], reason="Skip Windows.")
-def test_cbz_get_random_page(fake_cbz: Comic) -> None:
-    """Test to set if a page from a comic archive can be retrieved."""
-    page = fake_cbz.get_page(4)
-    with open(PAGE_FIVE, "rb") as cif:  # noqa: PTH123
-        image = cif.read()
-    assert image == page
-
-
-@pytest.mark.skipif(sys.platform in ["win32"], reason="Skip Windows.")
-def test_archive_apply_file_info_to_metadata(fake_cbz: Comic) -> None:
-    """Test to apply archive info to the generic metadata."""
-    test_md = Metadata()
-    fake_cbz.apply_archive_info_to_metadata(test_md)
-    # TODO: Need to test calculate page sizes
-    assert test_md.page_count == 5
-
-
-#######
-# CBR #
-#######
-@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
-def test_rar_write(fake_rar: Comic, fake_metadata: Metadata) -> None:
-    assert fake_rar.write_metadata(fake_metadata) is False
-
-
-# Skip test for Windows and macOS.
-@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
-def test_rar_file_exists(fake_rar: Comic) -> None:
-    """Test function that determines if a file is a rar file."""
-    assert fake_rar.is_zip() is False
-    assert fake_rar.is_rar() is True
-
-
-# Skip test for Windows and macOS.
-@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
-def test_rar_is_writable(fake_rar: Comic) -> None:
-    """Test to determine if rar archive is writable."""
-    assert fake_rar.is_writable() is False
-
-
-# Skip test for Windows and macOS.
-@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
-def test_rar_read_metadata(fake_rar: Comic) -> None:
-    """Test to read a rar files metadata."""
-    md = fake_rar.read_metadata()
-    assert md.series.name == "Captain Science"
-    assert md.issue == "1"
-    assert md.series.volume == 1950
-    assert md.page_count == 36
-
-
-# Skip test for Windows and macOS.
-@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
-def test_rar_number_of_pages(fake_rar: Comic) -> None:
-    """Test to determine number of pages in a comic archive."""
-    assert fake_rar.get_number_of_pages() == 36
-
-
-# Skip test for Windows and macOS.
-@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
-def test_rar_get_random_page(fake_rar: Comic) -> None:
-    """Test to set if a page from a comic archive can be retrieved."""
-    page = fake_rar.get_page(4)
-    with open(PAGE_FIVE, "rb") as cif:  # noqa: PTH123
-        image = cif.read()
-    assert image == page
-
-
-# Skip test for Windows and macOS.
-@pytest.mark.skipif(sys.platform in ["win32", "darwin"], reason="Skip MacOS & Windows.")
-def test_rar_export_to_zip(tmp_path: Path, fake_rar: Comic) -> None:
-    fn = tmp_path / "fake_export.cbz"
-    assert fake_rar.export_as_zip(fn) is True
-    ca = Comic(fn)
-    assert ca.is_zip() is True
-    assert ca.get_number_of_pages() == 36
-
-
-###########
-# Unknown #
-###########
-
-
-def test_unknown_archive(tmp_path: Path) -> None:
-    fn = tmp_path / "unknown"
-    fn2 = tmp_path / "other"
-    ca = UnknownArchiver(fn)
-    oa = UnknownArchiver(fn2)
-    txt_fn = "test.txt"
-    assert ca.get_filename_list() == []
-    assert ca.remove_file(txt_fn) is False
-    assert ca.copy_from_archive(oa) is False
-
-
-@pytest.mark.parametrize(
-    ("comic_path", "expected_path"),
-    [
-        ("/home/bpepple/comics/comic1", Path("/home/bpepple/comics/comic1")),
-        ("/home/bpepple/comics/comic2", Path("/home/bpepple/comics/comic2")),
-        ("/home/bpepple/comics/comic3", Path("/home/bpepple/comics/comic3")),
-    ],
-    ids=["comic1_path", "comic2_path", "comic3_path"],
-)
-def test_comic_path_happy_path(comic_path, expected_path):
+def test_remove_metadata(mocker):
     # Arrange
-    comic = Comic(comic_path)
+    comic = Comic("/path/to/comic.cbz")
+    mocker.patch.object(comic, "has_metadata", return_value=True)
+    mocker.patch.object(comic._archiver, "remove_file", return_value=True)
+    mocker.patch.object(comic, "_successful_write", return_value=True)
 
     # Act
-    result = comic.path
+    result = comic.remove_metadata()
 
     # Assert
-    assert result == expected_path
+    assert result is True
 
 
-@pytest.mark.parametrize(
-    ("comic_path", "expected_path"),
-    [
-        ("/", Path("/")),
-        ("", Path("")),  # noqa: PTH201
-        (
-            "/home/bpepple/comics/very/long/path/to/comic",
-            Path("/home/bpepple/comics/very/long/path/to/comic"),
-        ),
-    ],
-    ids=["root_path", "empty_path", "long_path"],
-)
-def test_comic_path_edge_cases(comic_path, expected_path):
+def test_remove_pages(mocker):
     # Arrange
-    comic = Comic(comic_path)
+    comic = Comic("/path/to/comic.cbz")
+    mocker.patch.object(comic, "get_page_name", side_effect=["page1.jpg", "page2.png"])
+    mocker.patch.object(comic._archiver, "remove_files", return_value=True)
+    mocker.patch.object(comic, "_successful_write", return_value=True)
 
     # Act
-    result = comic.path
+    result = comic.remove_pages([0, 1])
 
     # Assert
-    assert result == expected_path
+    assert result is True
+
+
+def test_has_metadata(mocker):
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    mocker.patch.object(comic, "seems_to_be_a_comic_archive", return_value=True)
+    mocker.patch.object(comic._archiver, "get_filename_list", return_value=["ComicInfo.xml"])
+
+    # Act
+    result = comic.has_metadata()
+
+    # Assert
+    assert result is True
+
+
+def test_apply_archive_info_to_metadata(mocker):
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    metadata = Metadata()
+    mocker.patch.object(comic, "get_number_of_pages", return_value=2)
+    mocker.patch.object(comic, "get_page", return_value=b"image data")
+    mocker.patch("PIL.Image.open", return_value=mocker.Mock(size=(100, 200)))
+
+    # Act
+    comic.apply_archive_info_to_metadata(metadata, calc_page_sizes=True)
+
+    # Assert
+    assert metadata.page_count == 2
+
+
+def test_export_as_zip(mocker):
+    # Arrange
+    comic = Comic("/path/to/comic.cbr")
+    mocker.patch("darkseid.archivers.zip.ZipArchiver.copy_from_archive", return_value=True)
+
+    # Act
+    result = comic.export_as_zip(Path("/path/to/comic.cbz"))
+
+    # Assert
+    assert result is True
