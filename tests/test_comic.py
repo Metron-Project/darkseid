@@ -9,6 +9,7 @@ from darkseid.archivers.zip import ZipArchiver
 from darkseid.comic import Comic
 from darkseid.metadata import Metadata
 
+
 @pytest.mark.parametrize(
     ("path", "expected_archiver"),
     [

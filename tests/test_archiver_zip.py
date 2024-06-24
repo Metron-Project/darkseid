@@ -37,6 +37,7 @@ def test_write_file(zip_archiver, archive_file, data):
     assert archive_file in zip_archiver.get_filename_list()
     assert zip_archiver.read_file(archive_file).decode() == data
 
+
 # TODO: Add a test for BadZipFile
 @pytest.mark.parametrize(
     ("archive_file", "expected_exception"), [("nonexistent.zip", OSError)], ids=["nonexistent_file"]
