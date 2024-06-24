@@ -24,7 +24,18 @@ class Archiver:
             None
         """
 
-        self.path = path
+        self._path = path
+
+    @property
+    def path(self: Archiver) -> Path:
+        """
+        Returns the path associated with the Archiver.
+
+        Returns:
+            Path: The path associated with the Archiver.
+        """
+
+        return self._path
 
     def read_file(self: Archiver, archive_file: str) -> bytes:
         """

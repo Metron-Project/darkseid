@@ -12,7 +12,7 @@ from typing import cast
 
 import rarfile
 
-from darkseid.archivers import Archiver
+from darkseid.archivers.archiver import Archiver
 
 logger = logging.getLogger(__name__)
 

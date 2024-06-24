@@ -4,14 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from darkseid.comic import Comic
 from darkseid.metadata import Arc, Basic, Metadata, Price, Series, Universe
 
 TEST_FILES_PATH = Path("tests/test_files")
 IMG_DIR = TEST_FILES_PATH / "Captain_Science_001"
-ARCHIVE_PATH = TEST_FILES_PATH / "Captain Science #001.cbz"
 CI_XSD = TEST_FILES_PATH / "ComicInfo.xsd"
-RAR_PATH = TEST_FILES_PATH / "Captain Science #001-cix-cbi.cbr"
 
 
 @pytest.fixture(scope="module")
@@ -51,13 +48,3 @@ def fake_overlay_metadata() -> Metadata:
     overlay_md.prices = [Price(Decimal("3.99")), Price(Decimal("1.5"), "CA")]
     overlay_md.collection_title = "Just another TPB"
     return overlay_md
-
-
-@pytest.fixture(scope="session")
-def fake_cbz() -> Comic:
-    return Comic(ARCHIVE_PATH)
-
-
-@pytest.fixture(scope="session")
-def fake_rar() -> Comic:
-    return Comic(RAR_PATH)
