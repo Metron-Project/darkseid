@@ -37,7 +37,7 @@ def test_write_file(rar_archiver):
 
 def test_copy_from_archive(rar_archiver):
     # Act
-    result = rar_archiver.copy_from_archive(None)  # noqa: type
+    result = rar_archiver.copy_from_archive(None)  # type: ignore
 
     # Assert
     assert result is False
