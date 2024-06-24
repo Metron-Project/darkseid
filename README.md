@@ -21,7 +21,7 @@ pip install darkeid
 
 ## Documentation
 
-[Read the project documentation](https://darkseid.readthedocs.io/en/latest/?badge=latest)
+[Read the project documentation](https://darkseid.readthedocs.io/en/stable/?badge=latest)
 
 ## Bugs/Requests
 
