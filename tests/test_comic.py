@@ -9,22 +9,6 @@ from darkseid.archivers.zip import ZipArchiver
 from darkseid.comic import Comic
 from darkseid.metadata import Metadata
 
-
-@pytest.fixture()
-def mock_archiver(mocker):
-    return mocker.patch("darkseid.archivers.UnknownArchiver")
-
-
-@pytest.fixture()
-def mock_zip_archiver(mocker):
-    return mocker.patch("darkseid.archivers.zip.ZipArchiver")
-
-
-@pytest.fixture()
-def mock_rar_archiver(mocker):
-    return mocker.patch("darkseid.archivers.rar.RarArchiver")
-
-
 @pytest.mark.parametrize(
     ("path", "expected_archiver"),
     [
