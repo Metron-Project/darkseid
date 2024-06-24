@@ -1,14 +1,9 @@
 from datetime import date
 from decimal import Decimal
-from pathlib import Path
 
 import pytest
 
 from darkseid.metadata import Arc, Basic, Metadata, Price, Series, Universe
-
-TEST_FILES_PATH = Path("tests/test_files")
-IMG_DIR = TEST_FILES_PATH / "Captain_Science_001"
-CI_XSD = TEST_FILES_PATH / "ComicInfo.xsd"
 
 
 @pytest.fixture(scope="module")

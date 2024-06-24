@@ -8,7 +8,8 @@ from lxml import etree
 
 from darkseid.comicinfo import ComicInfo
 from darkseid.metadata import Arc, Basic, Credit, Metadata, Role, Series
-from tests.conftest import CI_XSD
+
+CI_XSD = Path("tests/test_files/ComicInfo.xsd")
 
 
 @pytest.fixture()
