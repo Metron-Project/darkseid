@@ -154,9 +154,9 @@ class ComicInfo:
         Returns:
             list[str]: The list of substrings after splitting the string.
         """
-
-        pattern = r"|".join(delimiters)
-        return split(pattern, string)
+        for delimiter in delimiters:
+            string = string.replace(delimiter, delimiters[0])
+        return string.split(delimiters[0])
 
     @staticmethod
     def _get_root(xml: any) -> ET.Element:
