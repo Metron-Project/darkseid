@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET  # noqa: N817
 from datetime import date
-from re import split
+import re
 from typing import Any, ClassVar, cast
 
 from defusedxml.ElementTree import fromstring, parse
@@ -390,13 +390,7 @@ class ComicInfo:
             Returns:
                 list[str]: The list of cleaned and filtered non-empty values.
             """
-
-            res = list(map(str.strip, (filter(None, split(r',|"(.*?)"', string)))))
-            # Remove empty values
-            for item in res:
-                if not item:
-                    res.remove(item)
-            return res
+            return [item.strip() for item in re.split(r',|"(.*?)"', string) if item and item.strip()]
 
         def string_to_resource(string: str) -> list[Basic] | None:
             """
