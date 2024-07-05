@@ -405,10 +405,8 @@ class ComicInfo:
 
             if string is not None:
                 res: list[str | Basic] = clean_resource_list(string)
-                # Now let's add the dataclass
-                for count, item in enumerate(res):
-                    res[count] = Basic(item)
-                return res
+                # Use list comprehension to add the dataclass
+                return [Basic(item) for item in res]
             return None
 
         def string_to_arc(string: str) -> list[Arc] | None:
