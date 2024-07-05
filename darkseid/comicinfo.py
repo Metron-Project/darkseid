@@ -422,10 +422,8 @@ class ComicInfo:
 
             if string is not None:
                 res: list[str | Arc] = clean_resource_list(string)
-                # Now let's add the dataclass
-                for count, item in enumerate(res):
-                    res[count] = Arc(item)
-                return res
+                # Use list comprehension for better performance
+                return [Arc(item) for item in res]
             return None
 
         md = Metadata()
