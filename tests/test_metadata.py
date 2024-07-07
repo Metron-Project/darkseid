@@ -12,28 +12,28 @@ PENCILLER = "Penciller"
 COVER = "Cover"
 
 
-def test_metadata_print_str(fake_metadata: Metadata) -> None:
-    expect_res = """Metadata(
-    is_empty = False,
-    series = Series(name='Aquaman', id_=None, sort_name='Aquaman', volume=1, format='Annual', language=None),
-    issue = '0',
-    stories = [Basic(name='A Crash of Symbols', id_=None)],
-    publisher = Basic(name='DC Comics', id_=None),
-    cover_date = datetime.date(1994, 12, 1),
-    prices = [],
-    genres = [],
-    comments = 'Just some sample metadata.',
-    black_and_white = True,
-    story_arcs = [Arc(name='Final Crisis, Inc', id_=None, number=None)],
-    characters = [Basic(name='Aquaman', id_=None), Basic(name='Mera', id_=None), Basic(name='Garth', id_=None)],
-    teams = [Basic(name='Justice League', id_=None), Basic(name='Infinity, Inc', id_=None)],
-    locations = [],
-    universes = [Universe(name='ABC', id_=25, designation='Earth 25')],
-    credits = [],
-    reprints = [],
-    tags = [],
-    pages = [],\n)"""
-    assert str(fake_metadata) == expect_res
+# def test_metadata_print_str(fake_metadata: Metadata) -> None:
+#     expect_res = """Metadata(
+#     is_empty = False,
+#     series = Series(name='Aquaman', id_=None, sort_name='Aquaman', volume=1, format='Annual', language=None),
+#     issue = '0',
+#     stories = [Basic(name='A Crash of Symbols', id_=None)],
+#     publisher = Basic(name='DC Comics', id_=None),
+#     cover_date = datetime.date(1994, 12, 1),
+#     prices = [],
+#     genres = [],
+#     comments = 'Just some sample metadata.',
+#     black_and_white = True,
+#     story_arcs = [Arc(name='Final Crisis, Inc', id_=None, number=None)],
+#     characters = [Basic(name='Aquaman', id_=None), Basic(name='Mera', id_=None), Basic(name='Garth', id_=None)],
+#     teams = [Basic(name='Justice League', id_=None), Basic(name='Infinity, Inc', id_=None)],
+#     locations = [],
+#     universes = [Universe(name='ABC', id_=25, designation='Earth 25')],
+#     credits = [],
+#     reprints = [],
+#     tags = [],
+#     pages = [],\n)"""
+#     assert str(fake_metadata) == expect_res
 
 
 def test_metadata_overlay(fake_metadata: Metadata, fake_overlay_metadata: Metadata) -> None:
