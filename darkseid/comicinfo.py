@@ -5,9 +5,9 @@
 # Copyright 2020 Brian Pepple
 from __future__ import annotations
 
+import re
 import xml.etree.ElementTree as ET  # noqa: N817
 from datetime import date
-import re
 from typing import Any, ClassVar, cast
 
 from defusedxml.ElementTree import fromstring, parse
@@ -360,7 +360,9 @@ class ComicInfo:
             Returns:
                 list[str]: The list of cleaned and filtered non-empty values.
             """
-            return [item.strip() for item in re.split(r',|"(.*?)"', string) if item and item.strip()]
+            return [
+                item.strip() for item in re.split(r',|"(.*?)"', string) if item and item.strip()
+            ]
 
         def string_to_resource(string: str) -> list[Basic] | None:
             """
