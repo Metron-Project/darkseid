@@ -233,18 +233,15 @@ class ComicInfo:
 
         root = self._get_root(xml)
 
-        # helper func
         def assign(cix_entry: str, md_entry: str | int | None) -> None:
+            et_entry = root.find(cix_entry)
             if md_entry is not None and md_entry:
-                et_entry = root.find(cix_entry)
                 if et_entry is not None:
                     et_entry.text = str(md_entry)
                 else:
                     ET.SubElement(root, cix_entry).text = str(md_entry)
-            else:
-                et_entry = root.find(cix_entry)
-                if et_entry is not None:
-                    root.remove(et_entry)
+            elif et_entry is not None:
+                root.remove(et_entry)
 
         def get_resource_list(resource: list[Basic] | list[Arc]) -> str | None:
             return list_to_string([i.name for i in resource]) if resource else None
@@ -267,49 +264,27 @@ class ComicInfo:
             assign("Month", md.cover_date.month)
             assign("Day", md.cover_date.day)
 
-        # need to specially process the credits, since they are structured
-        # differently than CIX
-        credit_writer_list: list[str] = []
-        credit_penciller_list: list[str] = []
-        credit_inker_list: list[str] = []
-        credit_colorist_list: list[str] = []
-        credit_letterer_list: list[str] = []
-        credit_cover_list: list[str] = []
-        credit_editor_list: list[str] = []
+        credit_roles = {
+            "Writer": self.writer_synonyms,
+            "Penciller": self.penciller_synonyms,
+            "Inker": self.inker_synonyms,
+            "Colorist": self.colorist_synonyms,
+            "Letterer": self.letterer_synonyms,
+            "CoverArtist": self.cover_synonyms,
+            "Editor": self.editor_synonyms,
+        }
 
-        # first, loop through credits, and build a list for each role that CIX
-        # supports
+        credit_lists = {role: [] for role in credit_roles}
+
         for credit in md.credits:
             for r in credit.role:
-                if r.name.casefold() in self.writer_synonyms:
-                    credit_writer_list.append(credit.person.replace(",", ""))
+                role_name = r.name.casefold()
+                for role, synonyms in credit_roles.items():
+                    if role_name in synonyms:
+                        credit_lists[role].append(credit.person.replace(",", ""))
 
-                if r.name.casefold() in self.penciller_synonyms:
-                    credit_penciller_list.append(credit.person.replace(",", ""))
-
-                if r.name.casefold() in self.inker_synonyms:
-                    credit_inker_list.append(credit.person.replace(",", ""))
-
-                if r.name.casefold() in self.colorist_synonyms:
-                    credit_colorist_list.append(credit.person.replace(",", ""))
-
-                if r.name.casefold() in self.letterer_synonyms:
-                    credit_letterer_list.append(credit.person.replace(",", ""))
-
-                if r.name.casefold() in self.cover_synonyms:
-                    credit_cover_list.append(credit.person.replace(",", ""))
-
-                if r.name.casefold() in self.editor_synonyms:
-                    credit_editor_list.append(credit.person.replace(",", ""))
-
-        # second, convert each list to string, and add to XML struct
-        assign("Writer", list_to_string(credit_writer_list))
-        assign("Penciller", list_to_string(credit_penciller_list))
-        assign("Inker", list_to_string(credit_inker_list))
-        assign("Colorist", list_to_string(credit_colorist_list))
-        assign("Letterer", list_to_string(credit_letterer_list))
-        assign("CoverArtist", list_to_string(credit_cover_list))
-        assign("Editor", list_to_string(credit_editor_list))
+        for role, names in credit_lists.items():
+            assign(role, list_to_string(names))
 
         if md.publisher:
             assign("Publisher", md.publisher.name)
@@ -338,16 +313,11 @@ class ComicInfo:
             pages_node = ET.SubElement(root, "Pages")
 
         for page_dict in md.pages:
-            page = page_dict
-            if "Image" in page:
-                page["Image"] = str(page["Image"])
+            page_dict["Image"] = str(page_dict.get("Image", ""))
             page_node = ET.SubElement(pages_node, "Page")
             page_node.attrib = dict(sorted(page_dict.items()))
 
-        # self pretty-print
         ET.indent(root)
-
-        # wrap it in an ElementTree instance, and save as XML
         return ET.ElementTree(root)
 
     def convert_xml_to_metadata(self: ComicInfo, tree: ET.ElementTree) -> Metadata:
