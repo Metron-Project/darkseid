@@ -167,11 +167,7 @@ class ComicInfo:
         Returns:
             ET.Element: The root element of the XML object.
         """
-        root = (
-            ET.ElementTree(ET.fromstring(xml)).getroot()  # noqa: S314
-            if xml
-            else ET.Element("ComicInfo")
-        )
+        root = ET.ElementTree(fromstring(xml)).getroot() if xml else ET.Element("ComicInfo")
         root.attrib["xmlns:xsi"] = "https://www.w3.org/2001/XMLSchema-instance"
         root.attrib["xmlns:xsd"] = "https://www.w3.org/2001/XMLSchema"
 
