@@ -5,9 +5,9 @@
 # Copyright 2020 Brian Pepple
 from __future__ import annotations
 
+import re
 import xml.etree.ElementTree as ET  # noqa: N817
 from datetime import date
-from re import split
 from typing import Any, ClassVar, cast
 
 from defusedxml.ElementTree import fromstring, parse
@@ -119,7 +119,6 @@ class ComicInfo:
         Returns:
             Metadata: The parsed Metadata object.
         """
-
         tree = ET.ElementTree(fromstring(string))
         return self.convert_xml_to_metadata(tree)
 
@@ -138,7 +137,6 @@ class ComicInfo:
         Returns:
             str: The XML string representation of the Metadata object.
         """
-
         tree = self.convert_metadata_to_xml(md, xml)
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
 
@@ -154,9 +152,9 @@ class ComicInfo:
         Returns:
             list[str]: The list of substrings after splitting the string.
         """
-
-        pattern = r"|".join(delimiters)
-        return split(pattern, string)
+        for delimiter in delimiters:
+            string = string.replace(delimiter, delimiters[0])
+        return string.split(delimiters[0])
 
     @staticmethod
     def _get_root(xml: any) -> ET.Element:
@@ -169,50 +167,28 @@ class ComicInfo:
         Returns:
             ET.Element: The root element of the XML object.
         """
-
-        root = (
-            ET.ElementTree(ET.fromstring(xml)).getroot()  # noqa: S314
-            if xml
-            else ET.Element("ComicInfo")
-        )
+        root = ET.ElementTree(fromstring(xml)).getroot() if xml else ET.Element("ComicInfo")
         root.attrib["xmlns:xsi"] = "https://www.w3.org/2001/XMLSchema-instance"
         root.attrib["xmlns:xsd"] = "https://www.w3.org/2001/XMLSchema"
 
         return root
 
     @classmethod
-    def validate_age_rating(
-        cls: type[ComicInfo],
-        val: str | None = None,
+    def validate_value(
+        cls: type[ComicInfo], val: str | None, valid_set: frozenset[str]
     ) -> str | None:
         """
-        Validates an age rating value.
+        Validates a value against a predefined set.
 
         Args:
-            val (str | None): The age rating value to validate.
+            val (str | None): The value to validate.
+            valid_set (frozenset[str]): The set of valid values.
 
         Returns:
-            str | None: The validated age rating value, or None if the value is not in the predefined set.
+            str | None: The validated value, or "Unknown" if the value is not in the set.
         """
-
         if val is not None:
-            return "Unknown" if val not in cls.ci_age_ratings else val
-        return None
-
-    @classmethod
-    def validate_manga(cls: type[ComicInfo], val: str | None = None) -> str | None:
-        """
-        Validates a manga value.
-
-        Args:
-            val (str | None): The manga value to validate.
-
-        Returns:
-            str | None: The validated manga value, or None if the value is not in the predefined set.
-        """
-
-        if val is not None:
-            return "Unknown" if val not in cls.ci_manga else val
+            return "Unknown" if val not in valid_set else val
         return None
 
     def convert_metadata_to_xml(
@@ -230,21 +206,17 @@ class ComicInfo:
         Returns:
             ET.ElementTree: The XML representation of the Metadata object.
         """
-
         root = self._get_root(xml)
 
-        # helper func
         def assign(cix_entry: str, md_entry: str | int | None) -> None:
+            et_entry = root.find(cix_entry)
             if md_entry is not None and md_entry:
-                et_entry = root.find(cix_entry)
                 if et_entry is not None:
                     et_entry.text = str(md_entry)
                 else:
                     ET.SubElement(root, cix_entry).text = str(md_entry)
-            else:
-                et_entry = root.find(cix_entry)
-                if et_entry is not None:
-                    root.remove(et_entry)
+            elif et_entry is not None:
+                root.remove(et_entry)
 
         def get_resource_list(resource: list[Basic] | list[Arc]) -> str | None:
             return list_to_string([i.name for i in resource]) if resource else None
@@ -267,49 +239,27 @@ class ComicInfo:
             assign("Month", md.cover_date.month)
             assign("Day", md.cover_date.day)
 
-        # need to specially process the credits, since they are structured
-        # differently than CIX
-        credit_writer_list: list[str] = []
-        credit_penciller_list: list[str] = []
-        credit_inker_list: list[str] = []
-        credit_colorist_list: list[str] = []
-        credit_letterer_list: list[str] = []
-        credit_cover_list: list[str] = []
-        credit_editor_list: list[str] = []
+        credit_roles = {
+            "Writer": self.writer_synonyms,
+            "Penciller": self.penciller_synonyms,
+            "Inker": self.inker_synonyms,
+            "Colorist": self.colorist_synonyms,
+            "Letterer": self.letterer_synonyms,
+            "CoverArtist": self.cover_synonyms,
+            "Editor": self.editor_synonyms,
+        }
 
-        # first, loop through credits, and build a list for each role that CIX
-        # supports
+        credit_lists = {role: [] for role in credit_roles}
+
         for credit in md.credits:
             for r in credit.role:
-                if r.name.casefold() in self.writer_synonyms:
-                    credit_writer_list.append(credit.person.replace(",", ""))
+                role_name = r.name.casefold()
+                for role, synonyms in credit_roles.items():
+                    if role_name in synonyms:
+                        credit_lists[role].append(credit.person.replace(",", ""))
 
-                if r.name.casefold() in self.penciller_synonyms:
-                    credit_penciller_list.append(credit.person.replace(",", ""))
-
-                if r.name.casefold() in self.inker_synonyms:
-                    credit_inker_list.append(credit.person.replace(",", ""))
-
-                if r.name.casefold() in self.colorist_synonyms:
-                    credit_colorist_list.append(credit.person.replace(",", ""))
-
-                if r.name.casefold() in self.letterer_synonyms:
-                    credit_letterer_list.append(credit.person.replace(",", ""))
-
-                if r.name.casefold() in self.cover_synonyms:
-                    credit_cover_list.append(credit.person.replace(",", ""))
-
-                if r.name.casefold() in self.editor_synonyms:
-                    credit_editor_list.append(credit.person.replace(",", ""))
-
-        # second, convert each list to string, and add to XML struct
-        assign("Writer", list_to_string(credit_writer_list))
-        assign("Penciller", list_to_string(credit_penciller_list))
-        assign("Inker", list_to_string(credit_inker_list))
-        assign("Colorist", list_to_string(credit_colorist_list))
-        assign("Letterer", list_to_string(credit_letterer_list))
-        assign("CoverArtist", list_to_string(credit_cover_list))
-        assign("Editor", list_to_string(credit_editor_list))
+        for role, names in credit_lists.items():
+            assign(role, list_to_string(names))
 
         if md.publisher:
             assign("Publisher", md.publisher.name)
@@ -322,13 +272,13 @@ class ComicInfo:
         if md.series is not None:
             assign("Format", md.series.format)
         assign("BlackAndWhite", "Yes" if md.black_and_white else None)
-        assign("Manga", self.validate_manga(md.manga))
+        assign("Manga", self.validate_value(md.manga, self.ci_manga))
         assign("Characters", get_resource_list(md.characters))
         assign("Teams", get_resource_list(md.teams))
         assign("Locations", get_resource_list(md.locations))
         assign("ScanInformation", md.scan_info)
         assign("StoryArc", get_resource_list(md.story_arcs))
-        assign("AgeRating", self.validate_age_rating(md.age_rating))
+        assign("AgeRating", self.validate_value(md.age_rating, self.ci_age_ratings))
 
         #  loop and add the page entries under pages node
         pages_node = root.find("Pages")
@@ -338,16 +288,11 @@ class ComicInfo:
             pages_node = ET.SubElement(root, "Pages")
 
         for page_dict in md.pages:
-            page = page_dict
-            if "Image" in page:
-                page["Image"] = str(page["Image"])
+            page_dict["Image"] = str(page_dict.get("Image", ""))
             page_node = ET.SubElement(pages_node, "Page")
             page_node.attrib = dict(sorted(page_dict.items()))
 
-        # self pretty-print
         ET.indent(root)
-
-        # wrap it in an ElementTree instance, and save as XML
         return ET.ElementTree(root)
 
     def convert_xml_to_metadata(self: ComicInfo, tree: ET.ElementTree) -> Metadata:
@@ -360,7 +305,6 @@ class ComicInfo:
         Returns:
             Metadata: The Metadata object extracted from the XML tree.
         """
-
         root = tree.getroot()
 
         if root.tag != "ComicInfo":
@@ -376,69 +320,12 @@ class ComicInfo:
             Returns:
                 str | int | None: The text content of the tag, or None if the tag is not found.
             """
-
             tag = root.find(txt)
             return None if tag is None else tag.text
 
-        def clean_resource_list(string: str) -> list[str]:
-            """
-            Cleans and filters a string to create a list of non-empty values.
-
-            Args:
-                string (str): The string to clean and filter.
-
-            Returns:
-                list[str]: The list of cleaned and filtered non-empty values.
-            """
-
-            res = list(map(str.strip, (filter(None, split(r',|"(.*?)"', string)))))
-            # Remove empty values
-            for item in res:
-                if not item:
-                    res.remove(item)
-            return res
-
-        def string_to_resource(string: str) -> list[Basic] | None:
-            """
-            Converts a string to a list of Basic objects.
-
-            Args:
-                string (str): The string to convert to Basic objects.
-
-            Returns:
-                list[Basic] | None: The list of Basic objects created from the string, or None if the string is None.
-            """
-
-            if string is not None:
-                res: list[str | Basic] = clean_resource_list(string)
-                # Now let's add the dataclass
-                for count, item in enumerate(res):
-                    res[count] = Basic(item)
-                return res
-            return None
-
-        def string_to_arc(string: str) -> list[Arc] | None:
-            """
-            Converts a string to a list of Arc objects.
-
-            Args:
-                string (str): The string to convert to Arc objects.
-
-            Returns:
-                list[Arc] | None: The list of Arc objects created from the string, or None if the string is None.
-            """
-
-            if string is not None:
-                res: list[str | Arc] = clean_resource_list(string)
-                # Now let's add the dataclass
-                for count, item in enumerate(res):
-                    res[count] = Arc(item)
-                return res
-            return None
-
         md = Metadata()
         md.series = Series(name=xlate(get("Series")))
-        md.stories = string_to_resource(xlate(get("Title")))
+        md.stories = self.string_to_resource(xlate(get("Title")))
         md.issue = IssueString(xlate(get("Number"))).as_string()
         md.issue_count = xlate(get("Count"), True)
         md.series.volume = xlate(get("Volume"), True)
@@ -459,17 +346,17 @@ class ComicInfo:
 
         md.publisher = Basic(xlate(get("Publisher")))
         md.imprint = xlate(get("Imprint"))
-        md.genres = string_to_resource(xlate(get("Genre")))
+        md.genres = self.string_to_resource(xlate(get("Genre")))
         md.web_link = xlate(get("Web"))
         md.series.language = xlate(get("LanguageISO"))
         md.series.format = xlate(get("Format"))
         md.manga = xlate(get("Manga"))
-        md.characters = string_to_resource(xlate(get("Characters")))
-        md.teams = string_to_resource(xlate(get("Teams")))
-        md.locations = string_to_resource(xlate(get("Locations")))
+        md.characters = self.string_to_resource(xlate(get("Characters")))
+        md.teams = self.string_to_resource(xlate(get("Teams")))
+        md.locations = self.string_to_resource(xlate(get("Locations")))
         md.page_count = xlate(get("PageCount"), True)
         md.scan_info = xlate(get("ScanInformation"))
-        md.story_arcs = string_to_arc(xlate(get("StoryArc")))
+        md.story_arcs = self.string_to_arc(xlate(get("StoryArc")))
         md.series_group = xlate(get("SeriesGroup"))
         md.age_rating = xlate(get("AgeRating"))
 
@@ -520,7 +407,6 @@ class ComicInfo:
         Returns:
             None
         """
-
         tree = self.convert_metadata_to_xml(md, xml)
         tree.write(filename, encoding="utf-8", xml_declaration=True)
 
@@ -534,6 +420,50 @@ class ComicInfo:
         Returns:
             Metadata: The Metadata object extracted from the file.
         """
-
         tree = parse(filename)
         return self.convert_xml_to_metadata(tree)
+
+    @staticmethod
+    def clean_resource_list(string: str) -> list[str]:
+        """
+        Cleans and filters a string to create a list of non-empty values.
+
+        Args:
+            string (str): The string to clean and filter.
+
+        Returns:
+            list[str]: The list of cleaned and filtered non-empty values.
+        """
+        return [item.strip() for item in re.split(r',|"(.*?)"', string) if item and item.strip()]
+
+    @staticmethod
+    def string_to_resource(string: str) -> list[Basic] | None:
+        """
+        Converts a string to a list of Basic objects.
+
+        Args:
+            string (str): The string to convert to Basic objects.
+
+        Returns:
+            list[Basic] | None: The list of Basic objects created from the string, or None if the string is None.
+        """
+        if string is not None:
+            res: list[str | Basic] = ComicInfo.clean_resource_list(string)
+            return [Basic(item) for item in res]
+        return None
+
+    @staticmethod
+    def string_to_arc(string: str) -> list[Arc] | None:
+        """
+        Converts a string to a list of Arc objects.
+
+        Args:
+            string (str): The string to convert to Arc objects.
+
+        Returns:
+            list[Arc] | None: The list of Arc objects created from the string, or None if the string is None.
+        """
+        if string is not None:
+            res: list[str | Arc] = ComicInfo.clean_resource_list(string)
+            return [Arc(item) for item in res]
+        return None
