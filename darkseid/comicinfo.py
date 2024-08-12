@@ -263,7 +263,8 @@ class ComicInfo:
 
         if md.publisher:
             assign("Publisher", md.publisher.name)
-        assign("Imprint", md.imprint)
+        if md.imprint:
+            assign("Imprint", md.imprint.name)
         assign("Genre", get_resource_list(md.genres))
         assign("Web", md.web_link)
         assign("PageCount", md.page_count)
@@ -345,7 +346,7 @@ class ComicInfo:
                 md.cover_date = date(tmp_year, tmp_month, 1)
 
         md.publisher = Basic(xlate(get("Publisher")))
-        md.imprint = xlate(get("Imprint"))
+        md.imprint = Basic(xlate(get("Imprint")))
         md.genres = self.string_to_resource(xlate(get("Genre")))
         md.web_link = xlate(get("Web"))
         md.series.language = xlate(get("LanguageISO"))
