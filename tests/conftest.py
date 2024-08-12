@@ -18,6 +18,7 @@ def fake_metadata() -> Metadata:
     md.issue = "0"
     md.stories = [Basic("A Crash of Symbols")]
     md.publisher = Basic("DC Comics")
+    md.imprint = Basic("Vertigo", 9)
     md.cover_date = date(1994, 12, 1)
     md.story_arcs = [Arc("Final Crisis, Inc")]
     md.characters = [
