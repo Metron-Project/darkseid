@@ -29,6 +29,8 @@ def test_credits() -> list[Credit]:
 @pytest.fixture()
 def test_meta_data(test_credits: list[Credit]) -> Metadata:
     md = Metadata()
+    md.publisher = Basic("DC Comics", 1)
+    md.imprint = Basic("DC Black Label", 2)
     md.series = Series(
         "Aquaman",
         sort_name="Aquaman",
@@ -163,3 +165,5 @@ def test_read_from_file(test_meta_data: Metadata, tmp_path: Path) -> None:
     assert new_md.story_arcs == test_meta_data.story_arcs
     assert new_md.locations == test_meta_data.locations
     assert new_md.black_and_white == test_meta_data.black_and_white
+    assert new_md.publisher.name == test_meta_data.publisher.name
+    assert new_md.imprint.name == test_meta_data.imprint.name
