@@ -135,7 +135,7 @@ testpaths = "tests"
 exclude = "*~,.git/*,.mypy_cache/*,.pytest_cache/*,.venv*,__pycache__/*,cache/*,dist/*,node_modules/*,test-results/*,typings/*"
 
 [tool.ruff]
-extend-exclude = ["typings"]
+extend-exclude = ["node_modules", "darkseid/zipfile_remove"]
 target-version = "py310"
 line-length = 100
 
