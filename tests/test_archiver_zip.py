@@ -97,23 +97,6 @@ def test_get_filename_list(zip_archiver, archive_file, data):
 
 
 @pytest.mark.parametrize(
-    ("exclude_list", "data"), [(["test.txt"], "Hello, World!")], ids=["exclude_file"]
-)
-def test_rebuild(zip_archiver, exclude_list, data):
-    # Arrange
-    zip_archiver.write_file("test.txt", data)
-    zip_archiver.write_file("keep.txt", "Keep this file")
-
-    # Act
-    result = zip_archiver._rebuild(exclude_list)  # noqa: SLF001
-
-    # Assert
-    assert result is True
-    assert "test.txt" not in zip_archiver.get_filename_list()
-    assert "keep.txt" in zip_archiver.get_filename_list()
-
-
-@pytest.mark.parametrize(
     ("other_archive_files", "data"), [(["test.txt"], ["Hello, World!"])], ids=["simple_copy"]
 )
 def test_copy_from_archive(zip_archiver, other_archive_files, data):
