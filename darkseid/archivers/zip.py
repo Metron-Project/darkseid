@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import zipfile
 from typing import TYPE_CHECKING
+from zipfile import ZIP_DEFLATED, ZIP_STORED
 
 from darkseid.zipfile_remove import ZipFileWithRemove
 
@@ -110,27 +111,28 @@ class ZipArchiver(Archiver):
                 return False
         return True
 
-    def write_file(self: ZipArchiver, archive_file: str, data: str) -> bool:
+    def write_file(self: ZipArchiver, fn: str, data: str) -> bool:
         """
         Writes data to a file in the ZIP archive.
 
         Args:
-            archive_file (str): The file to write to in the archive.
+            fn (str): The file to write to in the archive.
             data (str): The data to write to the file.
 
         Returns:
             bool: True if the write operation was successful, False otherwise.
         """
+        compress = ZIP_DEFLATED if self.IMAGE_EXT_RE.search(fn) is None else ZIP_STORED
         try:
             with ZipFileWithRemove(self.path, "a") as zf:
-                if archive_file in set(zf.namelist()):
-                    zf.remove(archive_file)
-                zf.writestr(archive_file, data)
+                if fn in set(zf.namelist()):
+                    zf.remove(fn)
+                zf.writestr(fn, data, compress_type=compress, compresslevel=9)
         except (zipfile.BadZipfile, OSError):
             logger.exception(
                 "Error writing zip archive %s :: %s",
                 self.path,
-                archive_file,
+                fn,
             )
             return False
         else:
@@ -174,7 +176,12 @@ class ZipArchiver(Archiver):
                         # Skip any bad images in the file.
                         continue
                     if data is not None:
-                        zout.writestr(filename, data)
+                        compress = (
+                            ZIP_DEFLATED
+                            if self.IMAGE_EXT_RE.search(filename) is None
+                            else ZIP_STORED
+                        )
+                        zout.writestr(filename, data, compress_type=compress, compresslevel=9)
         except (zipfile.BadZipfile, OSError) as e:
             # Remove any partial files created
             if self.path.exists():
