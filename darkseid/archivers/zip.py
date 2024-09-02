@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import logging
-import zipfile
 from typing import TYPE_CHECKING
-from zipfile import ZIP_DEFLATED, ZIP_STORED
+from zipfile import ZIP_DEFLATED, ZIP_STORED, BadZipfile, ZipFile
 
 from darkseid.zipfile_remove import ZipFileWithRemove
 
@@ -51,9 +50,9 @@ class ZipArchiver(Archiver):
         """
 
         try:
-            with zipfile.ZipFile(self.path, mode="r") as zf:
+            with ZipFile(self.path, mode="r") as zf:
                 return zf.read(archive_file)
-        except (zipfile.BadZipfile, OSError) as e:
+        except (BadZipfile, OSError) as e:
             logger.exception(
                 "Error reading zip archive %s :: %s",
                 self.path,
@@ -76,7 +75,7 @@ class ZipArchiver(Archiver):
                 zf.remove(archive_file)
         except KeyError:
             return False
-        except (zipfile.BadZipfile, OSError):
+        except (BadZipfile, OSError):
             logger.exception(
                 "Error writing zip archive %s :: %s",
                 self.path,
@@ -102,7 +101,7 @@ class ZipArchiver(Archiver):
                 with ZipFileWithRemove(self.path, "a") as zf:
                     for filename in filenames_to_remove:
                         zf.remove(filename)
-            except (zipfile.BadZipfile, OSError):
+            except (BadZipfile, OSError):
                 logger.exception(
                     "Error writing zip archive %s :: %s",
                     self.path,
@@ -128,7 +127,7 @@ class ZipArchiver(Archiver):
                 if fn in set(zf.namelist()):
                     zf.remove(fn)
                 zf.writestr(fn, data, compress_type=compress, compresslevel=9)
-        except (zipfile.BadZipfile, OSError):
+        except (BadZipfile, OSError):
             logger.exception(
                 "Error writing zip archive %s :: %s",
                 self.path,
@@ -150,9 +149,9 @@ class ZipArchiver(Archiver):
         """
 
         try:
-            with zipfile.ZipFile(self.path, mode="r") as zf:
+            with ZipFile(self.path, mode="r") as zf:
                 return zf.namelist()
-        except (zipfile.BadZipfile, OSError):
+        except (BadZipfile, OSError):
             logger.exception("Error listing files in zip archive: %s", self.path)
             return []
 
@@ -168,7 +167,7 @@ class ZipArchiver(Archiver):
         """
 
         try:
-            with zipfile.ZipFile(self.path, mode="w", allowZip64=True) as zout:
+            with ZipFile(self.path, mode="w", allowZip64=True) as zout:
                 for filename in other_archive.get_filename_list():
                     try:
                         data = other_archive.read_file(filename)
@@ -182,7 +181,7 @@ class ZipArchiver(Archiver):
                             else ZIP_STORED
                         )
                         zout.writestr(filename, data, compress_type=compress, compresslevel=9)
-        except (zipfile.BadZipfile, OSError) as e:
+        except (BadZipfile, OSError) as e:
             # Remove any partial files created
             if self.path.exists():
                 self.path.unlink()
