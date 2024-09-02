@@ -12,12 +12,12 @@ possible, however lossy it might be
 from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
     from datetime import date
     from decimal import Decimal
-from typing import TypedDict
+
 
 import pycountry
 
