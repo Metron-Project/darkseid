@@ -329,7 +329,12 @@ class Comic:
         """
 
         if self.has_metadata():
-            write_success = self._archiver.remove_file(self._ci_xml_filename)
+            metadata_files = [
+                path
+                for path in self._archiver.get_filename_list()
+                if Path(path).name.lower() == self._ci_xml_filename.lower()
+            ]
+            write_success = self._archiver.remove_files(metadata_files)
             return self._successful_write(write_success, False, None)
         return True
 
@@ -377,6 +382,11 @@ class Comic:
         self.reset_cache()
         return write_success
 
+    def _check_for_metadata(self: Comic) -> bool:
+        target_filename = self._ci_xml_filename.lower()
+        filenames = {Path(path).name.lower() for path in self._archiver.get_filename_list()}
+        return target_filename in filenames
+
     def has_metadata(self: Comic) -> bool:
         """
         Checks to see if the archive has metadata.
@@ -386,13 +396,7 @@ class Comic:
         """
 
         if self._has_md is None:
-            self._has_md = bool(
-                self.seems_to_be_a_comic_archive()
-                and (
-                    not self.seems_to_be_a_comic_archive()
-                    or self._ci_xml_filename in self._archiver.get_filename_list()
-                ),
-            )
+            self._has_md = self.seems_to_be_a_comic_archive() and self._check_for_metadata()
 
         return self._has_md
 
