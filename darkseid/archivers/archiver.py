@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -12,6 +13,8 @@ class Archiver:
 
     This class provides methods for reading, writing, and removing files within an archive.
     """
+
+    IMAGE_EXT_RE = re.compile(r"\.(jpe?g|png|webp|gif)$", re.IGNORECASE)
 
     def __init__(self: Archiver, path: Path) -> None:
         """

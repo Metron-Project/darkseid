@@ -12,12 +12,12 @@ possible, however lossy it might be
 from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
     from datetime import date
     from decimal import Decimal
-from typing import TypedDict
+
 
 import pycountry
 
@@ -374,6 +374,7 @@ class Metadata:
         collection_title (Optional[str]): The title of the collection.
         stories (list[Basic]): The list of stories.
         publisher (Optional[Basic]): The publisher information.
+        imprint (Optional[Basic]): The imprint information.
         cover_date (Optional[date]): The cover date.
         store_date (Optional[date]): The store date.
         prices (list[Price]): The list of prices.
@@ -387,7 +388,6 @@ class Metadata:
         alternate_series (Optional[str]): The alternate series.
         alternate_number (Optional[str]): The alternate number.
         alternate_count (Optional[int]): The count of alternates.
-        imprint (Optional[str]): The imprint.
         notes (Optional[str]): The notes.
         web_link (Optional[str]): The web link.
         manga (Optional[str]): The manga information.
@@ -435,6 +435,7 @@ class Metadata:
     collection_title: str | None = None
     stories: list[Basic] = field(default_factory=list)
     publisher: Basic | None = None
+    imprint: Basic | None = None
     cover_date: date | None = None
     store_date: date | None = None
     prices: list[Price] = field(default_factory=list)
@@ -450,7 +451,6 @@ class Metadata:
     alternate_series: str | None = None
     alternate_number: str | None = None
     alternate_count: int | None = None
-    imprint: str | None = None
     notes: str | None = None
     web_link: str | None = None
     manga: str | None = None

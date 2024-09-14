@@ -52,6 +52,8 @@ def test_metadata_overlay(fake_metadata: Metadata, fake_overlay_metadata: Metada
     assert md.prices == fake_metadata.prices
     assert md.collection_title == fake_metadata.collection_title
     assert md.universes == fake_metadata.universes
+    assert md.imprint.name == fake_metadata.imprint.name
+    assert md.imprint.id_ == fake_metadata.imprint.id_
 
 
 def test_metadata_credits(fake_metadata: Metadata) -> None:

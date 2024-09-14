@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "darkseid"
-version = "4.0.5"
+version = "4.4.0"
 description = "A library to interact with comic archives"
 authors = ["Brian Pepple <bdpepple@gmail.com>"]
 license = "GPL-3.0-or-later"
@@ -135,7 +135,7 @@ testpaths = "tests"
 exclude = "*~,.git/*,.mypy_cache/*,.pytest_cache/*,.venv*,__pycache__/*,cache/*,dist/*,node_modules/*,test-results/*,typings/*"
 
 [tool.ruff]
-extend-exclude = ["typings"]
+extend-exclude = ["node_modules", "darkseid/zipfile_remove"]
 target-version = "py310"
 line-length = 100
 
