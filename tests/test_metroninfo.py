@@ -101,7 +101,7 @@ def test_convert_metadata_to_xml(metron_info):
         info_source=Basic("Metron", id_=54),
         alt_sources=[Basic("Comic Vine", id_=90)],
         publisher=Basic("Marvel", id_=1),
-        series=Series(name="Spider-Man", volume=1, format="Series", id_=50, language="en"),
+        series=Series(name="Spider-Man", volume=1, format="Single Issue", id_=50, language="en"),
         issue="50",
         story_arcs=[Arc("Final Crisis, Inc", id_=80, number=1)],
         cover_date=date(2020, 1, 1),
@@ -140,7 +140,7 @@ def test_metadata_from_string(metron_info):
             <Name>Spider-Man</Name>
             <SortName>Spider-Man</SortName>
             <Volume>1</Volume>
-            <Format>Series</Format>
+            <Format>Omnibus</Format>
         </Series>
         <Prices>
             <Price country="US">3.99</Price>
@@ -182,6 +182,7 @@ def test_metadata_from_string(metron_info):
     assert result.alt_sources[0].id_ == 12345
     assert result.publisher.name == "Marvel"
     assert result.series.name == "Spider-Man"
+    assert result.series.format == "Omnibus"
     assert result.prices[0].amount == Decimal("3.99")
     assert result.gtin.isbn == 1234567890123
     assert result.gtin.upc == 76194130593600111

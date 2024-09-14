@@ -45,12 +45,14 @@ class MetronInfo:
     mix_series_format = frozenset(
         {
             "annual",
+            "digital chapter",
             "graphic novel",
-            "limited series",
-            "one-shot",
-            "series",
-            "trade paperback",
             "hardcover",
+            "limited series",
+            "omnibus",
+            "one-shot",
+            "single issue",
+            "trade paperback",
         }
     )
     mix_genres = frozenset(
@@ -216,7 +218,7 @@ class MetronInfo:
         ET.SubElement(series_node, "SortName").text = series.sort_name
         ET.SubElement(series_node, "Volume").text = str(series.volume)
         ET.SubElement(series_node, "Format").text = (
-            series.format if series.format in MetronInfo.mix_series_format else "Series"
+            series.format if series.format in MetronInfo.mix_series_format else "Single Issue"
         )
 
     @staticmethod
