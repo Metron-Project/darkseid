@@ -14,6 +14,7 @@ from darkseid.metadata import (
     Credit,
     Metadata,
     Price,
+    Publisher,
     Role,
     Series,
     Universe,
@@ -111,7 +112,7 @@ def test_convert_metadata_to_xml(metron_info):
     metadata = Metadata(
         info_source=Basic("Metron", id_=54),
         alt_sources=[Basic("Comic Vine", id_=90)],
-        publisher=Basic("Marvel", id_=1),
+        publisher=Publisher("Marvel", id_=1),
         series=Series(
             name="Spider-Man",
             volume=1,
@@ -156,7 +157,10 @@ def test_metadata_from_string(metron_info):
             <Alternative source="Comic Vine">12345</Alternative>
             <Alternative source="Grand Comics Database">543</Alternative>
         </ID>
-        <Publisher>Marvel</Publisher>
+        <Publisher id="12345">
+            <Name>Marvel</Name>
+            <Imprint id="1234">Epic</Imprint>
+        </Publisher>
         <Series id="65478" lang="en">
             <Name>Spider-Man</Name>
             <SortName>Spider-Man</SortName>
@@ -244,7 +248,7 @@ def test_write_xml(fake_metadata, metron_info, tmp_path):
 
 def test_read_xml(metron_info, tmp_path):
     # Arrange
-    xml_string = "<MetronInfo><Publisher>Marvel</Publisher></MetronInfo>"
+    xml_string = "<MetronInfo><Publisher><Name>Marvel</Name></Publisher></MetronInfo>"
     filename = tmp_path / "test.xml"
     with Path.open(filename, "w") as f:
         f.write(xml_string)

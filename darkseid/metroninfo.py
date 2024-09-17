@@ -21,6 +21,7 @@ from darkseid.metadata import (
     ImageMetadata,
     Metadata,
     Price,
+    Publisher,
     Role,
     Series,
     Universe,
@@ -203,6 +204,24 @@ class MetronInfo:
                 ET.SubElement(child_node, "Number").text = str(val.number)
 
     @staticmethod
+    def assign_publisher(root: ET.Element, publisher: Publisher) -> None:
+        if publisher is None:
+            return
+        publisher_node = MetronInfo.get_or_create_element(root, "Publisher")
+        if publisher.id_:
+            publisher_node.attrib = {"id": str(publisher.id_)}
+
+        ET.SubElement(publisher_node, "Name").text = publisher.name
+
+        if publisher.imprint:
+            imprint_node = ET.SubElement(
+                publisher_node,
+                "Imprint",
+                {"id": str(publisher.imprint.id_)} if publisher.imprint.id_ else {},
+            )
+            imprint_node.text = publisher.imprint.name
+
+    @staticmethod
     def assign_series(root: ET.Element, series: Series) -> None:
         if series is None:
             return
@@ -294,7 +313,7 @@ class MetronInfo:
 
         if self.valid_info_source(md.info_source):
             self.assign_info_source(root, md.info_source, md.alt_sources)
-        self.assign_basic_resource(root, "Publisher", md.publisher or Basic("Unknown"))
+        self.assign_publisher(root, md.publisher)
         self.assign_series(root, md.series)
         self.assign(root, "CollectionTitle", md.collection_title)
         self.assign(root, "Number", md.issue)
@@ -419,6 +438,30 @@ class MetronInfo:
                 Price(Decimal(item.text), item.attrib.get("country", "US")) for item in resource
             ]
 
+        def get_publisher() -> Publisher | None:
+            resource = root.find("Publisher")
+            if resource is None:
+                return None
+
+            publisher_name: str | None = None
+            imprint: Basic | None = None
+
+            tag_actions = {
+                "Name": lambda obj: obj.text,
+                "Imprint": lambda obj: Basic(obj.text, get_id_from_attrib(obj.attrib)),
+            }
+
+            for item in resource:
+                if item.tag in tag_actions:
+                    if item.tag == "Name":
+                        publisher_name = tag_actions[item.tag](item)
+                    elif item.tag == "Imprint":
+                        imprint = tag_actions[item.tag](item)
+
+            publisher_id = get_id_from_attrib(resource.attrib)
+
+            return Publisher(publisher_name, publisher_id, imprint)
+
         def _create_alt_name_list(element: ET.Element) -> list[AlternativeNames]:
             return [
                 AlternativeNames(
@@ -501,7 +544,7 @@ class MetronInfo:
         md = Metadata()
         md.info_source = get_info_sources()
         md.alt_sources = get_alt_sources()
-        md.publisher = get_resource("Publisher")
+        md.publisher = get_publisher()
         md.series = get_series()
         md.collection_title = get("CollectionTitle")
         md.issue = IssueString(get("Number")).as_string()
