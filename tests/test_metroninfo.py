@@ -6,7 +6,18 @@ from pathlib import Path
 import pytest
 from lxml import etree
 
-from darkseid.metadata import GTIN, Arc, Basic, Credit, Metadata, Price, Role, Series, Universe
+from darkseid.metadata import (
+    GTIN,
+    AlternativeNames,
+    Arc,
+    Basic,
+    Credit,
+    Metadata,
+    Price,
+    Role,
+    Series,
+    Universe,
+)
 from darkseid.metroninfo import MetronInfo
 
 MI_XSD = "tests/test_files/MetronInfo.xsd"
@@ -101,7 +112,17 @@ def test_convert_metadata_to_xml(metron_info):
         info_source=Basic("Metron", id_=54),
         alt_sources=[Basic("Comic Vine", id_=90)],
         publisher=Basic("Marvel", id_=1),
-        series=Series(name="Spider-Man", volume=1, format="Single Issue", id_=50, language="en"),
+        series=Series(
+            name="Spider-Man",
+            volume=1,
+            format="Single Issue",
+            id_=50,
+            language="en",
+            alternative_names=[
+                AlternativeNames("Bug Boy", 50),
+                AlternativeNames("Spider", language="de"),
+            ],
+        ),
         issue="50",
         story_arcs=[Arc("Final Crisis, Inc", id_=80, number=1)],
         cover_date=date(2020, 1, 1),
@@ -141,6 +162,10 @@ def test_metadata_from_string(metron_info):
             <SortName>Spider-Man</SortName>
             <Volume>1</Volume>
             <Format>Omnibus</Format>
+            <AlternativeNames>
+                <Name id="1234">Foo</Name>
+                <Name lang="de">Hüsker Dü</Name>
+            </AlternativeNames>
         </Series>
         <Prices>
             <Price country="US">3.99</Price>
@@ -183,6 +208,11 @@ def test_metadata_from_string(metron_info):
     assert result.publisher.name == "Marvel"
     assert result.series.name == "Spider-Man"
     assert result.series.format == "Omnibus"
+    assert len(result.series.alternative_names) == 2
+    assert result.series.alternative_names[0].name == "Foo"
+    assert result.series.alternative_names[0].id_ == 1234
+    assert result.series.alternative_names[1].language == "de"
+    assert result.series.alternative_names[1].name == "Hüsker Dü"
     assert result.prices[0].amount == Decimal("3.99")
     assert result.gtin.isbn == 1234567890123
     assert result.gtin.upc == 76194130593600111

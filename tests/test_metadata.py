@@ -42,6 +42,10 @@ def test_metadata_overlay(fake_metadata: Metadata, fake_overlay_metadata: Metada
     md.overlay(fake_overlay_metadata)
 
     assert md.series.name == "Aquaman"
+    assert len(md.series.alternative_names) == 2
+    assert md.series.alternative_names[1].name == "Fishy"
+    assert md.series.alternative_names[1].id_ == 60
+    assert md.series.alternative_names[1].language == "de"
     assert md.issue == "0"
     assert md.stories == fake_metadata.stories
     assert md.cover_date == date(1994, 10, 1)

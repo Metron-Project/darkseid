@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from darkseid.metadata import Arc, Basic, Metadata, Price, Series, Universe
+from darkseid.metadata import AlternativeNames, Arc, Basic, Metadata, Price, Series, Universe
 
 
 @pytest.fixture(scope="module")
@@ -38,7 +38,13 @@ def fake_metadata() -> Metadata:
 @pytest.fixture(scope="session")
 def fake_overlay_metadata() -> Metadata:
     overlay_md = Metadata()
-    overlay_md.series = Series(name="Aquaman", sort_name="Aquaman", volume=1, format="Annual")
+    overlay_md.series = Series(
+        name="Aquaman",
+        sort_name="Aquaman",
+        volume=1,
+        format="Annual",
+        alternative_names=[AlternativeNames("Water Boy"), AlternativeNames("Fishy", 60, "de")],
+    )
     overlay_md.cover_date = date(1994, 10, 1)
     overlay_md.reprints = [Basic("Aquaman (1964) #64", 12345)]
     overlay_md.prices = [Price(Decimal("3.99")), Price(Decimal("1.5"), "CA")]

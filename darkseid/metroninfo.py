@@ -14,6 +14,7 @@ from defusedxml.ElementTree import fromstring, parse
 from darkseid.issue_string import IssueString
 from darkseid.metadata import (
     GTIN,
+    AlternativeNames,
     Arc,
     Basic,
     Credit,
@@ -220,6 +221,18 @@ class MetronInfo:
         ET.SubElement(series_node, "Format").text = (
             series.format if series.format in MetronInfo.mix_series_format else "Single Issue"
         )
+        if series.alternative_names:
+            alt_names_node = ET.SubElement(series_node, "AlternativeNames")
+            for alt_name in series.alternative_names:
+                name_node = ET.SubElement(alt_names_node, "Name")
+                name_node.text = alt_name.name
+                alt_attrib = {}
+                if alt_name.id_:
+                    alt_attrib["id"] = str(alt_name.id_)
+                if alt_name.language:
+                    alt_attrib["lang"] = alt_name.language
+                if alt_attrib:
+                    name_node.attrib = alt_attrib
 
     @staticmethod
     def assign_info_source(root: ET.Element, primary: Basic, alt_lst: list[Basic]) -> None:
@@ -406,6 +419,14 @@ class MetronInfo:
                 Price(Decimal(item.text), item.attrib.get("country", "US")) for item in resource
             ]
 
+        def _create_alt_name_list(element: ET.Element) -> list[AlternativeNames]:
+            return [
+                AlternativeNames(
+                    name.text, get_id_from_attrib(name.attrib), name.attrib.get("lang")
+                )
+                for name in element.findall("Name")
+            ]
+
         def get_series() -> Series | None:
             resource = root.find("Series")
             if resource is None:
@@ -427,6 +448,8 @@ class MetronInfo:
                         series_md.volume = int(item.text)
                     case "Format":
                         series_md.format = item.text
+                    case "AlternativeNames":
+                        series_md.alternative_names = _create_alt_name_list(item)
                     case _:
                         pass
 

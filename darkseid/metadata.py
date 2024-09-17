@@ -190,6 +190,61 @@ class Role(Basic):
 
 
 @dataclass
+class AlternativeNames(Basic):
+    """
+    A data class representing an alternative name for a series with basic information and validations.
+
+    Attributes:
+        name (str): The alternative name for a series.
+        id_ (int | None): The ID associated with the alternative name, defaults to None.
+        language (str | None): The 2-letter ISO code of the language, defaults to None.
+
+    Static Methods:
+        validate_language(value: str, **_: any) -> str | None: Validates a language value.
+    """
+
+    language: str | None = None
+
+    @staticmethod
+    def validate_language(value: str, **_: any) -> str | None:
+        """
+        Validates a language value.
+
+        If the value is empty, it returns None. Otherwise, it strips any leading or trailing
+        whitespace from the value. If the length of the value is 2, it tries to find the
+        language object using the alpha-2 code. Otherwise, it tries to look up the language
+        object using the value. If the language object is not found, it raises a ValueError.
+
+        Args:
+            value (str): The language value to validate.
+            **_ (any): Additional keyword arguments (ignored).
+
+        Returns:
+            Optional[str]: The validated language code, or None if the value is empty.
+
+        Raises:
+            ValueError: Raised when the language object cannot be found.
+        """
+
+        if not value:
+            return None
+        value = value.strip()
+
+        if len(value) == COUNTRY_LEN:
+            obj = pycountry.languages.get(alpha_2=value)
+        else:
+            try:
+                obj = pycountry.languages.lookup(value)
+            except LookupError as e:
+                msg = f"Couldn't find language {value}"
+                raise ValueError(msg) from e
+        if obj is None:
+            msg = f"Couldn't find language {value}"
+            raise ValueError(msg)
+        return obj.alpha_2
+
+
+@dataclass
 class Series(Basic, Validations):
     """
     A data class representing a series with basic information and validations.
@@ -200,6 +255,7 @@ class Series(Basic, Validations):
         sort_name (str | None): The sort name of the series, defaults to None.
         volume (int | None): The volume of the series, defaults to None.
         format (str | None): The format of the series, defaults to None.
+        alternative_names: list[AlternativeNames]: A list of alternative names for series.
         language (str | None): The 2-letter ISO code of the language, defaults to None.
 
     Static Methods:
@@ -209,6 +265,7 @@ class Series(Basic, Validations):
     sort_name: str | None = None
     volume: int | None = None
     format: str | None = None
+    alternative_names: list[AlternativeNames] = field(default_factory=list)
     language: str | None = None  # 2-letter iso code
 
     @staticmethod
