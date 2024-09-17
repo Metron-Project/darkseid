@@ -417,13 +417,6 @@ class MetronInfo:
                 Basic(alt_node.attrib.get("source"), int(alt_node.text)) for alt_node in alt_nodes
             ]
 
-        def get_resource(element: str) -> Basic | None:
-            resource = root.find(element)
-            if resource is None:
-                return None
-            attrib = resource.attrib
-            return Basic(resource.text, get_id_from_attrib(attrib))
-
         def get_resource_list(element: str) -> list[Basic]:
             resource = root.find(element)
             if resource is None:
