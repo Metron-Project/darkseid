@@ -13,7 +13,7 @@ from typing import Any, ClassVar, cast
 from defusedxml.ElementTree import fromstring, parse
 
 from darkseid.issue_string import IssueString
-from darkseid.metadata import Arc, Basic, Credit, ImageMetadata, Metadata, Role, Series
+from darkseid.metadata import Arc, Basic, Credit, ImageMetadata, Metadata, Publisher, Role, Series
 from darkseid.utils import list_to_string, xlate
 
 
@@ -263,8 +263,8 @@ class ComicInfo:
 
         if md.publisher:
             assign("Publisher", md.publisher.name)
-        if md.imprint:
-            assign("Imprint", md.imprint.name)
+            if md.publisher.imprint:
+                assign("Imprint", md.publisher.imprint.name)
         assign("Genre", get_resource_list(md.genres))
         assign("Web", md.web_link)
         assign("PageCount", md.page_count)
@@ -344,10 +344,11 @@ class ComicInfo:
                 md.cover_date = date(tmp_year, tmp_month, tmp_day)
             else:
                 md.cover_date = date(tmp_year, tmp_month, 1)
+        # Publisher info
+        pub = xlate(get("Publisher"))
+        imprint = xlate(get("Imprint"))
+        md.publisher = Publisher(pub, imprint=Basic(imprint) if imprint else None)
 
-        md.publisher = Basic(xlate(get("Publisher")))
-        if imprint := xlate(get("Imprint")):  # Make sure Imprint element is present.
-            md.imprint = Basic(imprint)
         md.genres = self.string_to_resource(xlate(get("Genre")))
         md.web_link = xlate(get("Web"))
         md.series.language = xlate(get("LanguageISO"))

@@ -308,6 +308,20 @@ class Series(Basic, Validations):
 
 
 @dataclass
+class Publisher(Basic):
+    """
+    A data class representing a Publisher with basic information.
+
+    Attributes:
+        name (str): The name associated with the basic information.
+        id_ (int | None): The ID associated with the basic information, defaults to None.
+        imprint (Basic | None): The Imprint of a Publisher with basic information, defaults to None.
+    """
+
+    imprint: Basic | None = None
+
+
+@dataclass
 class Arc(Basic):
     """
     A data class representing an arc with basic information.
@@ -430,8 +444,7 @@ class Metadata:
         issue (Optional[str]): The issue information.
         collection_title (Optional[str]): The title of the collection.
         stories (list[Basic]): The list of stories.
-        publisher (Optional[Basic]): The publisher information.
-        imprint (Optional[Basic]): The imprint information.
+        publisher (Optional[Publisher]): The publisher information.
         cover_date (Optional[date]): The cover date.
         store_date (Optional[date]): The store date.
         prices (list[Price]): The list of prices.
@@ -491,8 +504,7 @@ class Metadata:
     issue: str | None = None
     collection_title: str | None = None
     stories: list[Basic] = field(default_factory=list)
-    publisher: Basic | None = None
-    imprint: Basic | None = None
+    publisher: Publisher | None = None
     cover_date: date | None = None
     store_date: date | None = None
     prices: list[Price] = field(default_factory=list)
@@ -612,7 +624,6 @@ class Metadata:
         assign("alternate_series", new_md.alternate_series)
         assign("alternate_number", new_md.alternate_number)
         assign("alternate_count", new_md.alternate_count)
-        assign("imprint", new_md.imprint)
         assign("web_link", new_md.web_link)
         assign("manga", new_md.manga)
         assign("black_and_white", new_md.black_and_white)

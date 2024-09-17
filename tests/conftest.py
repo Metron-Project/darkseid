@@ -3,7 +3,16 @@ from decimal import Decimal
 
 import pytest
 
-from darkseid.metadata import AlternativeNames, Arc, Basic, Metadata, Price, Series, Universe
+from darkseid.metadata import (
+    AlternativeNames,
+    Arc,
+    Basic,
+    Metadata,
+    Price,
+    Publisher,
+    Series,
+    Universe,
+)
 
 
 @pytest.fixture(scope="module")
@@ -17,8 +26,7 @@ def fake_metadata() -> Metadata:
     )
     md.issue = "0"
     md.stories = [Basic("A Crash of Symbols")]
-    md.publisher = Basic("DC Comics")
-    md.imprint = Basic("Vertigo", 9)
+    md.publisher = Publisher("DC Comics", imprint=Basic("Vertigo", 9))
     md.cover_date = date(1994, 12, 1)
     md.story_arcs = [Arc("Final Crisis, Inc")]
     md.characters = [

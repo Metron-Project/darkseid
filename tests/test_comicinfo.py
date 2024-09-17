@@ -7,7 +7,7 @@ import pytest
 from lxml import etree
 
 from darkseid.comicinfo import ComicInfo
-from darkseid.metadata import Arc, Basic, Credit, Metadata, Role, Series
+from darkseid.metadata import Arc, Basic, Credit, Metadata, Publisher, Role, Series
 
 CI_XSD = Path("tests/test_files/ComicInfo.xsd")
 
@@ -29,8 +29,7 @@ def test_credits() -> list[Credit]:
 @pytest.fixture()
 def test_meta_data(test_credits: list[Credit]) -> Metadata:
     md = Metadata()
-    md.publisher = Basic("DC Comics", 1)
-    md.imprint = Basic("DC Black Label", 2)
+    md.publisher = Publisher("DC Comics", 1, Basic("DC Black Label", 2))
     md.series = Series(
         "Aquaman",
         sort_name="Aquaman",
@@ -93,12 +92,12 @@ def test_meta_with_no_imprint(test_meta_data: Metadata, tmp_path: Path) -> None:
     """Test of writing the metadata with no imprint to a file."""
     tmp_file = tmp_path / "test-write.xml"
     old_md = test_meta_data
-    old_md.imprint = None
+    old_md.publisher.imprint = None
     ComicInfo().write_to_external_file(tmp_file, test_meta_data)
     assert tmp_file.read_text() is not None
     assert validate(tmp_file, CI_XSD) is True
     new_md = ComicInfo().read_from_external_file(tmp_file)
-    assert new_md.imprint is None
+    assert new_md.publisher.imprint is None
     assert old_md.characters == new_md.characters
 
 
@@ -179,4 +178,4 @@ def test_read_from_file(test_meta_data: Metadata, tmp_path: Path) -> None:
     assert new_md.locations == test_meta_data.locations
     assert new_md.black_and_white == test_meta_data.black_and_white
     assert new_md.publisher.name == test_meta_data.publisher.name
-    assert new_md.imprint.name == test_meta_data.imprint.name
+    assert new_md.publisher.imprint.name == test_meta_data.publisher.imprint.name
