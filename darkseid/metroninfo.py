@@ -441,7 +441,7 @@ class MetronInfo:
             raise ValueError(msg)
 
         def get_id_from_attrib(attrib: dict[str, str]) -> int | None:
-            return int(attrib["id"]) if attrib and "id" in attrib else None
+            return int(id_) if (id_ := attrib.get("id")) else None
 
         def get(element: str) -> str | None:
             tag = root.find(element)
