@@ -160,9 +160,8 @@ class MetronInfo:
     def get_or_create_element(parent: ET.Element, tag: str) -> ET.Element:
         element = parent.find(tag)
         if element is None:
-            element = ET.SubElement(parent, tag)
-        else:
-            element.clear()
+            return ET.SubElement(parent, tag)
+        element.clear()
         return element
 
     @staticmethod
@@ -190,11 +189,13 @@ class MetronInfo:
     @staticmethod
     def assign_basic_children(root: ET.Element, parent: str, child: str, vals: list[Basic]) -> None:
         parent_node = MetronInfo.get_or_create_element(root, parent)
+        create_sub_element = ET.SubElement
         for val in vals:
-            child_node = ET.SubElement(parent_node, child)
-            child_node.text = val.name
-            if val.id_:
-                child_node.attrib["id"] = str(val.id_)
+            child_node = create_sub_element(parent_node, child)
+            name = val.name
+            child_node.text = name
+            if id_ := val.id_:
+                child_node.attrib["id"] = str(id_)
 
     @staticmethod
     def assign_basic_resource(root: ET.Element, element: str, val: Basic) -> None:
@@ -207,9 +208,8 @@ class MetronInfo:
     def assign_arc(root: ET.Element, vals: list[Arc]) -> None:
         parent_node = MetronInfo.get_or_create_element(root, "Arcs")
         for val in vals:
-            child_node = ET.SubElement(parent_node, "Arc")
-            if val.id_:
-                child_node.attrib = {"id": str(val.id_)}
+            attributes = {"id": str(val.id_)} if val.id_ else {}
+            child_node = ET.SubElement(parent_node, "Arc", attrib=attributes)
             ET.SubElement(child_node, "Name").text = val.name
             if val.number:
                 ET.SubElement(child_node, "Number").text = str(val.number)
@@ -238,12 +238,9 @@ class MetronInfo:
             return
         series_node = MetronInfo.get_or_create_element(root, "Series")
         if series.id_ or series.language:
-            attrib = {}
-            if series.id_:
-                attrib["id"] = str(series.id_)
-            if series.language:
-                attrib["lang"] = series.language
-            series_node.attrib = attrib
+            series_node.attrib = {
+                k: v for k, v in (("id", str(series.id_)), ("lang", series.language)) if v
+            }
 
         ET.SubElement(series_node, "Name").text = series.name
         ET.SubElement(series_node, "SortName").text = series.sort_name
@@ -254,15 +251,10 @@ class MetronInfo:
         if series.alternative_names:
             alt_names_node = ET.SubElement(series_node, "AlternativeNames")
             for alt_name in series.alternative_names:
-                name_node = ET.SubElement(alt_names_node, "Name")
-                name_node.text = alt_name.name
-                alt_attrib = {}
-                if alt_name.id_:
-                    alt_attrib["id"] = str(alt_name.id_)
-                if alt_name.language:
-                    alt_attrib["lang"] = alt_name.language
-                if alt_attrib:
-                    name_node.attrib = alt_attrib
+                alt_attrib = {
+                    k: v for k, v in (("id", str(alt_name.id_)), ("lang", alt_name.language)) if v
+                }
+                ET.SubElement(alt_names_node, "Name", attrib=alt_attrib).text = alt_name.name
 
     @staticmethod
     def assign_info_source(root: ET.Element, primary: Basic, alt_lst: list[Basic]) -> None:
@@ -270,11 +262,12 @@ class MetronInfo:
         primary_node = ET.SubElement(id_node, "Primary")
         primary_node.text = str(primary.id_)
         primary_node.attrib["source"] = primary.name
-        for alt in alt_lst:
-            if MetronInfo.valid_info_source(alt):
-                alt_node = ET.SubElement(id_node, "Alternative")
-                alt_node.text = str(alt.id_)
-                alt_node.attrib["source"] = alt.name
+
+        create_sub_element = ET.SubElement
+        for alt in (alt for alt in alt_lst if MetronInfo.valid_info_source(alt)):
+            alt_node = create_sub_element(id_node, "Alternative")
+            alt_node.text = str(alt.id_)
+            alt_node.attrib["source"] = alt.name
 
     @staticmethod
     def assign_gtin(root: ET.Element, gtin: GTIN) -> None:
@@ -287,37 +280,42 @@ class MetronInfo:
     @staticmethod
     def assign_price(root: ET.Element, prices: list[Price]) -> None:
         price_node = MetronInfo.get_or_create_element(root, "Prices")
+        create_sub_element = ET.SubElement
         for p in prices:
-            child_node = ET.SubElement(price_node, "Price")
+            child_node = create_sub_element(price_node, "Price", attrib={"country": p.country})
             child_node.text = str(p.amount)
-            child_node.attrib["country"] = p.country
 
     @staticmethod
     def assign_universes(root: ET.Element, universes: list[Universe]) -> None:
         universes_node = MetronInfo.get_or_create_element(root, "Universes")
+        sub_element = ET.SubElement
         for u in universes:
-            universe_node = ET.SubElement(universes_node, "Universe")
+            universe_node = sub_element(universes_node, "Universe")
             if u.id_:
                 universe_node.attrib["id"] = str(u.id_)
-            ET.SubElement(universe_node, "Name").text = u.name
+            sub_element(universe_node, "Name").text = u.name
             if u.designation:
-                ET.SubElement(universe_node, "Designation").text = u.designation
+                sub_element(universe_node, "Designation").text = u.designation
 
     @staticmethod
     def assign_credits(root: ET.Element, credits_lst: list[Credit]) -> None:
         parent_node = MetronInfo.get_or_create_element(root, "Credits")
+        sub_element = ET.SubElement
+        mix_roles = MetronInfo.mix_roles
+
         for item in credits_lst:
-            credit_node = ET.SubElement(parent_node, "Credit")
-            creator_node = ET.SubElement(credit_node, "Creator")
+            credit_node = sub_element(parent_node, "Credit")
+            creator_node = sub_element(
+                credit_node, "Creator", attrib={"id": str(item.id_)} if item.id_ else {}
+            )
             creator_node.text = item.person
-            if item.id_:
-                creator_node.attrib["id"] = str(item.id_)
-            roles_node = ET.SubElement(credit_node, "Roles")
+            roles_node = sub_element(credit_node, "Roles")
+
             for r in item.role:
-                role_node = ET.SubElement(roles_node, "Role")
-                role_node.text = r.name if r.name in MetronInfo.mix_roles else "Other"
-                if r.id_:
-                    role_node.attrib["id"] = str(r.id_)
+                role_node = sub_element(
+                    roles_node, "Role", attrib={"id": str(r.id_)} if r.id_ else {}
+                )
+                role_node.text = r.name if r.name in mix_roles else "Other"
 
     def convert_metadata_to_xml(self, md: Metadata, xml=None) -> ET.ElementTree:  # noqa: PLR0912,C901
         root = self._get_root(xml)
