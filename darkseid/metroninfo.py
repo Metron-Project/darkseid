@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 
 class MetronInfo:
-    """A class to manage comic metadata and its XML representation.
+    """A class to manage comic metadata and its MetronInfo XML representation.
 
     This class provides methods to convert metadata to and from XML format, validate information sources,
     and manage various attributes related to comic series, genres, and roles.
