@@ -15,7 +15,7 @@ from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
-    from datetime import date
+    from datetime import date, datetime
     from decimal import Decimal
 
 
@@ -540,6 +540,8 @@ class Metadata:
     reprints: list[Basic] = field(default_factory=list)
     tags: list[Basic] = field(default_factory=list)
     pages: list[ImageMetadata] = field(default_factory=list)
+
+    modified: datetime | None = None
 
     def __post_init__(self: Metadata) -> None:
         """
