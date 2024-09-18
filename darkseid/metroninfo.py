@@ -177,6 +177,17 @@ class MetronInfo:
             et_entry.text = val.strftime("%Y-%m-%d") if isinstance(val, date) else str(val)
 
     @staticmethod
+    def assign_datetime(root: ET.Element, element: str, val: datetime | None = None) -> None:
+        et_entry = root.find(element)
+        if val is None:
+            if et_entry is not None:
+                root.remove(et_entry)
+        else:
+            if et_entry is None:
+                et_entry = ET.SubElement(root, element)
+            et_entry.text = val.isoformat(sep="T")
+
+    @staticmethod
     def assign_basic_children(root: ET.Element, parent: str, child: str, vals: list[Basic]) -> None:
         parent_node = MetronInfo.get_or_create_element(root, parent)
         for val in vals:
@@ -346,6 +357,7 @@ class MetronInfo:
             self.assign_gtin(root, md.gtin)
         self.assign(root, "AgeRating", self.valid_age_rating(md.age_rating))
         self.assign(root, "URL", md.web_link)
+        self.assign_datetime(root, "LastModified", md.modified)
         if md.credits:
             self.assign_credits(root, md.credits)
 
@@ -454,6 +466,12 @@ class MetronInfo:
             publisher_id = get_id_from_attrib(resource.attrib)
 
             return Publisher(publisher_name, publisher_id, imprint)
+
+        def get_modified() -> datetime | None:
+            resource = root.find("LastModified")
+            if resource is None:
+                return None
+            return datetime.fromisoformat(resource.text)
 
         def _create_alt_name_list(element: ET.Element) -> list[AlternativeNames]:
             return [
@@ -565,6 +583,7 @@ class MetronInfo:
         md.gtin = get_gtin()
         md.age_rating = get("AgeRating")
         md.web_link = get("URL")
+        md.modified = get_modified()
         md.credits = get_credits()
 
         pages_node = root.find("Pages")

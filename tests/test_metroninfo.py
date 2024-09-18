@@ -1,5 +1,5 @@
 import xml.etree.ElementTree as ET  # noqa: N817
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
@@ -185,6 +185,7 @@ def test_metadata_from_string(metron_info):
                 <Name>Arc1</Name>
             </Arc>
         </Arcs>
+        <LastModified>2024-08-12T12:13:54.087728-04:00</LastModified>
         <Credits>
             <Credit>
                 <Creator id="123">Stan Lee</Creator>
@@ -224,6 +225,9 @@ def test_metadata_from_string(metron_info):
     assert result.credits[0].person == "Stan Lee"
     assert result.credits[0].id_ == 123
     assert result.credits[0].role[0].name == "Writer"
+    assert result.modified == datetime(
+        2024, 8, 12, 12, 13, 54, 87728, tzinfo=timezone(timedelta(days=-1, seconds=72000))
+    )
 
 
 def validate(xml_path: str, xsd_path: str) -> bool:

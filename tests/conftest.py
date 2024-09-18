@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -39,6 +39,9 @@ def fake_metadata() -> Metadata:
     md.comments = "Just some sample metadata."
     md.black_and_white = True
     md.is_empty = False
+    md.modified = datetime(
+        2024, 8, 12, 12, 13, 54, 87728, tzinfo=timezone(timedelta(days=-1, seconds=72000))
+    )
 
     return md
 
