@@ -169,7 +169,7 @@ class MetronInfo:
 
         Args:
             md (Metadata): The Metadata object to convert.
-            xml (bytes, optional): Optional XML bytes to include. Defaults to b"".
+            xml (bytes, optional): Optional XML bytes to include. Defaults to b''.
 
         Returns:
             str: The resulting XML string.
