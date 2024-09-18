@@ -242,13 +242,6 @@ class MetronInfo:
                 child_node.attrib["id"] = str(id_)
 
     @staticmethod
-    def _assign_basic_resource(root: ET.Element, element: str, val: Basic) -> None:
-        resource_node = MetronInfo._get_or_create_element(root, element)
-        resource_node.text = val.name
-        if val.id_:
-            resource_node.attrib["id"] = str(val.id_)
-
-    @staticmethod
     def _assign_arc(root: ET.Element, vals: list[Arc]) -> None:
         parent_node = MetronInfo._get_or_create_element(root, "Arcs")
         for val in vals:
