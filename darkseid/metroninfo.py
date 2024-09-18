@@ -32,6 +32,27 @@ if TYPE_CHECKING:
 
 
 class MetronInfo:
+    """A class to manage comic metadata and its XML representation.
+
+    This class provides methods to convert metadata to and from XML format, validate information sources,
+    and manage various attributes related to comic series, genres, and roles.
+
+    Attributes:
+        mix_info_sources (frozenset): A set of valid information sources.
+        mix_age_ratings (frozenset): A set of valid age ratings.
+        mix_series_format (frozenset): A set of valid series formats.
+        mix_genres (frozenset): A set of valid genres.
+        mix_roles (frozenset): A set of valid roles for creators.
+
+    Methods:
+        metadata_from_string(string): Converts an XML string to a Metadata object.
+        string_from_metadata(md, xml): Converts a Metadata object to an XML string.
+        convert_metadata_to_xml(md, xml): Converts a Metadata object into an XML ElementTree.
+        convert_xml_to_metadata(tree): Converts an XML ElementTree into a Metadata object.
+        write_xml(filename, md, xml): Writes the XML representation of metadata to a file.
+        read_xml(filename): Reads XML data from a file and converts it into a Metadata object.
+    """
+
     mix_info_sources = frozenset(
         {"comic vine", "grand comics database", "marvel", "metron", "league of comic geeks"}
     )
@@ -124,6 +145,16 @@ class MetronInfo:
     )
 
     def metadata_from_string(self, string: str) -> Metadata:
+        """Convert an XML string to a Metadata object.
+
+        This method parses the provided XML string and converts it into a Metadata object representation.
+
+        Args:
+            string (str): The XML string to be converted.
+
+        Returns:
+            Metadata: The resulting Metadata object.
+        """
         tree = ET.ElementTree(fromstring(string))
         return self.convert_xml_to_metadata(tree)
 
@@ -132,6 +163,17 @@ class MetronInfo:
         md: Metadata,
         xml: bytes = b"",
     ) -> str:
+        """Convert a Metadata object to an XML string.
+
+        This method generates an XML string representation of the provided Metadata object.
+
+        Args:
+            md (Metadata): The Metadata object to convert.
+            xml (bytes, optional): Optional XML bytes to include. Defaults to b"".
+
+        Returns:
+            str: The resulting XML string.
+        """
         tree = self.convert_metadata_to_xml(md, xml)
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
 
@@ -320,6 +362,17 @@ class MetronInfo:
                 role_node.text = r.name if r.name in mix_roles else "Other"
 
     def convert_metadata_to_xml(self, md: Metadata, xml=None) -> ET.ElementTree:  # noqa: PLR0912,C901
+        """Convert a Metadata object to an XML ElementTree.
+
+        This method generates an XML representation of the provided Metadata object, including all relevant details.
+
+        Args:
+            md (Metadata): The Metadata object to convert.
+            xml (optional): Optional XML bytes to include.
+
+        Returns:
+            ET.ElementTree: The resulting XML ElementTree.
+        """
         root = self._get_root(xml)
 
         if self._valid_info_source(md.info_source):
@@ -375,6 +428,19 @@ class MetronInfo:
 
     @staticmethod
     def convert_xml_to_metadata(tree: ET.ElementTree) -> Metadata:  # noqa: C901,PLR0915
+        """Convert an XML ElementTree to a Metadata object.
+
+        This method parses the provided XML ElementTree and converts it into a Metadata object representation.
+
+        Args:
+            tree (ET.ElementTree): The XML ElementTree to convert.
+
+        Returns:
+            Metadata: The resulting Metadata object.
+
+        Raises:
+            ValueError: If the XML does not conform to the MetronInfo schema.
+        """
         root = tree.getroot()
 
         if root.tag != "MetronInfo":
@@ -592,9 +658,28 @@ class MetronInfo:
         return md
 
     def write_xml(self, filename: Path, md: Metadata, xml=None) -> None:
+        """Write a Metadata object to an XML file.
+
+        This method converts the provided Metadata object to XML and writes it to the specified file.
+
+        Args:
+            filename (Path): The path to the file where the XML will be written.
+            md (Metadata): The Metadata object to write.
+            xml (optional): Optional XML bytes to include.
+        """
         tree = self.convert_metadata_to_xml(md, xml)
         tree.write(filename, encoding="UTF-8", xml_declaration=True)
 
     def read_xml(self, filename: Path) -> Metadata:
+        """Read a Metadata object from an XML file.
+
+        This method reads the XML from the specified file and converts it into a Metadata object.
+
+        Args:
+            filename (Path): The path to the XML file to read.
+
+        Returns:
+            Metadata: The resulting Metadata object.
+        """
         tree = parse(filename)
         return self.convert_xml_to_metadata(tree)
