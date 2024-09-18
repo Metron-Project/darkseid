@@ -61,7 +61,7 @@ def test_get_root(metron_info, xml, expected_root_tag):
 )
 def test_valid_info_source(metron_info, val, expected_result):
     # Act
-    result = metron_info.valid_info_source(val)
+    result = metron_info._valid_info_source(val)  # noqa: SLF001
 
     # Assert
     assert result == expected_result
@@ -81,7 +81,7 @@ def test_valid_info_source(metron_info, val, expected_result):
 )
 def test_list_contains_valid_genre(metron_info, vals, expected_result):
     # Act
-    result = metron_info.list_contains_valid_genre(vals)
+    result = metron_info._list_contains_valid_genre(vals)  # noqa: SLF001
 
     # Assert
     assert result == expected_result
@@ -101,7 +101,7 @@ def test_list_contains_valid_genre(metron_info, vals, expected_result):
 )
 def test_valid_age_rating(metron_info, val, expected_result):
     # Act
-    result = metron_info.valid_age_rating(val)
+    result = metron_info._valid_age_rating(val)  # noqa: SLF001
 
     # Assert
     assert result == expected_result

@@ -7,7 +7,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET  # noqa: N817
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import TYPE_CHECKING, ClassVar, cast
+from typing import TYPE_CHECKING, cast
 
 from defusedxml.ElementTree import fromstring, parse
 
@@ -35,7 +35,7 @@ class MetronInfo:
     mix_info_sources = frozenset(
         {"comic vine", "grand comics database", "marvel", "metron", "league of comic geeks"}
     )
-    mix_age_ratings: ClassVar[frozenset[str]] = frozenset(
+    mix_age_ratings = frozenset(
         {
             "unknown",
             "everyone",
@@ -143,21 +143,21 @@ class MetronInfo:
         return root
 
     @classmethod
-    def valid_info_source(cls, val: Basic | None = None) -> bool:
+    def _valid_info_source(cls, val: Basic | None = None) -> bool:
         return val is not None and val.name.lower() in cls.mix_info_sources
 
     @classmethod
-    def list_contains_valid_genre(cls, vals: list[Basic]) -> bool:
+    def _list_contains_valid_genre(cls, vals: list[Basic]) -> bool:
         return any(val.name.lower() in cls.mix_genres for val in vals)
 
     @classmethod
-    def valid_age_rating(cls, val: str | None = None) -> str | None:
+    def _valid_age_rating(cls, val: str | None = None) -> str | None:
         if val is None:
             return None
         return "Unknown" if val.lower() not in cls.mix_age_ratings else val
 
     @staticmethod
-    def get_or_create_element(parent: ET.Element, tag: str) -> ET.Element:
+    def _get_or_create_element(parent: ET.Element, tag: str) -> ET.Element:
         element = parent.find(tag)
         if element is None:
             return ET.SubElement(parent, tag)
@@ -165,7 +165,7 @@ class MetronInfo:
         return element
 
     @staticmethod
-    def assign(root: ET.Element, element: str, val: str | int | date | None = None) -> None:
+    def _assign(root: ET.Element, element: str, val: str | int | date | None = None) -> None:
         et_entry = root.find(element)
         if val is None:
             if et_entry is not None:
@@ -176,7 +176,7 @@ class MetronInfo:
             et_entry.text = val.strftime("%Y-%m-%d") if isinstance(val, date) else str(val)
 
     @staticmethod
-    def assign_datetime(root: ET.Element, element: str, val: datetime | None = None) -> None:
+    def _assign_datetime(root: ET.Element, element: str, val: datetime | None = None) -> None:
         et_entry = root.find(element)
         if val is None:
             if et_entry is not None:
@@ -187,8 +187,10 @@ class MetronInfo:
             et_entry.text = val.isoformat(sep="T")
 
     @staticmethod
-    def assign_basic_children(root: ET.Element, parent: str, child: str, vals: list[Basic]) -> None:
-        parent_node = MetronInfo.get_or_create_element(root, parent)
+    def _assign_basic_children(
+        root: ET.Element, parent: str, child: str, vals: list[Basic]
+    ) -> None:
+        parent_node = MetronInfo._get_or_create_element(root, parent)
         create_sub_element = ET.SubElement
         for val in vals:
             child_node = create_sub_element(parent_node, child)
@@ -198,15 +200,15 @@ class MetronInfo:
                 child_node.attrib["id"] = str(id_)
 
     @staticmethod
-    def assign_basic_resource(root: ET.Element, element: str, val: Basic) -> None:
-        resource_node = MetronInfo.get_or_create_element(root, element)
+    def _assign_basic_resource(root: ET.Element, element: str, val: Basic) -> None:
+        resource_node = MetronInfo._get_or_create_element(root, element)
         resource_node.text = val.name
         if val.id_:
             resource_node.attrib["id"] = str(val.id_)
 
     @staticmethod
-    def assign_arc(root: ET.Element, vals: list[Arc]) -> None:
-        parent_node = MetronInfo.get_or_create_element(root, "Arcs")
+    def _assign_arc(root: ET.Element, vals: list[Arc]) -> None:
+        parent_node = MetronInfo._get_or_create_element(root, "Arcs")
         for val in vals:
             attributes = {"id": str(val.id_)} if val.id_ else {}
             child_node = ET.SubElement(parent_node, "Arc", attrib=attributes)
@@ -215,10 +217,10 @@ class MetronInfo:
                 ET.SubElement(child_node, "Number").text = str(val.number)
 
     @staticmethod
-    def assign_publisher(root: ET.Element, publisher: Publisher) -> None:
+    def _assign_publisher(root: ET.Element, publisher: Publisher) -> None:
         if publisher is None:
             return
-        publisher_node = MetronInfo.get_or_create_element(root, "Publisher")
+        publisher_node = MetronInfo._get_or_create_element(root, "Publisher")
         if publisher.id_:
             publisher_node.attrib = {"id": str(publisher.id_)}
 
@@ -233,10 +235,10 @@ class MetronInfo:
             imprint_node.text = publisher.imprint.name
 
     @staticmethod
-    def assign_series(root: ET.Element, series: Series) -> None:
+    def _assign_series(root: ET.Element, series: Series) -> None:
         if series is None:
             return
-        series_node = MetronInfo.get_or_create_element(root, "Series")
+        series_node = MetronInfo._get_or_create_element(root, "Series")
         if series.id_ or series.language:
             series_node.attrib = {
                 k: v for k, v in (("id", str(series.id_)), ("lang", series.language)) if v
@@ -257,37 +259,37 @@ class MetronInfo:
                 ET.SubElement(alt_names_node, "Name", attrib=alt_attrib).text = alt_name.name
 
     @staticmethod
-    def assign_info_source(root: ET.Element, primary: Basic, alt_lst: list[Basic]) -> None:
-        id_node = MetronInfo.get_or_create_element(root, "ID")
+    def _assign_info_source(root: ET.Element, primary: Basic, alt_lst: list[Basic]) -> None:
+        id_node = MetronInfo._get_or_create_element(root, "ID")
         primary_node = ET.SubElement(id_node, "Primary")
         primary_node.text = str(primary.id_)
         primary_node.attrib["source"] = primary.name
 
         create_sub_element = ET.SubElement
-        for alt in (alt for alt in alt_lst if MetronInfo.valid_info_source(alt)):
+        for alt in (alt for alt in alt_lst if MetronInfo._valid_info_source(alt)):
             alt_node = create_sub_element(id_node, "Alternative")
             alt_node.text = str(alt.id_)
             alt_node.attrib["source"] = alt.name
 
     @staticmethod
-    def assign_gtin(root: ET.Element, gtin: GTIN) -> None:
-        gtin_node = MetronInfo.get_or_create_element(root, "GTIN")
+    def _assign_gtin(root: ET.Element, gtin: GTIN) -> None:
+        gtin_node = MetronInfo._get_or_create_element(root, "GTIN")
         if gtin.isbn:
             ET.SubElement(gtin_node, "ISBN").text = str(gtin.isbn)
         if gtin.upc:
             ET.SubElement(gtin_node, "UPC").text = str(gtin.upc)
 
     @staticmethod
-    def assign_price(root: ET.Element, prices: list[Price]) -> None:
-        price_node = MetronInfo.get_or_create_element(root, "Prices")
+    def _assign_price(root: ET.Element, prices: list[Price]) -> None:
+        price_node = MetronInfo._get_or_create_element(root, "Prices")
         create_sub_element = ET.SubElement
         for p in prices:
             child_node = create_sub_element(price_node, "Price", attrib={"country": p.country})
             child_node.text = str(p.amount)
 
     @staticmethod
-    def assign_universes(root: ET.Element, universes: list[Universe]) -> None:
-        universes_node = MetronInfo.get_or_create_element(root, "Universes")
+    def _assign_universes(root: ET.Element, universes: list[Universe]) -> None:
+        universes_node = MetronInfo._get_or_create_element(root, "Universes")
         sub_element = ET.SubElement
         for u in universes:
             universe_node = sub_element(universes_node, "Universe")
@@ -298,8 +300,8 @@ class MetronInfo:
                 sub_element(universe_node, "Designation").text = u.designation
 
     @staticmethod
-    def assign_credits(root: ET.Element, credits_lst: list[Credit]) -> None:
-        parent_node = MetronInfo.get_or_create_element(root, "Credits")
+    def _assign_credits(root: ET.Element, credits_lst: list[Credit]) -> None:
+        parent_node = MetronInfo._get_or_create_element(root, "Credits")
         sub_element = ET.SubElement
         mix_roles = MetronInfo.mix_roles
 
@@ -320,47 +322,47 @@ class MetronInfo:
     def convert_metadata_to_xml(self, md: Metadata, xml=None) -> ET.ElementTree:  # noqa: PLR0912,C901
         root = self._get_root(xml)
 
-        if self.valid_info_source(md.info_source):
-            self.assign_info_source(root, md.info_source, md.alt_sources)
-        self.assign_publisher(root, md.publisher)
-        self.assign_series(root, md.series)
-        self.assign(root, "CollectionTitle", md.collection_title)
-        self.assign(root, "Number", md.issue)
+        if self._valid_info_source(md.info_source):
+            self._assign_info_source(root, md.info_source, md.alt_sources)
+        self._assign_publisher(root, md.publisher)
+        self._assign_series(root, md.series)
+        self._assign(root, "CollectionTitle", md.collection_title)
+        self._assign(root, "Number", md.issue)
         if md.stories:
-            self.assign_basic_children(root, "Stories", "Story", md.stories)
-        self.assign(root, "Summary", md.comments)
+            self._assign_basic_children(root, "Stories", "Story", md.stories)
+        self._assign(root, "Summary", md.comments)
         if md.prices:
-            self.assign_price(root, md.prices)
-        self.assign(root, "CoverDate", md.cover_date)
-        self.assign(root, "StoreDate", md.store_date)
-        self.assign(root, "PageCount", md.page_count)
-        self.assign(root, "Notes", md.notes)
-        if md.genres and self.list_contains_valid_genre(md.genres):
-            self.assign_basic_children(root, "Genres", "Genre", md.genres)
+            self._assign_price(root, md.prices)
+        self._assign(root, "CoverDate", md.cover_date)
+        self._assign(root, "StoreDate", md.store_date)
+        self._assign(root, "PageCount", md.page_count)
+        self._assign(root, "Notes", md.notes)
+        if md.genres and self._list_contains_valid_genre(md.genres):
+            self._assign_basic_children(root, "Genres", "Genre", md.genres)
         if md.tags:
-            self.assign_basic_children(root, "Tags", "Tag", md.tags)
+            self._assign_basic_children(root, "Tags", "Tag", md.tags)
         if md.story_arcs:
-            self.assign_arc(root, md.story_arcs)
+            self._assign_arc(root, md.story_arcs)
         if md.characters:
-            self.assign_basic_children(root, "Characters", "Character", md.characters)
+            self._assign_basic_children(root, "Characters", "Character", md.characters)
         if md.teams:
-            self.assign_basic_children(root, "Teams", "Team", md.teams)
+            self._assign_basic_children(root, "Teams", "Team", md.teams)
         if md.universes:
-            self.assign_universes(root, md.universes)
+            self._assign_universes(root, md.universes)
         if md.locations:
-            self.assign_basic_children(root, "Locations", "Location", md.locations)
+            self._assign_basic_children(root, "Locations", "Location", md.locations)
         if md.reprints:
-            self.assign_basic_children(root, "Reprints", "Reprint", md.reprints)
+            self._assign_basic_children(root, "Reprints", "Reprint", md.reprints)
         if md.gtin:
-            self.assign_gtin(root, md.gtin)
-        self.assign(root, "AgeRating", self.valid_age_rating(md.age_rating))
-        self.assign(root, "URL", md.web_link)
-        self.assign_datetime(root, "LastModified", md.modified)
+            self._assign_gtin(root, md.gtin)
+        self._assign(root, "AgeRating", self._valid_age_rating(md.age_rating))
+        self._assign(root, "URL", md.web_link)
+        self._assign_datetime(root, "LastModified", md.modified)
         if md.credits:
-            self.assign_credits(root, md.credits)
+            self._assign_credits(root, md.credits)
 
         if md.pages:
-            pages_node = self.get_or_create_element(root, "Pages")
+            pages_node = self._get_or_create_element(root, "Pages")
             for page_dict in md.pages:
                 page = page_dict
                 if "Image" in page:
