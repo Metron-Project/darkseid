@@ -386,63 +386,47 @@ class MetronInfo:
             tag = root.find(element)
             return None if tag is None else tag.text
 
-        def get_gtin() -> GTIN | None:
-            resource = root.find("GTIN")
+        def get_gtin(resource: ET.Element) -> GTIN | None:
             if resource is None:
                 return None
 
             gtin = GTIN()
+            tag_to_attr = {"UPC": "upc", "ISBN": "isbn"}
             found = False
+
             for item in resource:
-                if item.text:
-                    match item.tag:
-                        case "UPC":
-                            gtin.upc = int(item.text)
-                            found = True
-                        case "ISBN":
-                            gtin.isbn = int(item.text)
-                            found = True
-                        case _:
-                            pass
+                if item.text and item.tag in tag_to_attr:
+                    setattr(gtin, tag_to_attr[item.tag], int(item.text))
+                    found = True
 
             return gtin if found else None
 
-        def get_info_sources() -> Basic | None:
-            id_node = root.find("ID")
-            if id_node is None:
-                return None
-            primary_node = id_node.find("Primary")
+        def get_info_sources(primary_node: ET.Element) -> Basic | None:
             if primary_node is None:
                 return None
             return Basic(primary_node.attrib.get("source"), int(primary_node.text))
 
-        def get_alt_sources() -> list[Basic] | None:
-            id_node = root.find("ID")
+        def get_alt_sources(id_node: ET.Element) -> list[Basic] | None:
             if id_node is None:
                 return None
-            alt_nodes = id_node.findall("Alternative")
-            if alt_nodes is None:
-                return None
             return [
-                Basic(alt_node.attrib.get("source"), int(alt_node.text)) for alt_node in alt_nodes
+                Basic(alt_node.attrib.get("source"), int(alt_node.text))
+                for alt_node in id_node.findall("Alternative")
             ]
 
-        def get_resource_list(element: str) -> list[Basic]:
-            resource = root.find(element)
+        def get_resource_list(resource: ET.Element) -> list[Basic]:
             if resource is None:
                 return []
             return [Basic(item.text, get_id_from_attrib(item.attrib)) for item in resource]
 
-        def get_prices() -> list[Price]:
-            resource = root.find("Prices")
+        def get_prices(resource: ET.Element) -> list[Price]:
             if resource is None:
                 return []
             return [
                 Price(Decimal(item.text), item.attrib.get("country", "US")) for item in resource
             ]
 
-        def get_publisher() -> Publisher | None:
-            resource = root.find("Publisher")
+        def get_publisher(resource: ET.Element) -> Publisher | None:
             if resource is None:
                 return None
 
@@ -460,55 +444,57 @@ class MetronInfo:
                         publisher_name = tag_actions[item.tag](item)
                     elif item.tag == "Imprint":
                         imprint = tag_actions[item.tag](item)
+                    if publisher_name and imprint:
+                        break
 
             publisher_id = get_id_from_attrib(resource.attrib)
 
             return Publisher(publisher_name, publisher_id, imprint)
 
-        def get_modified() -> datetime | None:
-            resource = root.find("LastModified")
+        def get_modified(resource: ET.Element) -> datetime | None:
             if resource is None:
                 return None
             return datetime.fromisoformat(resource.text)
 
         def _create_alt_name_list(element: ET.Element) -> list[AlternativeNames]:
+            names = element.findall("Name")
             return [
                 AlternativeNames(
                     name.text, get_id_from_attrib(name.attrib), name.attrib.get("lang")
                 )
-                for name in element.findall("Name")
+                for name in names
             ]
 
-        def get_series() -> Series | None:
-            resource = root.find("Series")
+        def get_series(resource: ET.Element) -> Series | None:
             if resource is None:
                 return None
 
             series_md = Series("None")
             attrib = resource.attrib
             series_md.id_ = get_id_from_attrib(attrib)
-            if attrib and "lang" in attrib:
-                series_md.language = attrib["lang"]
+            series_md.language = attrib.get("lang")
+
+            tag_to_attr = {
+                "Name": "name",
+                "SortName": "sort_name",
+                "Volume": "volume",
+                "Format": "format",
+                "AlternativeNames": "_create_alt_name_list",
+            }
 
             for item in resource:
-                match item.tag:
-                    case "Name":
-                        series_md.name = item.text
-                    case "SortName":
-                        series_md.sort_name = item.text
-                    case "Volume":
-                        series_md.volume = int(item.text)
-                    case "Format":
-                        series_md.format = item.text
-                    case "AlternativeNames":
+                attr = tag_to_attr.get(item.tag)
+                if attr:
+                    if attr == "_create_alt_name_list":
                         series_md.alternative_names = _create_alt_name_list(item)
-                    case _:
-                        pass
+                    elif attr == "volume":
+                        setattr(series_md, attr, int(item.text))
+                    else:
+                        setattr(series_md, attr, item.text)
 
             return series_md
 
-        def get_arcs() -> list[Arc]:
-            arcs_node = root.find("Arcs")
+        def get_arcs(arcs_node: ET.Element) -> list[Arc]:
             if arcs_node is None:
                 return []
             resources = arcs_node.findall("Arc")
@@ -519,15 +505,12 @@ class MetronInfo:
                 Arc(
                     resource.find("Name").text,
                     get_id_from_attrib(resource.attrib),
-                    int(resource.find("Number").text)
-                    if resource.find("Number") is not None
-                    else None,
+                    int(number.text) if (number := resource.find("Number")) is not None else None,
                 )
                 for resource in resources
             ]
 
-        def get_credits() -> list[Credit] | None:
-            credits_node = root.find("Credits")
+        def get_credits(credits_node: ET.Element) -> list[Credit] | None:
             if credits_node is None:
                 return None
             resources = credits_node.findall("Credit")
@@ -550,16 +533,28 @@ class MetronInfo:
                 credits_list.append(credit)
             return credits_list
 
+        # Cache root.find() results
+        primary_node = root.find("ID/Primary")
+        id_node = root.find("ID")
+        gtin_node = root.find("GTIN")
+        publisher_node = root.find("Publisher")
+        modified_node = root.find("LastModified")
+        series_node = root.find("Series")
+        arcs_node = root.find("Arcs")
+        credits_node = root.find("Credits")
+        prices_node = root.find("Prices")
+        pages_node = root.find("Pages")
+
         md = Metadata()
-        md.info_source = get_info_sources()
-        md.alt_sources = get_alt_sources()
-        md.publisher = get_publisher()
-        md.series = get_series()
+        md.info_source = get_info_sources(primary_node)
+        md.alt_sources = get_alt_sources(id_node)
+        md.publisher = get_publisher(publisher_node)
+        md.series = get_series(series_node)
         md.collection_title = get("CollectionTitle")
         md.issue = IssueString(get("Number")).as_string()
-        md.stories = get_resource_list("Stories")
+        md.stories = get_resource_list(root.find("Stories"))
         md.comments = get("Summary")
-        md.prices = get_prices()
+        md.prices = get_prices(prices_node)
         if cov_date := get("CoverDate"):
             md.cover_date = (
                 datetime.strptime(cov_date, "%Y-%m-%d").replace(tzinfo=timezone.utc).date()
@@ -571,20 +566,19 @@ class MetronInfo:
         p_count = get("PageCount")
         md.page_count = int(p_count) if p_count is not None and p_count.isdigit() else None
         md.notes = get("Notes")
-        md.genres = get_resource_list("Genres")
-        md.tags = get_resource_list("Tags")
-        md.story_arcs = get_arcs()
-        md.characters = get_resource_list("Characters")
-        md.teams = get_resource_list("Teams")
-        md.locations = get_resource_list("Locations")
-        md.reprints = get_resource_list("Reprints")
-        md.gtin = get_gtin()
+        md.genres = get_resource_list(root.find("Genres"))
+        md.tags = get_resource_list(root.find("Tags"))
+        md.story_arcs = get_arcs(arcs_node)
+        md.characters = get_resource_list(root.find("Characters"))
+        md.teams = get_resource_list(root.find("Teams"))
+        md.locations = get_resource_list(root.find("Locations"))
+        md.reprints = get_resource_list(root.find("Reprints"))
+        md.gtin = get_gtin(gtin_node)
         md.age_rating = get("AgeRating")
         md.web_link = get("URL")
-        md.modified = get_modified()
-        md.credits = get_credits()
+        md.modified = get_modified(modified_node)
+        md.credits = get_credits(credits_node)
 
-        pages_node = root.find("Pages")
         if pages_node is not None:
             for page in pages_node:
                 p: dict[str, str | int] = page.attrib
