@@ -7,7 +7,7 @@ import pytest
 from lxml import etree
 
 from darkseid.comicinfo import ComicInfo
-from darkseid.metadata import Arc, Basic, Credit, Metadata, Publisher, Role, Series
+from darkseid.metadata import URLS, Arc, Basic, Credit, Metadata, Publisher, Role, Series
 
 CI_XSD = Path("tests/test_files/ComicInfo.xsd")
 
@@ -55,6 +55,13 @@ def test_meta_data(test_credits: list[Credit]) -> Metadata:
     md.black_and_white = True
     md.age_rating = "MA15+"
     md.manga = "YesAndRightToLeft"
+    md.web_link = URLS(
+        "https://metron.cloud/issue/ultramega-2021-5/",
+        [
+            "https://metron.cloud/issue/the-body-trade-2024-1/",
+            "https://metron.cloud/issue/the-body-trade-2024-2/",
+        ],
+    )
     for c in test_credits:
         md.add_credit(c)
     return md

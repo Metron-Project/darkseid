@@ -4,6 +4,7 @@ from decimal import Decimal
 import pytest
 
 from darkseid.metadata import (
+    URLS,
     AlternativeNames,
     Arc,
     Basic,
@@ -41,6 +42,13 @@ def fake_metadata() -> Metadata:
     md.is_empty = False
     md.modified = datetime(
         2024, 8, 12, 12, 13, 54, 87728, tzinfo=timezone(timedelta(days=-1, seconds=72000))
+    )
+    md.web_link = URLS(
+        "https://metron.cloud/issue/ultramega-2021-5/",
+        [
+            "https://metron.cloud/issue/the-body-trade-2024-1/",
+            "https://metron.cloud/issue/the-body-trade-2024-2/",
+        ],
     )
 
     return md

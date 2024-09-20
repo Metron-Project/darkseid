@@ -14,6 +14,7 @@ from defusedxml.ElementTree import fromstring, parse
 from darkseid.issue_string import IssueString
 from darkseid.metadata import (
     GTIN,
+    URLS,
     AlternativeNames,
     Arc,
     Basic,
@@ -335,6 +336,16 @@ class MetronInfo:
                 sub_element(universe_node, "Designation").text = u.designation
 
     @staticmethod
+    def _assign_urls(root: ET.Element, urls: URLS) -> None:
+        urls_node = MetronInfo._get_or_create_element(root, "URL")
+        sub_element = ET.SubElement
+        if urls.primary:
+            sub_element(urls_node, "Primary").text = urls.primary
+        if urls.alternatives:
+            for alt in urls.alternatives:
+                sub_element(urls_node, "Alternative").text = alt
+
+    @staticmethod
     def _assign_credits(root: ET.Element, credits_lst: list[Credit]) -> None:
         parent_node = MetronInfo._get_or_create_element(root, "Credits")
         sub_element = ET.SubElement
@@ -402,7 +413,8 @@ class MetronInfo:
         if md.gtin:
             self._assign_gtin(root, md.gtin)
         self._assign(root, "AgeRating", self._valid_age_rating(md.age_rating))
-        self._assign(root, "URL", md.web_link)
+        if md.web_link:
+            self._assign_urls(root, md.web_link)
         self._assign_datetime(root, "LastModified", md.modified)
         if md.credits:
             self._assign_credits(root, md.credits)
@@ -571,6 +583,14 @@ class MetronInfo:
                 for resource in resources
             ]
 
+        def get_urls(url_node: ET.Element) -> URLS | None:
+            if url_node is None:
+                return None
+            alt_urls_node = url_node.findall("Alternative")
+            url_lst = [alt_url.text for alt_url in alt_urls_node] if alt_urls_node else None
+            primary = url_node.find("Primary").text
+            return URLS(primary, url_lst)
+
         def get_credits(credits_node: ET.Element) -> list[Credit] | None:
             if credits_node is None:
                 return None
@@ -605,6 +625,7 @@ class MetronInfo:
         credits_node = root.find("Credits")
         prices_node = root.find("Prices")
         pages_node = root.find("Pages")
+        url_node = root.find("URL")
 
         md = Metadata()
         md.info_source = get_info_sources(primary_node)
@@ -636,7 +657,7 @@ class MetronInfo:
         md.reprints = get_resource_list(root.find("Reprints"))
         md.gtin = get_gtin(gtin_node)
         md.age_rating = get("AgeRating")
-        md.web_link = get("URL")
+        md.web_link = get_urls(url_node)
         md.modified = get_modified(modified_node)
         md.credits = get_credits(credits_node)
 

@@ -352,6 +352,21 @@ class Credit:
 
 
 @dataclass
+class URLS:
+    """
+    A data class representing URLS for a comic.
+
+    Attributes:
+        primary (str): The primary URL, whic is usually the information source URL.
+        alternatives (list[str]): A list of alternative URLs.
+    """
+
+    # TODO: Probably worthwhile to validate the strings are URLS.
+    primary: str
+    alternatives: list[str] | None = None
+
+
+@dataclass
 class GTIN(Validations):
     """
     A data class representing a GTIN (Global Trade Item Number) with validations.
@@ -459,7 +474,7 @@ class Metadata:
         alternate_number (Optional[str]): The alternate number.
         alternate_count (Optional[int]): The count of alternates.
         notes (Optional[str]): The notes.
-        web_link (Optional[str]): The web link.
+        web_link (Optional[URLS]): The web link.
         manga (Optional[str]): The manga information.
         black_and_white (Optional[bool]): Indicates if the comic is black and white.
         page_count (Optional[int]): The count of pages.
@@ -521,7 +536,7 @@ class Metadata:
     alternate_number: str | None = None
     alternate_count: int | None = None
     notes: str | None = None
-    web_link: str | None = None
+    web_link: URLS | None = None
     manga: str | None = None
     black_and_white: bool | None = None
     page_count: int | None = None
