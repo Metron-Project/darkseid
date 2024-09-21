@@ -7,7 +7,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET  # noqa: N817
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from defusedxml.ElementTree import fromstring, parse
 
@@ -19,7 +19,6 @@ from darkseid.metadata import (
     Arc,
     Basic,
     Credit,
-    ImageMetadata,
     Metadata,
     Price,
     Publisher,
@@ -419,15 +418,6 @@ class MetronInfo:
         if md.credits:
             self._assign_credits(root, md.credits)
 
-        if md.pages:
-            pages_node = self._get_or_create_element(root, "Pages")
-            for page_dict in md.pages:
-                page = page_dict
-                if "Image" in page:
-                    page["Image"] = str(page["Image"])
-                page_node = ET.SubElement(pages_node, "Page")
-                page_node.attrib = dict(sorted(page_dict.items()))
-
         ET.indent(root)
         return ET.ElementTree(root)
 
@@ -624,7 +614,6 @@ class MetronInfo:
         arcs_node = root.find("Arcs")
         credits_node = root.find("Credits")
         prices_node = root.find("Prices")
-        pages_node = root.find("Pages")
         url_node = root.find("URL")
 
         md = Metadata()
@@ -660,13 +649,6 @@ class MetronInfo:
         md.web_link = get_urls(url_node)
         md.modified = get_modified(modified_node)
         md.credits = get_credits(credits_node)
-
-        if pages_node is not None:
-            for page in pages_node:
-                p: dict[str, str | int] = page.attrib
-                if "Image" in p:
-                    p["Image"] = int(p["Image"])
-                md.pages.append(cast(ImageMetadata, p))
 
         md.is_empty = False
         return md
