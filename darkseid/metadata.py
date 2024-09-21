@@ -24,6 +24,7 @@ import pycountry
 MAX_UPC = 17
 MAX_ISBN = 13
 COUNTRY_LEN = 2
+YEAR_LEN = 4
 
 
 class Validations:
@@ -255,6 +256,7 @@ class Series(Basic, Validations):
         sort_name (str | None): The sort name of the series, defaults to None.
         volume (int | None): The volume of the series, defaults to None.
         format (str | None): The format of the series, defaults to None.
+        start_year (int | None): The year that the series started in. A 4 digit value.
         alternative_names: list[AlternativeNames]: A list of alternative names for series.
         language (str | None): The 2-letter ISO code of the language, defaults to None.
 
@@ -265,8 +267,20 @@ class Series(Basic, Validations):
     sort_name: str | None = None
     volume: int | None = None
     format: str | None = None
+    start_year: int | None = None
     alternative_names: list[AlternativeNames] = field(default_factory=list)
     language: str | None = None  # 2-letter iso code
+
+    @staticmethod
+    def validate_start_year(value: int, **_: any) -> int | None:
+        if not value:
+            return None
+
+        if len(str(value)) == YEAR_LEN:
+            return value
+
+        msg = f"Year: {value} length must be {YEAR_LEN}"
+        raise ValueError(msg)
 
     @staticmethod
     def validate_language(value: str, **_: any) -> str | None:

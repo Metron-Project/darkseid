@@ -119,6 +119,7 @@ def test_convert_metadata_to_xml(metron_info):
             format="Single Issue",
             id_=50,
             language="en",
+            start_year=1990,
             alternative_names=[
                 AlternativeNames("Bug Boy", 50),
                 AlternativeNames("Spider", language="de"),
@@ -166,6 +167,7 @@ def test_metadata_from_string(metron_info):
             <SortName>Spider-Man</SortName>
             <Volume>1</Volume>
             <Format>Omnibus</Format>
+            <StartYear>1964</StartYear>
             <AlternativeNames>
                 <Name id="1234">Foo</Name>
                 <Name lang="de">Hüsker Dü</Name>
@@ -213,6 +215,7 @@ def test_metadata_from_string(metron_info):
     assert result.publisher.name == "Marvel"
     assert result.series.name == "Spider-Man"
     assert result.series.format == "Omnibus"
+    assert result.series.start_year == 1964
     assert len(result.series.alternative_names) == 2
     assert result.series.alternative_names[0].name == "Foo"
     assert result.series.alternative_names[0].id_ == 1234
@@ -240,7 +243,7 @@ def validate(xml_path: str, xsd_path: str) -> bool:
 
 def test_write_xml(fake_metadata, metron_info, tmp_path):
     # Arrange
-    filename = tmp_path / "test.xml"
+    filename = tmp_path / "mi_test.xml"
 
     # Act
     metron_info.write_xml(filename, fake_metadata)

@@ -20,10 +20,7 @@ from darkseid.metadata import (
 def fake_metadata() -> Metadata:
     md = Metadata()
     md.series = Series(
-        name="Aquaman",
-        sort_name="Aquaman",
-        volume=1,
-        format="Annual",
+        name="Aquaman", sort_name="Aquaman", volume=1, format="Annual", start_year=1961
     )
     md.issue = "0"
     md.stories = [Basic("A Crash of Symbols")]

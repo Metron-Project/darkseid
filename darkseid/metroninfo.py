@@ -285,6 +285,8 @@ class MetronInfo:
         ET.SubElement(series_node, "Format").text = (
             series.format if series.format in MetronInfo.mix_series_format else "Single Issue"
         )
+        if series.start_year:
+            ET.SubElement(series_node, "StartYear").text = str(series.start_year)
         if series.alternative_names:
             alt_names_node = ET.SubElement(series_node, "AlternativeNames")
             for alt_name in series.alternative_names:
@@ -542,6 +544,7 @@ class MetronInfo:
                 "SortName": "sort_name",
                 "Volume": "volume",
                 "Format": "format",
+                "StartYear": "start_year",
                 "AlternativeNames": "_create_alt_name_list",
             }
 
@@ -550,7 +553,7 @@ class MetronInfo:
                 if attr:
                     if attr == "_create_alt_name_list":
                         series_md.alternative_names = _create_alt_name_list(item)
-                    elif attr == "volume":
+                    elif attr in ["volume", "start_year"]:
                         setattr(series_md, attr, int(item.text))
                     else:
                         setattr(series_md, attr, item.text)
