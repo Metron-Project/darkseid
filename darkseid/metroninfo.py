@@ -517,9 +517,7 @@ class MetronInfo:
             return Publisher(publisher_name, publisher_id, imprint)
 
         def get_modified(resource: ET.Element) -> datetime | None:
-            if resource is None:
-                return None
-            return datetime.fromisoformat(resource.text)
+            return None if resource is None else datetime.fromisoformat(resource.text)
 
         def _create_alt_name_list(element: ET.Element) -> list[AlternativeNames]:
             names = element.findall("Name")
