@@ -364,7 +364,7 @@ class MetronInfo:
                 role_node = sub_element(
                     roles_node, "Role", attrib={"id": str(r.id_)} if r.id_ else {}
                 )
-                role_node.text = r.name if r.name in mix_roles else "Other"
+                role_node.text = r.name if r.name.lower() in mix_roles else "Other"
 
     def convert_metadata_to_xml(self, md: Metadata, xml=None) -> ET.ElementTree:  # noqa: PLR0912,C901
         """Convert a Metadata object to an XML ElementTree.

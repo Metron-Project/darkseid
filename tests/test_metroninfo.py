@@ -245,8 +245,12 @@ def test_write_xml(fake_metadata, metron_info, tmp_path):
     # Arrange
     filename = tmp_path / "mi_test.xml"
 
+    md = fake_metadata
+    md.add_credit(Credit("John Byrne", id_=1, role=[Role("Writer", 2), Role("Artist", 1)]))
+    md.add_credit(Credit("Terry Austin", id_=2, role=[Role("Inker", 5)]))
+
     # Act
-    metron_info.write_xml(filename, fake_metadata)
+    metron_info.write_xml(filename, md)
 
     # Assert
     assert filename.exists()
