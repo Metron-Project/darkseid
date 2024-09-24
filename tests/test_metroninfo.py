@@ -12,12 +12,14 @@ from darkseid.metadata import (
     Arc,
     Basic,
     Credit,
+    InfoSources,
     Metadata,
     Price,
     Publisher,
     Role,
     Series,
     Universe,
+    WebsiteInfo,
 )
 from darkseid.metroninfo import MetronInfo
 
@@ -51,11 +53,11 @@ def test_get_root(metron_info, xml, expected_root_tag):
     ("val", "expected_result"),
     [
         # Happy path
-        (Basic(name="Marvel"), True),
+        ("Marvel", True),
         # Edge case: None value
         (None, False),
         # Error case: invalid source
-        (Basic(name="InvalidSource"), False),
+        ("InvalidSource", False),
     ],
     ids=["valid_source", "none_value", "invalid_source"],
 )
@@ -110,8 +112,7 @@ def test_valid_age_rating(metron_info, val, expected_result):
 def test_convert_metadata_to_xml(metron_info):
     # Arrange
     metadata = Metadata(
-        info_source=Basic("Metron", id_=54),
-        alt_sources=[Basic("Comic Vine", id_=90)],
+        info_source=InfoSources(WebsiteInfo("Metron", id_=54), [WebsiteInfo("Comic Vine", 1234)]),
         publisher=Publisher("Marvel", id_=1),
         series=Series(
             name="Spider-Man",
@@ -155,8 +156,10 @@ def test_metadata_from_string(metron_info):
     <MetronInfo>
          <ID>
             <Primary source="Metron">290431</Primary>
-            <Alternative source="Comic Vine">12345</Alternative>
-            <Alternative source="Grand Comics Database">543</Alternative>
+            <Alternatives>
+                <Alternative source="Comic Vine">12345</Alternative>
+                <Alternative source="Grand Comics Database">543</Alternative>
+            </Alternatives>
         </ID>
         <Publisher id="12345">
             <Name>Marvel</Name>
@@ -182,6 +185,13 @@ def test_metadata_from_string(metron_info):
             <ISBN>1234567890123</ISBN>
             <UPC>76194130593600111</UPC>
         </GTIN>
+        <URLs>
+            <Primary>https://comicvine.gamespot.com/justice-league-1-justice-league-part-one/4000-290431/</Primary>
+            <Alternatives>
+                <Alternative>https://foo.bar</Alternative>
+                <Alternative>https://bar.foo</Alternative>
+            </Alternatives>
+        </URLs>
         <Arcs>
             <Arc>
                 <Name>Arc1</Name>
@@ -196,22 +206,16 @@ def test_metadata_from_string(metron_info):
                 </Roles>
             </Credit>
         </Credits>
-        <Pages>
-            <Page Image="0" Type="FrontCover" ImageSize="1733120" ImageHeight="2951" ImageWidth="1920" />
-            <Page Image="1" ImageSize="1320938" ImageHeight="2951" ImageWidth="1920" />
-            <Page Image="2" ImageSize="1298224" ImageHeight="2951" ImageWidth="1920" />
-            <Page Image="3" ImageSize="1587983" ImageHeight="2951" ImageWidth="1920" />
-        </Pages>
     </MetronInfo>
     """
     # Act
     result = metron_info.metadata_from_string(xml_string)
 
     # Assert
-    assert result.info_source.name == "Metron"
-    assert result.info_source.id_ == 290431
-    assert result.alt_sources[0].name == "Comic Vine"
-    assert result.alt_sources[0].id_ == 12345
+    assert result.info_source.primary.name == "Metron"
+    assert result.info_source.primary.id_ == 290431
+    assert result.info_source.alternatives[0].name == "Comic Vine"
+    assert result.info_source.alternatives[0].id_ == 12345
     assert result.publisher.name == "Marvel"
     assert result.series.name == "Spider-Man"
     assert result.series.format == "Omnibus"
@@ -225,6 +229,12 @@ def test_metadata_from_string(metron_info):
     assert result.gtin.isbn == 1234567890123
     assert result.gtin.upc == 76194130593600111
     assert result.story_arcs[0].name == "Arc1"
+    assert (
+        result.web_link.primary
+        == "https://comicvine.gamespot.com/justice-league-1-justice-league-part-one/4000-290431/"
+    )
+    assert len(result.web_link.alternatives) == 2
+    assert result.web_link.alternatives[0] == "https://foo.bar"
     assert result.credits[0].person == "Stan Lee"
     assert result.credits[0].id_ == 123
     assert result.credits[0].role[0].name == "Writer"

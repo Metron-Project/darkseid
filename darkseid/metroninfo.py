@@ -19,12 +19,14 @@ from darkseid.metadata import (
     Arc,
     Basic,
     Credit,
+    InfoSources,
     Metadata,
     Price,
     Publisher,
     Role,
     Series,
     Universe,
+    WebsiteInfo,
 )
 
 if TYPE_CHECKING:
@@ -185,8 +187,8 @@ class MetronInfo:
         return root
 
     @classmethod
-    def _valid_info_source(cls, val: Basic | None = None) -> bool:
-        return val is not None and val.name.lower() in cls.mix_info_sources
+    def _valid_info_source(cls, val: str | None = None) -> bool:
+        return val is not None and val.lower() in cls.mix_info_sources
 
     @classmethod
     def _list_contains_valid_genre(cls, vals: list[Basic]) -> bool:
@@ -296,17 +298,19 @@ class MetronInfo:
                 ET.SubElement(alt_names_node, "Name", attrib=alt_attrib).text = alt_name.name
 
     @staticmethod
-    def _assign_info_source(root: ET.Element, primary: Basic, alt_lst: list[Basic]) -> None:
+    def _assign_info_source(root: ET.Element, info_source: InfoSources) -> None:
         id_node = MetronInfo._get_or_create_element(root, "ID")
-        primary_node = ET.SubElement(id_node, "Primary")
-        primary_node.text = str(primary.id_)
-        primary_node.attrib["source"] = primary.name
-
         create_sub_element = ET.SubElement
-        for alt in (alt for alt in alt_lst if MetronInfo._valid_info_source(alt)):
-            alt_node = create_sub_element(id_node, "Alternative")
-            alt_node.text = str(alt.id_)
-            alt_node.attrib["source"] = alt.name
+        primary_node = create_sub_element(id_node, "Primary")
+        primary_node.text = str(info_source.primary.id_)
+        primary_node.attrib["source"] = str(info_source.primary.name)
+
+        if info_source.alternatives:
+            alt_nodes = create_sub_element(id_node, "Alternatives")
+            for alt in info_source.alternatives:
+                alt_node = create_sub_element(alt_nodes, "Alternative")
+                alt_node.text = str(alt.id_)
+                alt_node.attrib["source"] = str(alt.name)
 
     @staticmethod
     def _assign_gtin(root: ET.Element, gtin: GTIN) -> None:
@@ -338,13 +342,14 @@ class MetronInfo:
 
     @staticmethod
     def _assign_urls(root: ET.Element, urls: URLS) -> None:
-        urls_node = MetronInfo._get_or_create_element(root, "URL")
+        urls_node = MetronInfo._get_or_create_element(root, "URLs")
         sub_element = ET.SubElement
         if urls.primary:
             sub_element(urls_node, "Primary").text = urls.primary
         if urls.alternatives:
+            alts_node = sub_element(urls_node, "Alternatives")
             for alt in urls.alternatives:
-                sub_element(urls_node, "Alternative").text = alt
+                sub_element(alts_node, "Alternative").text = alt
 
     @staticmethod
     def _assign_credits(root: ET.Element, credits_lst: list[Credit]) -> None:
@@ -380,8 +385,8 @@ class MetronInfo:
         """
         root = self._get_root(xml)
 
-        if self._valid_info_source(md.info_source):
-            self._assign_info_source(root, md.info_source, md.alt_sources)
+        if md.info_source:
+            self._assign_info_source(root, md.info_source)
         self._assign_publisher(root, md.publisher)
         self._assign_series(root, md.series)
         self._assign(root, "CollectionTitle", md.collection_title)
@@ -466,18 +471,26 @@ class MetronInfo:
 
             return gtin if found else None
 
-        def get_info_sources(primary_node: ET.Element) -> Basic | None:
-            if primary_node is None:
-                return None
-            return Basic(primary_node.attrib.get("source"), int(primary_node.text))
-
-        def get_alt_sources(id_node: ET.Element) -> list[Basic] | None:
+        def get_info_sources(id_node: ET.Element) -> InfoSources | None:
             if id_node is None:
                 return None
-            return [
-                Basic(alt_node.attrib.get("source"), int(alt_node.text))
-                for alt_node in id_node.findall("Alternative")
+            # Check that primary info is available otherwise return None.
+            primary_node = id_node.find("Primary")
+            if primary_node is None:
+                return None
+
+            primary_source = primary_node.attrib.get("source")
+            if not MetronInfo._valid_info_source(primary_source):
+                return None
+
+            alts_node = id_node.find("Alternatives")
+            alts_lst = [
+                WebsiteInfo(item.attrib.get("source"), int(item.text))
+                for item in alts_node.findall("Alternative")
+                if MetronInfo._valid_info_source(item.attrib.get("source"))
             ]
+
+            return InfoSources(WebsiteInfo(primary_source, int(primary_node.text)), alts_lst)
 
         def get_resource_list(resource: ET.Element) -> list[Basic]:
             if resource is None:
@@ -577,8 +590,9 @@ class MetronInfo:
         def get_urls(url_node: ET.Element) -> URLS | None:
             if url_node is None:
                 return None
-            alt_urls_node = url_node.findall("Alternative")
-            url_lst = [alt_url.text for alt_url in alt_urls_node] if alt_urls_node else None
+            alts_node = url_node.find("Alternatives")
+            alt_node = alts_node.findall("Alternative")
+            url_lst = [alt_url.text for alt_url in alt_node] if alt_node else None
             primary = url_node.find("Primary").text
             return URLS(primary, url_lst)
 
@@ -606,7 +620,6 @@ class MetronInfo:
             return credits_list
 
         # Cache root.find() results
-        primary_node = root.find("ID/Primary")
         id_node = root.find("ID")
         gtin_node = root.find("GTIN")
         publisher_node = root.find("Publisher")
@@ -615,11 +628,10 @@ class MetronInfo:
         arcs_node = root.find("Arcs")
         credits_node = root.find("Credits")
         prices_node = root.find("Prices")
-        url_node = root.find("URL")
+        url_node = root.find("URLs")
 
         md = Metadata()
-        md.info_source = get_info_sources(primary_node)
-        md.alt_sources = get_alt_sources(id_node)
+        md.info_source = get_info_sources(id_node)
         md.publisher = get_publisher(publisher_node)
         md.series = get_series(series_node)
         md.collection_title = get("CollectionTitle")

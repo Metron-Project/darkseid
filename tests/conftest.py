@@ -8,17 +8,20 @@ from darkseid.metadata import (
     AlternativeNames,
     Arc,
     Basic,
+    InfoSources,
     Metadata,
     Price,
     Publisher,
     Series,
     Universe,
+    WebsiteInfo,
 )
 
 
 @pytest.fixture(scope="module")
 def fake_metadata() -> Metadata:
     md = Metadata()
+    md.info_source = InfoSources(WebsiteInfo("Metron", 123), [WebsiteInfo("Comic Vine", 20012)])
     md.series = Series(
         name="Aquaman", sort_name="Aquaman", volume=1, format="Annual", start_year=1961
     )

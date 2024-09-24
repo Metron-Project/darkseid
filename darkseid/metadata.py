@@ -166,6 +166,40 @@ class Basic:
 
 
 @dataclass
+class WebsiteInfo:
+    """Represents a comic source with an identifier.
+
+    This class is used to encapsulate the details of a website, including
+    its name and a unique identifier. It provides a structured way to manage
+    and reference comic sources within the application.
+
+    Attributes:
+        name (str): The name of the website were the information was retrieved.
+        id_ (int): The ID associated with the source of the website.
+    """
+
+    name: str
+    id_: int
+
+
+@dataclass
+class InfoSources:
+    """Represents a collection of comic sources, including a primary source and alternatives.
+
+    This class is designed to manage a primary comic source along with a list of
+    alternative sources. It provides a structured way to organize and access multiple
+    comic sources within the application.
+
+    Attributes:
+        primary (WebsiteInfo): The primary source of information.
+        alternatives (list[WebsiteInfo]): The list of alternative sources.
+    """
+
+    primary: WebsiteInfo
+    alternatives: list[WebsiteInfo] = field(default_factory=list)
+
+
+@dataclass
 class Universe(Basic):
     """
     A data class representing a universe.
@@ -470,8 +504,7 @@ class Metadata:
     Attributes:
         is_empty (bool): Indicates if the metadata is empty.
         tag_origin (Optional[str]): The origin of the tag.
-        info_source (Optional[Basic]): The information source.
-        alt_sources: list[Basic]: A list of information sources used to link an issue between different services.
+        info_source (Optional[InfoSources]): The information source.
         series (Optional[Series]): The series information.
         issue (Optional[str]): The issue information.
         collection_title (Optional[str]): The title of the collection.
@@ -530,8 +563,7 @@ class Metadata:
     is_empty: bool = True
     tag_origin: str | None = None
 
-    info_source: Basic | None = None
-    alt_sources: list[Basic] = field(default_factory=list)
+    info_source: InfoSources | None = None
     series: Series | None = None
     issue: str | None = None
     collection_title: str | None = None
