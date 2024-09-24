@@ -28,6 +28,9 @@ YEAR_LEN = 4
 
 
 class Validations:
+    def __init__(self):
+        self.__dataclass_fields__ = None
+
     def __post_init__(self: Validations) -> None:
         """
         Run validation methods if declared.
