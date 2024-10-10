@@ -70,26 +70,6 @@ def test_valid_info_source(metron_info, val, expected_result):
 
 
 @pytest.mark.parametrize(
-    ("vals", "expected_result"),
-    [
-        # Happy path
-        ([Basic(name="Fantasy")], True),
-        # Edge case: empty list
-        ([], False),
-        # Error case: invalid genre
-        ([Basic(name="InvalidGenre")], False),
-    ],
-    ids=["valid_genre", "empty_list", "invalid_genre"],
-)
-def test_list_contains_valid_genre(metron_info, vals, expected_result):
-    # Act
-    result = metron_info._list_contains_valid_genre(vals)  # noqa: SLF001
-
-    # Assert
-    assert result == expected_result
-
-
-@pytest.mark.parametrize(
     ("val", "expected_result"),
     [
         # Happy path
@@ -185,6 +165,9 @@ def test_metadata_from_string(metron_info):
             <ISBN>1234567890123</ISBN>
             <UPC>76194130593600111</UPC>
         </GTIN>
+        <Genres>
+            <Genre id="1">Super-Hero</Genre>
+        </Genres>
         <URLs>
             <Primary>https://comicvine.gamespot.com/justice-league-1-justice-league-part-one/4000-290431/</Primary>
             <Alternatives>
@@ -235,6 +218,8 @@ def test_metadata_from_string(metron_info):
     )
     assert len(result.web_link.alternatives) == 2
     assert result.web_link.alternatives[0] == "https://foo.bar"
+    assert result.genres[0].id_ == 1
+    assert result.genres[0].name == "Super-Hero"
     assert result.credits[0].person == "Stan Lee"
     assert result.credits[0].id_ == 123
     assert result.credits[0].role[0].name == "Writer"

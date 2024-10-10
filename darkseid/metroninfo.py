@@ -43,7 +43,6 @@ class MetronInfo:
         mix_info_sources (frozenset): A set of valid information sources.
         mix_age_ratings (frozenset): A set of valid age ratings.
         mix_series_format (frozenset): A set of valid series formats.
-        mix_genres (frozenset): A set of valid genres.
         mix_roles (frozenset): A set of valid roles for creators.
 
     Methods:
@@ -78,25 +77,6 @@ class MetronInfo:
             "one-shot",
             "single issue",
             "trade paperback",
-        }
-    )
-    mix_genres = frozenset(
-        {
-            "adult",
-            "crime",
-            "espionage",
-            "fantasy",
-            "historical",
-            "horror",
-            "humor",
-            "manga",
-            "parody",
-            "romance",
-            "science fiction",
-            "sport",
-            "super-hero",
-            "war",
-            "western",
         }
     )
     mix_roles = frozenset(
@@ -189,10 +169,6 @@ class MetronInfo:
     @classmethod
     def _valid_info_source(cls, val: str | None = None) -> bool:
         return val is not None and val.lower() in cls.mix_info_sources
-
-    @classmethod
-    def _list_contains_valid_genre(cls, vals: list[Basic]) -> bool:
-        return any(val.name.lower() in cls.mix_genres for val in vals)
 
     @classmethod
     def _valid_age_rating(cls, val: str | None = None) -> str | None:
@@ -400,7 +376,7 @@ class MetronInfo:
         self._assign(root, "StoreDate", md.store_date)
         self._assign(root, "PageCount", md.page_count)
         self._assign(root, "Notes", md.notes)
-        if md.genres and self._list_contains_valid_genre(md.genres):
+        if md.genres:
             self._assign_basic_children(root, "Genres", "Genre", md.genres)
         if md.tags:
             self._assign_basic_children(root, "Tags", "Tag", md.tags)
