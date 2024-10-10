@@ -55,7 +55,15 @@ class MetronInfo:
     """
 
     mix_info_sources = frozenset(
-        {"comic vine", "grand comics database", "marvel", "metron", "league of comic geeks"}
+        {
+            "anilist",
+            "comic vine",
+            "grand comics database",
+            "marvel",
+            "metron",
+            "myanimelist",
+            "league of comic geeks",
+        }
     )
     mix_age_ratings = frozenset(
         {
