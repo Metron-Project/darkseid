@@ -418,6 +418,20 @@ class URLS:
 
 
 @dataclass
+class Notes:
+    """
+    Notes is a data class designed to hold notes for the different formats.
+
+    Attributes:
+        metron_info (str): A string containing information about the metronome.
+        comic_rack (str): A string representing the comic book collection.
+    """
+
+    metron_info: str = ""
+    comic_rack: str = ""
+
+
+@dataclass
 class GTIN(Validations):
     """
     A data class representing a GTIN (Global Trade Item Number) with validations.
@@ -523,7 +537,7 @@ class Metadata:
         alternate_series (Optional[str]): The alternate series.
         alternate_number (Optional[str]): The alternate number.
         alternate_count (Optional[int]): The count of alternates.
-        notes (Optional[str]): The notes.
+        notes (Optional[Notes]): The notes.
         web_link (Optional[URLS]): The web link.
         manga (Optional[str]): The manga information.
         black_and_white (Optional[bool]): Indicates if the comic is black and white.
@@ -584,7 +598,7 @@ class Metadata:
     alternate_series: str | None = None
     alternate_number: str | None = None
     alternate_count: int | None = None
-    notes: str | None = None
+    notes: Notes | None = None
     web_link: URLS | None = None
     manga: str | None = None
     black_and_white: bool | None = None
