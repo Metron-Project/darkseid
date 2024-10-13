@@ -14,6 +14,7 @@ from darkseid.metadata import (
     Credit,
     InfoSources,
     Metadata,
+    Notes,
     Price,
     Publisher,
     Role,
@@ -120,6 +121,7 @@ def test_convert_metadata_to_xml(metron_info):
         tags=[Basic("Good", id_=1)],
         locations=[Basic("Atlantis", id_=90)],
         reprints=[Basic("Action Comics #1", id_=1)],
+        notes=Notes(metron_info="This is a test"),
     )
 
     # Act
@@ -180,6 +182,7 @@ def test_metadata_from_string(metron_info):
                 <Name>Arc1</Name>
             </Arc>
         </Arcs>
+        <Notes>This is a test</Notes>
         <LastModified>2024-08-12T12:13:54.087728-04:00</LastModified>
         <Credits>
             <Credit>
@@ -226,6 +229,8 @@ def test_metadata_from_string(metron_info):
     assert result.modified == datetime(
         2024, 8, 12, 12, 13, 54, 87728, tzinfo=timezone(timedelta(days=-1, seconds=72000))
     )
+    assert result.notes is not None
+    assert result.notes.metron_info == "This is a test"
 
 
 def validate(xml_path: str, xsd_path: str) -> bool:

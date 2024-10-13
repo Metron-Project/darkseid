@@ -21,6 +21,7 @@ from darkseid.metadata import (
     Credit,
     InfoSources,
     Metadata,
+    Notes,
     Price,
     Publisher,
     Role,
@@ -383,7 +384,8 @@ class MetronInfo:
         self._assign(root, "CoverDate", md.cover_date)
         self._assign(root, "StoreDate", md.store_date)
         self._assign(root, "PageCount", md.page_count)
-        self._assign(root, "Notes", md.notes)
+        if md.notes is not None and md.notes.metron_info:
+            self._assign(root, "Notes", md.notes.metron_info)
         if md.genres:
             self._assign_basic_children(root, "Genres", "Genre", md.genres)
         if md.tags:
@@ -580,6 +582,9 @@ class MetronInfo:
             primary = url_node.find("Primary").text
             return URLS(primary, url_lst)
 
+        def get_note(note_node: ET.Element) -> Notes | None:
+            return None if note_node is None else Notes(note_node.text)
+
         def get_credits(credits_node: ET.Element) -> list[Credit] | None:
             if credits_node is None:
                 return None
@@ -613,6 +618,7 @@ class MetronInfo:
         credits_node = root.find("Credits")
         prices_node = root.find("Prices")
         url_node = root.find("URLs")
+        note_node = root.find("Notes")
 
         md = Metadata()
         md.info_source = get_info_sources(id_node)
@@ -633,7 +639,7 @@ class MetronInfo:
             )
         p_count = get("PageCount")
         md.page_count = int(p_count) if p_count is not None and p_count.isdigit() else None
-        md.notes = get("Notes")
+        md.notes = get_note(note_node)
         md.genres = get_resource_list(root.find("Genres"))
         md.tags = get_resource_list(root.find("Tags"))
         md.story_arcs = get_arcs(arcs_node)
