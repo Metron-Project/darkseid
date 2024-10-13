@@ -20,6 +20,7 @@ from darkseid.metadata import (
     Credit,
     ImageMetadata,
     Metadata,
+    Notes,
     Publisher,
     Role,
     Series,
@@ -247,7 +248,8 @@ class ComicInfo:
         assign("SeriesGroup", md.series_group)
         assign("AlternateCount", md.alternate_count)
         assign("Summary", md.comments)
-        assign("Notes", md.notes)
+        if md.notes is not None and md.notes.comic_rack:
+            assign("Notes", md.notes.comic_rack)
         if md.cover_date is not None:
             assign("Year", md.cover_date.year)
             assign("Month", md.cover_date.month)
@@ -346,6 +348,9 @@ class ComicInfo:
             urls = self._split_sting(txt, [",", " "])
             return URLS(urls[0], urls[1:])
 
+        def get_note(note_txt: str) -> Notes | None:
+            return Notes(comic_rack=note_txt) if note_txt else None
+
         md = Metadata()
         md.series = Series(name=xlate(get("Series")))
         md.stories = self.string_to_resource(xlate(get("Title")))
@@ -356,7 +361,7 @@ class ComicInfo:
         md.alternate_number = IssueString(xlate(get("AlternateNumber"))).as_string()
         md.alternate_count = xlate(get("AlternateCount"), True)
         md.comments = xlate(get("Summary"))
-        md.notes = xlate(get("Notes"))
+        md.notes = get_note(xlate(get("Notes")))
         # Cover Year
         tmp_year = xlate(get("Year"), True)
         tmp_month = xlate(get("Month"), True)

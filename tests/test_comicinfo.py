@@ -7,7 +7,7 @@ import pytest
 from lxml import etree
 
 from darkseid.comicinfo import ComicInfo
-from darkseid.metadata import URLS, Arc, Basic, Credit, Metadata, Publisher, Role, Series
+from darkseid.metadata import URLS, Arc, Basic, Credit, Metadata, Notes, Publisher, Role, Series
 
 CI_XSD = Path("tests/test_files/ComicInfo.xsd")
 
@@ -62,6 +62,7 @@ def test_meta_data(test_credits: list[Credit]) -> Metadata:
             "https://metron.cloud/issue/the-body-trade-2024-2/",
         ],
     )
+    md.notes = Notes(comic_rack="This is a test")
     for c in test_credits:
         md.add_credit(c)
     return md
@@ -186,3 +187,4 @@ def test_read_from_file(test_meta_data: Metadata, tmp_path: Path) -> None:
     assert new_md.black_and_white == test_meta_data.black_and_white
     assert new_md.publisher.name == test_meta_data.publisher.name
     assert new_md.publisher.imprint.name == test_meta_data.publisher.imprint.name
+    assert new_md.notes.comic_rack == "This is a test"
