@@ -1,6 +1,5 @@
 # ruff: noqa: SLF001
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -402,58 +401,43 @@ def test_write_mi_metadata(mocker):
 
 
 @pytest.mark.parametrize(
-    ("has_metadata", "filename_list", "ci_xml_filename", "remove_files_result", "expected"),
+    ("metadata_format", "has_metadata", "filename_list", "expected"),
     [
-        # Happy path: metadata present and successfully removed
-        (True, ["ComicInfo.xml"], "ComicInfo.xml", True, True),
-        # Happy path: metadata present but not removed
-        (True, ["ComicInfo.xml"], "ComicInfo.xml", False, False),
-        # Edge case: metadata not present in the archive
-        (True, ["otherfile.xml"], "ComicInfo.xml", True, False),
-        # Edge case: no files in the archive
-        (True, [], "ComicInfo.xml", True, False),
-        # Error case: has_metadata returns False
-        (False, ["ComicInfo.xml"], "ComicInfo.xml", True, True),
+        (MetadataFormat.COMIC_RACK, True, ["comicinfo.xml"], True),
+        (MetadataFormat.METRON_INFO, True, ["metroninfo.xml"], True),
+        (MetadataFormat.COMIC_RACK, False, ["comicinfo.xml"], False),
+        (MetadataFormat.METRON_INFO, False, ["metroninfo.xml"], False),
+        (MetadataFormat.COMIC_RACK, True, ["other_file.xml"], False),
+        (MetadataFormat.METRON_INFO, True, ["other_file.xml"], False),
+        ("unsupported_format", True, ["comicinfo.xml"], False),
     ],
     ids=[
-        "metadata_present_and_removed",
-        "metadata_present_not_removed",
-        "metadata_not_present",
-        "no_files_in_archive",
-        "has_metadata_false",
+        "happy_path_comic_rack",
+        "happy_path_metron_info",
+        "no_metadata_comic_rack",
+        "no_metadata_metron_info",
+        "file_not_found_comic_rack",
+        "file_not_found_metron_info",
+        "unsupported_format",
     ],
 )
-def test_remove_metadata(
-    has_metadata, filename_list, ci_xml_filename, remove_files_result, expected
-):
+def test_remove_metadata(mocker, metadata_format, has_metadata, filename_list, expected):
     # Arrange
-    comic = Comic("bogus.cbz")
-    comic.has_metadata = MagicMock(return_value=has_metadata)
-    comic._archiver = MagicMock()
-    comic._archiver.get_filename_list = MagicMock(return_value=filename_list)
-    comic._archiver.remove_files = MagicMock(return_value=remove_files_result)
-    comic._ci_xml_filename = ci_xml_filename
-    comic._successful_write = MagicMock(return_value=remove_files_result)
-
-    # Act
-    result = comic.remove_metadata(MetadataFormat.COMIC_RACK)
-
-    # Assert
-    assert result is True
-
-
-def test_remove_mi_metadata(mocker):
-    # Arrange
-    comic = Comic("/path/to/comic.cbz")
-    mocker.patch.object(comic, "has_metadata", return_value=True)
-    mocker.patch.object(comic._archiver, "remove_file", return_value=True)
+    comic = Comic("fake.cbz")
     mocker.patch.object(comic, "_successful_write", return_value=True)
+    mocker.patch.object(comic, "has_metadata", return_value=has_metadata)
+    mocker.patch.object(comic._archiver, "get_filename_list", return_value=filename_list)
+    mocker.patch.object(comic._archiver, "remove_files", return_value=True)
 
     # Act
-    result = comic.remove_metadata(MetadataFormat.METRON_INFO)
+    result = comic.remove_metadata(metadata_format)
 
     # Assert
     assert result == expected
+    if expected:
+        comic._archiver.remove_files.assert_called_once()
+    else:
+        comic._archiver.remove_files.assert_not_called()
 
 
 def test_remove_pages(mocker):
