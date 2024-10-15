@@ -1,5 +1,6 @@
 # ruff: noqa: SLF001
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -335,18 +336,45 @@ def test_write_metadata(mocker):
     assert result is True
 
 
-def test_remove_metadata(mocker):
+@pytest.mark.parametrize(
+    ("has_metadata", "filename_list", "ci_xml_filename", "remove_files_result", "expected"),
+    [
+        # Happy path: metadata present and successfully removed
+        (True, ["ComicInfo.xml"], "ComicInfo.xml", True, True),
+        # Happy path: metadata present but not removed
+        (True, ["ComicInfo.xml"], "ComicInfo.xml", False, False),
+        # Edge case: metadata not present in the archive
+        (True, ["otherfile.xml"], "ComicInfo.xml", True, False),
+        # Edge case: no files in the archive
+        (True, [], "ComicInfo.xml", True, False),
+        # Error case: has_metadata returns False
+        (False, ["ComicInfo.xml"], "ComicInfo.xml", True, True),
+    ],
+    ids=[
+        "metadata_present_and_removed",
+        "metadata_present_not_removed",
+        "metadata_not_present",
+        "no_files_in_archive",
+        "has_metadata_false",
+    ],
+)
+def test_remove_metadata(
+    has_metadata, filename_list, ci_xml_filename, remove_files_result, expected
+):
     # Arrange
-    comic = Comic("/path/to/comic.cbz")
-    mocker.patch.object(comic, "has_metadata", return_value=True)
-    mocker.patch.object(comic._archiver, "remove_file", return_value=True)
-    mocker.patch.object(comic, "_successful_write", return_value=True)
+    comic = Comic("bogus.cbz")
+    comic.has_metadata = MagicMock(return_value=has_metadata)
+    comic._archiver = MagicMock()
+    comic._archiver.get_filename_list = MagicMock(return_value=filename_list)
+    comic._archiver.remove_files = MagicMock(return_value=remove_files_result)
+    comic._ci_xml_filename = ci_xml_filename
+    comic._successful_write = MagicMock(return_value=remove_files_result)
 
     # Act
     result = comic.remove_metadata()
 
     # Assert
-    assert result is True
+    assert result == expected
 
 
 def test_remove_pages(mocker):

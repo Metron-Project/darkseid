@@ -334,6 +334,8 @@ class Comic:
                 for path in self._archiver.get_filename_list()
                 if Path(path).name.lower() == self._ci_xml_filename.lower()
             ]
+            if not metadata_files:
+                return False
             write_success = self._archiver.remove_files(metadata_files)
             return self._successful_write(write_success, False, None)
         return True
