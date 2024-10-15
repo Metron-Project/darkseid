@@ -51,7 +51,10 @@ class ZipArchiver(Archiver):
 
         try:
             with ZipFile(self.path, mode="r") as zf:
-                return zf.read(archive_file)
+                for zipped_file in zf.infolist():
+                    if not zipped_file.is_dir() and  archive_file in zipped_file.filename:
+                        with zf.open(zipped_file.filename, "r") as f:
+                            return f.read()
         except (BadZipfile, OSError) as e:
             logger.exception(
                 "Error reading zip archive %s :: %s",
