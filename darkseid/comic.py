@@ -466,7 +466,8 @@ class Comic:
             for path in self._archiver.get_filename_list()
             if Path(path).name.lower() == filename_lower
         ]
-
+        if not metadata_files:
+            return False
         write_success = self._archiver.remove_files(metadata_files)
         if write_success:
             if metadata_format == MetadataFormat.METRON_INFO:
