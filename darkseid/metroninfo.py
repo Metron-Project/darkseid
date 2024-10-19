@@ -470,11 +470,14 @@ class MetronInfo:
                 return None
 
             alts_node = id_node.find("Alternatives")
-            alts_lst = [
-                WebsiteInfo(item.attrib.get("source"), int(item.text))
-                for item in alts_node.findall("Alternative")
-                if MetronInfo._valid_info_source(item.attrib.get("source"))
-            ]
+            if alts_node is not None:
+                alts_lst = [
+                    WebsiteInfo(item.attrib.get("source"), int(item.text))
+                    for item in alts_node.findall("Alternative")
+                    if MetronInfo._valid_info_source(item.attrib.get("source"))
+                ]
+            else:
+                alts_lst = []
 
             return InfoSources(WebsiteInfo(primary_source, int(primary_node.text)), alts_lst)
 
@@ -577,8 +580,11 @@ class MetronInfo:
             if url_node is None:
                 return None
             alts_node = url_node.find("Alternatives")
-            alt_node = alts_node.findall("Alternative")
-            url_lst = [alt_url.text for alt_url in alt_node] if alt_node else None
+            if alts_node is not None:
+                alt_node = alts_node.findall("Alternative")
+                url_lst = [alt_url.text for alt_url in alt_node] if alt_node else None
+            else:
+                url_lst = []
             primary = url_node.find("Primary").text
             return URLS(primary, url_lst)
 
@@ -595,12 +601,15 @@ class MetronInfo:
             credits_list = []
             for resource in resources:
                 roles_node = resource.find("Roles")
-                roles = roles_node.findall("Role")
-                role_list = (
-                    [Role(role.text, get_id_from_attrib(role.attrib)) for role in roles]
-                    if roles is not None
-                    else []
-                )
+                if roles_node is not None:
+                    roles = roles_node.findall("Role")
+                    role_list = (
+                        [Role(role.text, get_id_from_attrib(role.attrib)) for role in roles]
+                        if roles is not None
+                        else []
+                    )
+                else:
+                    role_list = []
 
                 creator = resource.find("Creator")
                 attrib = creator.attrib
