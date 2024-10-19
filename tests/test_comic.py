@@ -478,11 +478,11 @@ def test_has_metadata(mocker, fmt, filename_list, result):
 
 
 @pytest.mark.parametrize(
-    ("fmt", "description"),
+    "fmt",
     [
-        (None, "None as metadata format"),
-        ("", "Empty string as metadata format"),
-        (123, "Integer as metadata format"),
+        None,
+        "",
+        123,
     ],
     ids=["none_format", "empty_string_format", "integer_format"],
 )
