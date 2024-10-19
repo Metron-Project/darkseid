@@ -454,30 +454,44 @@ def test_remove_pages(mocker):
     assert result is True
 
 
-def test_has_ci_metadata(mocker):
+@pytest.mark.parametrize(
+    ("fmt", "filename_list", "result"),
+    [
+        (MetadataFormat.METRON_INFO, ["MetronInfo.xml"], True),
+        (MetadataFormat.METRON_INFO, ["other_file.xml"], False),
+        (MetadataFormat.COMIC_RACK, ["ComicInfo.xml"], True),
+        (MetadataFormat.COMIC_RACK, ["other_file.xml"], False),
+    ],
+    ids=["has_metron_info", "has_no_metron_info", "has_comic_info", "has_no_comic_info"],
+)
+def test_has_metadata(mocker, fmt, filename_list, result):
     # Arrange
-    comic = Comic("/path/to/comic.cbz")
+    comic = Comic("comic.cbz")
     mocker.patch.object(comic, "seems_to_be_a_comic_archive", return_value=True)
-    mocker.patch.object(comic._archiver, "get_filename_list", return_value=["ComicInfo.xml"])
+    mocker.patch.object(comic._archiver, "get_filename_list", return_value=filename_list)
 
     # Act
-    result = comic.has_metadata(MetadataFormat.COMIC_RACK)
+    res = comic.has_metadata(fmt)
 
     # Assert
-    assert result is True
+    assert res is result
 
 
-def test_has_mi_metadata(mocker):
+@pytest.mark.parametrize(
+    ("fmt", "description"),
+    [
+        (None, "None as metadata format"),
+        ("", "Empty string as metadata format"),
+        (123, "Integer as metadata format"),
+    ],
+    ids=["none_format", "empty_string_format", "integer_format"],
+)
+def test_has_metadata_invalid_format(fmt):
     # Arrange
-    comic = Comic("/path/to/comic.cbz")
-    mocker.patch.object(comic, "seems_to_be_a_comic_archive", return_value=True)
-    mocker.patch.object(comic._archiver, "get_filename_list", return_value=["MetronInfo.xml"])
+    comic = Comic("fake_comic.cbz")
 
-    # Act
-    result = comic.has_metadata(MetadataFormat.METRON_INFO)
-
-    # Assert
-    assert result is True
+    # Act & Assert
+    assert comic.has_metadata(fmt) is False
 
 
 def test_apply_archive_info_to_metadata(mocker):
