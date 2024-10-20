@@ -10,13 +10,13 @@ A [Python](https://www.python.org/) library to interact with comic archives.
 ## Installation
 
 ```bash
-pipx install darkeid
+pipx install darkseid
 ```
 
 or
 
 ```bash
-pip install darkeid
+pip install darkseid
 ```
 
 ## Documentation
