@@ -1,14 +1,32 @@
 # ruff: noqa: SLF001
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
 from darkseid.archivers import UnknownArchiver
 from darkseid.archivers.rar import RarArchiver
 from darkseid.archivers.zip import ZipArchiver
-from darkseid.comic import Comic
+from darkseid.comic import Comic, MetadataFormat
 from darkseid.metadata import Metadata
+
+
+@pytest.mark.parametrize(
+    ("metadata_format", "expected_str"),
+    [
+        (MetadataFormat.METRON_INFO, "MetronInfo"),
+        (MetadataFormat.COMIC_RACK, "ComicRack"),
+    ],
+    ids=[
+        "metron_info_format",
+        "comic_rack_format",
+    ],
+)
+def test_metadata_format_str(metadata_format, expected_str):
+    # Act
+    result = str(metadata_format)
+
+    # Assert
+    assert result == expected_str
 
 
 @pytest.mark.parametrize(
@@ -59,16 +77,16 @@ def test_comic_path():
 def test_reset_cache():
     # Arrange
     comic = Comic("/path/to/comic.cbz")
-    comic._has_md = True
+    comic._has_ci = True
     comic._page_count = 10
     comic._page_list = ["page1", "page2"]
     comic._metadata = Metadata()
 
     # Act
-    comic.reset_cache()
+    comic._reset_cache()
 
     # Assert
-    assert comic._has_md is None
+    assert comic._has_ci is None
     assert comic._page_count is None
     assert comic._page_list is None
     assert comic._metadata is None
@@ -290,39 +308,65 @@ def test_get_number_of_pages(mocker):
     assert result == 2
 
 
-def test_read_metadata(mocker):
+def test_read_ci_metadata(mocker):
     # Arrange
     comic = Comic("/path/to/comic.cbz")
-    mocker.patch.object(comic, "read_raw_metadata", return_value="<ComicInfo></ComicInfo>")
+    mocker.patch.object(comic, "read_raw_ci_metadata", return_value="<ComicInfo></ComicInfo>")
     mocker.patch("darkseid.comic.ComicInfo.metadata_from_string", return_value=Metadata())
 
     # Act
-    result = comic.read_metadata()
+    result = comic.read_metadata(MetadataFormat.COMIC_RACK)
 
     # Assert
     assert isinstance(result, Metadata)
 
 
-def test_read_raw_metadata(mocker):
+def test_read_mi_metadata(mocker):
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    mocker.patch.object(comic, "read_raw_ci_metadata", return_value="<MetronInfo></MetronInfo>")
+    mocker.patch("darkseid.comic.MetronInfo.metadata_from_string", return_value=Metadata())
+
+    # Act
+    result = comic.read_metadata(MetadataFormat.METRON_INFO)
+
+    # Assert
+    assert isinstance(result, Metadata)
+
+
+def test_read_raw_ci_metadata(mocker):
     # Arrange
     comic = Comic("/path/to/comic.cbz")
     mocker.patch.object(comic, "has_metadata", return_value=True)
     mocker.patch.object(comic._archiver, "read_file", return_value=b"<ComicInfo></ComicInfo>")
 
     # Act
-    result = comic.read_raw_metadata()
+    result = comic.read_raw_ci_metadata()
 
     # Assert
     assert result == "<ComicInfo></ComicInfo>"
 
 
-def test_write_metadata(mocker):
+def test_read_raw_mi_metadata(mocker):
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    mocker.patch.object(comic, "has_metadata", return_value=True)
+    mocker.patch.object(comic._archiver, "read_file", return_value=b"<MetronInfo></MetronInfo>")
+
+    # Act
+    result = comic.read_raw_mi_metadata()
+
+    # Assert
+    assert result == "<MetronInfo></MetronInfo>"
+
+
+def test_write_ci_metadata(mocker):
     # Arrange
     comic = Comic("/path/to/comic.cbz")
     metadata = Metadata()
     mocker.patch.object(comic, "is_writable", return_value=True)
     mocker.patch.object(comic, "apply_archive_info_to_metadata")
-    mocker.patch.object(comic, "read_raw_metadata", return_value=None)
+    mocker.patch.object(comic, "read_raw_ci_metadata", return_value=None)
     mocker.patch(
         "darkseid.comic.ComicInfo.string_from_metadata", return_value="<ComicInfo></ComicInfo>"
     )
@@ -330,51 +374,70 @@ def test_write_metadata(mocker):
     mocker.patch.object(comic, "_successful_write", return_value=True)
 
     # Act
-    result = comic.write_metadata(metadata)
+    result = comic.write_metadata(metadata, MetadataFormat.COMIC_RACK)
+
+    # Assert
+    assert result is True
+
+
+def test_write_mi_metadata(mocker):
+    # Arrange
+    comic = Comic("/path/to/comic.cbz")
+    metadata = Metadata()
+    mocker.patch.object(comic, "is_writable", return_value=True)
+    mocker.patch.object(comic, "apply_archive_info_to_metadata")
+    mocker.patch.object(comic, "read_raw_mi_metadata", return_value=None)
+    mocker.patch(
+        "darkseid.comic.MetronInfo.string_from_metadata", return_value="<MetronInfo></MetronInfo>"
+    )
+    mocker.patch.object(comic._archiver, "write_file", return_value=True)
+    mocker.patch.object(comic, "_successful_write", return_value=True)
+
+    # Act
+    result = comic.write_metadata(metadata, MetadataFormat.METRON_INFO)
 
     # Assert
     assert result is True
 
 
 @pytest.mark.parametrize(
-    ("has_metadata", "filename_list", "ci_xml_filename", "remove_files_result", "expected"),
+    ("metadata_format", "has_metadata", "filename_list", "expected"),
     [
-        # Happy path: metadata present and successfully removed
-        (True, ["ComicInfo.xml"], "ComicInfo.xml", True, True),
-        # Happy path: metadata present but not removed
-        (True, ["ComicInfo.xml"], "ComicInfo.xml", False, False),
-        # Edge case: metadata not present in the archive
-        (True, ["otherfile.xml"], "ComicInfo.xml", True, False),
-        # Edge case: no files in the archive
-        (True, [], "ComicInfo.xml", True, False),
-        # Error case: has_metadata returns False
-        (False, ["ComicInfo.xml"], "ComicInfo.xml", True, True),
+        (MetadataFormat.COMIC_RACK, True, ["comicinfo.xml"], True),
+        (MetadataFormat.METRON_INFO, True, ["metroninfo.xml"], True),
+        (MetadataFormat.COMIC_RACK, False, ["comicinfo.xml"], False),
+        (MetadataFormat.METRON_INFO, False, ["metroninfo.xml"], False),
+        (MetadataFormat.COMIC_RACK, True, ["other_file.xml"], False),
+        (MetadataFormat.METRON_INFO, True, ["other_file.xml"], False),
+        ("unsupported_format", True, ["comicinfo.xml"], False),
     ],
     ids=[
-        "metadata_present_and_removed",
-        "metadata_present_not_removed",
-        "metadata_not_present",
-        "no_files_in_archive",
-        "has_metadata_false",
+        "happy_path_comic_rack",
+        "happy_path_metron_info",
+        "no_metadata_comic_rack",
+        "no_metadata_metron_info",
+        "file_not_found_comic_rack",
+        "file_not_found_metron_info",
+        "unsupported_format",
     ],
 )
-def test_remove_metadata(
-    has_metadata, filename_list, ci_xml_filename, remove_files_result, expected
-):
+def test_remove_metadata(mocker, metadata_format, has_metadata, filename_list, expected):
     # Arrange
-    comic = Comic("bogus.cbz")
-    comic.has_metadata = MagicMock(return_value=has_metadata)
-    comic._archiver = MagicMock()
-    comic._archiver.get_filename_list = MagicMock(return_value=filename_list)
-    comic._archiver.remove_files = MagicMock(return_value=remove_files_result)
-    comic._ci_xml_filename = ci_xml_filename
-    comic._successful_write = MagicMock(return_value=remove_files_result)
+    comic = Comic("fake.cbz")
+    mocker.patch.object(comic, "_successful_write", return_value=True)
+    mocker.patch.object(comic, "has_metadata", return_value=has_metadata)
+    mocker.patch.object(comic._archiver, "get_filename_list", return_value=filename_list)
+    mocker.patch.object(comic._archiver, "remove_files", return_value=True)
 
     # Act
-    result = comic.remove_metadata()
+    result = comic.remove_metadata(metadata_format)
 
     # Assert
     assert result == expected
+    if expected:
+        comic._archiver.remove_files.assert_called_once()
+    else:
+        comic._archiver.remove_files.assert_not_called()
 
 
 def test_remove_pages(mocker):
@@ -391,17 +454,44 @@ def test_remove_pages(mocker):
     assert result is True
 
 
-def test_has_metadata(mocker):
+@pytest.mark.parametrize(
+    ("fmt", "filename_list", "result"),
+    [
+        (MetadataFormat.METRON_INFO, ["MetronInfo.xml"], True),
+        (MetadataFormat.METRON_INFO, ["other_file.xml"], False),
+        (MetadataFormat.COMIC_RACK, ["ComicInfo.xml"], True),
+        (MetadataFormat.COMIC_RACK, ["other_file.xml"], False),
+    ],
+    ids=["has_metron_info", "has_no_metron_info", "has_comic_info", "has_no_comic_info"],
+)
+def test_has_metadata(mocker, fmt, filename_list, result):
     # Arrange
-    comic = Comic("/path/to/comic.cbz")
+    comic = Comic("comic.cbz")
     mocker.patch.object(comic, "seems_to_be_a_comic_archive", return_value=True)
-    mocker.patch.object(comic._archiver, "get_filename_list", return_value=["ComicInfo.xml"])
+    mocker.patch.object(comic._archiver, "get_filename_list", return_value=filename_list)
 
     # Act
-    result = comic.has_metadata()
+    res = comic.has_metadata(fmt)
 
     # Assert
-    assert result is True
+    assert res is result
+
+
+@pytest.mark.parametrize(
+    "fmt",
+    [
+        None,
+        "",
+        123,
+    ],
+    ids=["none_format", "empty_string_format", "integer_format"],
+)
+def test_has_metadata_invalid_format(fmt):
+    # Arrange
+    comic = Comic("fake_comic.cbz")
+
+    # Act & Assert
+    assert comic.has_metadata(fmt) is False
 
 
 def test_apply_archive_info_to_metadata(mocker):

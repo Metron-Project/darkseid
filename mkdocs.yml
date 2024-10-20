@@ -49,6 +49,7 @@ nav:
       - Exceptions: darkseid/exceptions.md
       - IssueString: darkseid/issue_string.md
       - Metadata: darkseid/metadata.md
+      - MetronInfo: darkseid/metroninfo.md
       - Utils: darkseid/utils.md
 
 plugins:
