@@ -10,12 +10,6 @@ A [Python](https://www.python.org/) library to interact with comic archives.
 ## Installation
 
 ```bash
-pipx install darkseid
-```
-
-or
-
-```bash
 pip install darkseid
 ```
 
