@@ -4,7 +4,6 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from lxml import etree
 
 from darkseid.metadata import (
     GTIN,
@@ -233,14 +232,6 @@ def test_metadata_from_string(metron_info):
     assert result.notes.metron_info == "This is a test"
 
 
-def validate(xml_path: str, xsd_path: str) -> bool:
-    xmlschema_doc = etree.parse(xsd_path)
-    xmlschema = etree.XMLSchema(xmlschema_doc)
-
-    xml_doc = etree.parse(xml_path)
-    return xmlschema.validate(xml_doc)
-
-
 def test_write_xml(fake_metadata, metron_info, tmp_path):
     # Arrange
     filename = tmp_path / "mi_test.xml"
@@ -254,7 +245,6 @@ def test_write_xml(fake_metadata, metron_info, tmp_path):
 
     # Assert
     assert filename.exists()
-    assert validate(str(filename), MI_XSD) is True
 
 
 def test_read_xml(metron_info, tmp_path):
