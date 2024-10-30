@@ -4,24 +4,26 @@ from decimal import Decimal
 import pytest
 
 from darkseid.metadata import (
-    URLS,
     AlternativeNames,
     Arc,
     Basic,
     InfoSources,
+    Links,
     Metadata,
     Price,
     Publisher,
     Series,
     Universe,
-    WebsiteInfo,
 )
 
 
 @pytest.fixture(scope="module")
 def fake_metadata() -> Metadata:
     md = Metadata()
-    md.info_source = InfoSources(WebsiteInfo("Metron", 123), [WebsiteInfo("Comic Vine", 20012)])
+    md.info_source = [
+        InfoSources("Metron", 123, True),
+        InfoSources("Comic Vine", 20012),
+    ]
     md.series = Series(
         name="Aquaman", sort_name="Aquaman", volume=1, format="Annual", start_year=1961
     )
@@ -43,13 +45,11 @@ def fake_metadata() -> Metadata:
     md.modified = datetime(
         2024, 8, 12, 12, 13, 54, 87728, tzinfo=timezone(timedelta(days=-1, seconds=72000))
     )
-    md.web_link = URLS(
-        "https://metron.cloud/issue/ultramega-2021-5/",
-        [
-            "https://metron.cloud/issue/the-body-trade-2024-1/",
-            "https://metron.cloud/issue/the-body-trade-2024-2/",
-        ],
-    )
+    md.web_link = [
+        Links("https://metron.cloud/issue/ultramega-2021-5/", True),
+        Links("https://metron.cloud/issue/the-body-trade-2024-1/"),
+        Links("https://metron.cloud/issue/the-body-trade-2024-2/"),
+    ]
 
     return md
 

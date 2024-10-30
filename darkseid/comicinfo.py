@@ -14,11 +14,11 @@ from defusedxml.ElementTree import fromstring, parse
 
 from darkseid.issue_string import IssueString
 from darkseid.metadata import (
-    URLS,
     Arc,
     Basic,
     Credit,
     ImageMetadata,
+    Links,
     Metadata,
     Notes,
     Publisher,
@@ -232,9 +232,8 @@ class ComicInfo:
         def get_resource_list(resource: list[Basic] | list[Arc]) -> str | None:
             return list_to_string([i.name for i in resource]) if resource else None
 
-        def create_url_string(urls: URLS) -> str:
-            url_parts = [urls.primary, *urls.alternatives]
-            return ",".join(url_parts)
+        def create_url_string(links: list[Links]) -> str:
+            return ",".join(link.url for link in links)
 
         assign("Title", get_resource_list(md.stories))
         if md.series is not None:
@@ -341,12 +340,13 @@ class ComicInfo:
             tag = root.find(txt)
             return None if tag is None else tag.text
 
-        def get_urls(txt: str) -> URLS | None:
+        def get_urls(txt: str) -> list[Links] | None:
             if not txt:
                 return None
             # ComicInfo schema states URL string can be separated by a comma or space
             urls = self._split_sting(txt, [",", " "])
-            return URLS(urls[0], urls[1:])
+            # We're assuming the first link is the main source url.
+            return [Links(urls[0], primary=True)] + [Links(url) for url in urls[1:]]
 
         def get_note(note_txt: str) -> Notes | None:
             return Notes(comic_rack=note_txt) if note_txt else None

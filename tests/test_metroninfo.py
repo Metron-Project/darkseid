@@ -19,7 +19,6 @@ from darkseid.metadata import (
     Role,
     Series,
     Universe,
-    WebsiteInfo,
 )
 from darkseid.metroninfo import MetronInfo
 
@@ -92,7 +91,7 @@ def test_valid_age_rating(metron_info, val, expected_result):
 def test_convert_metadata_to_xml(metron_info):
     # Arrange
     metadata = Metadata(
-        info_source=InfoSources(WebsiteInfo("Metron", id_=54), [WebsiteInfo("Comic Vine", 1234)]),
+        info_source=[InfoSources("Metron", 54, True), InfoSources("Comic Vine", 1234)],
         publisher=Publisher("Marvel", id_=1),
         series=Series(
             name="Spider-Man",
@@ -197,10 +196,11 @@ def test_metadata_from_string(metron_info):
     result = metron_info.metadata_from_string(xml_string)
 
     # Assert
-    assert result.info_source.primary.name == "Metron"
-    assert result.info_source.primary.id_ == 290431
-    assert result.info_source.alternatives[0].name == "Comic Vine"
-    assert result.info_source.alternatives[0].id_ == 12345
+    assert result.info_source[0].name == "Metron"
+    assert result.info_source[0].id_ == 290431
+    assert result.info_source[0].primary is True
+    assert result.info_source[1].name == "Comic Vine"
+    assert result.info_source[1].id_ == 12345
     assert result.publisher.name == "Marvel"
     assert result.series.name == "Spider-Man"
     assert result.series.format == "Omnibus"
@@ -215,11 +215,12 @@ def test_metadata_from_string(metron_info):
     assert result.gtin.upc == 76194130593600111
     assert result.story_arcs[0].name == "Arc1"
     assert (
-        result.web_link.primary
+        result.web_link[2].url
         == "https://comicvine.gamespot.com/justice-league-1-justice-league-part-one/4000-290431/"
     )
-    assert len(result.web_link.alternatives) == 2
-    assert result.web_link.alternatives[0] == "https://foo.bar"
+    assert result.web_link[2].primary is True
+    assert len(result.web_link) == 3
+    assert result.web_link[0].url == "https://foo.bar"
     assert result.genres[0].id_ == 1
     assert result.genres[0].name == "Super-Hero"
     assert result.credits[0].person == "Stan Lee"

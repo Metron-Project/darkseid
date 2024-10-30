@@ -166,37 +166,22 @@ class Basic:
 
 
 @dataclass
-class WebsiteInfo:
-    """Represents a comic source with an identifier.
+class InfoSources:
+    """
+    Dataclass representing information sources with associated metadata.
 
-    This class is used to encapsulate the details of a website, including
-    its name and a unique identifier. It provides a structured way to manage
-    and reference comic sources within the application.
+    This class is used to store the name, identifier, and primary status of an information source. It allows for
+    structured representation of sources, facilitating easier management and access to their attributes.
 
     Attributes:
-        name (str): The name of the website were the information was retrieved.
-        id_ (int): The ID associated with the source of the website.
+        name (str): The name of the information source.
+        id_ (int): The unique identifier for the information source.
+        primary (bool): A flag indicating if this source is the primary one. Defaults to False.
     """
 
     name: str
     id_: int
-
-
-@dataclass
-class InfoSources:
-    """Represents a collection of comic sources, including a primary source and alternatives.
-
-    This class is designed to manage a primary comic source along with a list of
-    alternative sources. It provides a structured way to organize and access multiple
-    comic sources within the application.
-
-    Attributes:
-        primary (WebsiteInfo): The primary source of information.
-        alternatives (list[WebsiteInfo]): The list of alternative sources.
-    """
-
-    primary: WebsiteInfo
-    alternatives: list[WebsiteInfo] = field(default_factory=list)
+    primary: bool = False
 
 
 @dataclass
@@ -403,18 +388,20 @@ class Credit:
 
 
 @dataclass
-class URLS:
+class Links:
     """
-    A data class representing URLS for a comic.
+    Dataclass representing a URL with an optional primary flag.
+
+    This class is used to store a URL and indicate whether it is the primary URL. It can be extended to include validation for the URL format in the future.
 
     Attributes:
-        primary (str): The primary URL, whic is usually the information source URL.
-        alternatives (list[str]): A list of alternative URLs.
+        url (str): The URL string.
+        primary (bool): A flag indicating if this URL is the primary one. Defaults to False.
     """
 
     # TODO: Probably worthwhile to validate the strings are URLS.
-    primary: str
-    alternatives: list[str] | None = None
+    url: str
+    primary: bool = False
 
 
 @dataclass
@@ -518,7 +505,7 @@ class Metadata:
     Attributes:
         is_empty (bool): Indicates if the metadata is empty.
         tag_origin (Optional[str]): The origin of the tag.
-        info_source (Optional[InfoSources]): The information source.
+        info_source (Optional[list[InfoSources]]): The information source.
         series (Optional[Series]): The series information.
         issue (Optional[str]): The issue information.
         collection_title (Optional[str]): The title of the collection.
@@ -538,7 +525,7 @@ class Metadata:
         alternate_number (Optional[str]): The alternate number.
         alternate_count (Optional[int]): The count of alternates.
         notes (Optional[Notes]): The notes.
-        web_link (Optional[URLS]): The web link.
+        web_link (Optional[list[Links]]): The web link.
         manga (Optional[str]): The manga information.
         black_and_white (Optional[bool]): Indicates if the comic is black and white.
         page_count (Optional[int]): The count of pages.
@@ -577,7 +564,7 @@ class Metadata:
     is_empty: bool = True
     tag_origin: str | None = None
 
-    info_source: InfoSources | None = None
+    info_source: list[InfoSources] | None = None
     series: Series | None = None
     issue: str | None = None
     collection_title: str | None = None
@@ -599,7 +586,7 @@ class Metadata:
     alternate_number: str | None = None
     alternate_count: int | None = None
     notes: Notes | None = None
-    web_link: URLS | None = None
+    web_link: list[Links] | None = None
     manga: str | None = None
     black_and_white: bool | None = None
     page_count: int | None = None
