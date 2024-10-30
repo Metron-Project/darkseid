@@ -282,26 +282,16 @@ class MetronInfo:
 
     @staticmethod
     def _assign_info_source(root: ET.Element, info_source: list[InfoSources]) -> None:
-        id_node = MetronInfo._get_or_create_element(root, "ID")
+        id_node = MetronInfo._get_or_create_element(root, "IDS")
         create_sub_element = ET.SubElement
 
-        # Separate primary and alternative sources
-        primary_sources = [src for src in info_source if src.primary]
-        alternative_sources = [src for src in info_source if not src.primary]
+        for src in info_source:
+            attributes = {"source": str(src.name)}
+            if src.primary:
+                attributes["primary"] = "true"
 
-        # Create primary nodes
-        for info_src in primary_sources:
-            primary_node = create_sub_element(id_node, "Primary")
-            primary_node.text = str(info_src.id_)
-            primary_node.attrib["source"] = str(info_src.name)
-
-        # Create alternative nodes if any
-        if alternative_sources:
-            alt_nodes = create_sub_element(id_node, "Alternatives")
-            for info_src in alternative_sources:
-                alt_node = create_sub_element(alt_nodes, "Alternative")
-                alt_node.text = str(info_src.id_)
-                alt_node.attrib["source"] = str(info_src.name)
+            child_node = create_sub_element(id_node, "ID", attrib=attributes)
+            child_node.text = str(src.id_)
 
     @staticmethod
     def _assign_gtin(root: ET.Element, gtin: GTIN) -> None:
@@ -335,14 +325,11 @@ class MetronInfo:
     def _assign_urls(root: ET.Element, links: list[Links]) -> None:
         urls_node = MetronInfo._get_or_create_element(root, "URLs")
         sub_element = ET.SubElement
-        alts_node = None
-        for link in links:
-            if link.primary:
-                sub_element(urls_node, "Primary").text = link.url
-            else:
-                if alts_node is None:
-                    alts_node = sub_element(urls_node, "Alternatives")
-                sub_element(alts_node, "Alternative").text = link.url
+        elements = [(sub_element(urls_node, "URL"), link.url, link.primary) for link in links]
+        for child_node, url, primary in elements:
+            child_node.text = url
+            if primary:
+                child_node.attrib["primary"] = "true"
 
     @staticmethod
     def _assign_credits(root: ET.Element, credits_lst: list[Credit]) -> None:
@@ -468,28 +455,17 @@ class MetronInfo:
         def get_info_sources(id_node: ET.Element) -> list[InfoSources] | None:
             if id_node is None:
                 return None
-            # Check that primary info is available otherwise return None.
-            primary_node = id_node.find("Primary")
-            if primary_node is None:
-                return None
 
-            primary_source = primary_node.attrib.get("source")
-            if not MetronInfo._valid_info_source(primary_source):
-                return None
-
-            primary = [InfoSources(primary_source, int(primary_node.text), True)]
-
-            alts_node = id_node.find("Alternatives")
-            if alts_node is not None:
-                alts_lst = []
-                for item in alts_node.findall("Alternative"):
-                    if MetronInfo._valid_info_source(item.attrib.get("source")):
-                        alts_lst.extend([InfoSources(item.attrib.get("source"), int(item.text))])
-
-            else:
-                alts_lst = []
-
-            return primary + alts_lst
+            child_nodes = id_node.findall("ID")
+            return [
+                InfoSources(
+                    child.attrib.get("source"),
+                    int(child.text),
+                    bool(primary.title()) if (primary := child.attrib.get("primary")) else False,
+                )
+                for child in child_nodes
+                if MetronInfo._valid_info_source(child.attrib.get("source"))
+            ] or None
 
         def get_resource_list(resource: ET.Element) -> list[Basic]:
             if resource is None:
@@ -589,14 +565,15 @@ class MetronInfo:
         def get_urls(url_node: ET.Element) -> list[Links] | None:
             if url_node is None:
                 return None
-            alts_node = url_node.find("Alternatives")
-            link_lst = (
-                [Links(alt.text) for alt in alts_node.findall("Alternative")]
-                if alts_node is not None
-                else []
-            )
-            link_lst.append(Links(url_node.find("Primary").text, True))
-            return link_lst
+
+            child_nodes = url_node.findall("URL")
+            if child_nodes is None:
+                return None
+
+            return [
+                Links(child.text, child.attrib.get("primary", "") == "true")
+                for child in child_nodes
+            ]
 
         def get_note(note_node: ET.Element) -> Notes | None:
             return None if note_node is None else Notes(note_node.text)
@@ -628,7 +605,7 @@ class MetronInfo:
             return credits_list
 
         # Cache root.find() results
-        id_node = root.find("ID")
+        id_node = root.find("IDS")
         gtin_node = root.find("GTIN")
         publisher_node = root.find("Publisher")
         modified_node = root.find("LastModified")

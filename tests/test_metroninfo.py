@@ -134,13 +134,11 @@ def test_metadata_from_string(metron_info):
     # Arrange
     xml_string = """
     <MetronInfo>
-         <ID>
-            <Primary source="Metron">290431</Primary>
-            <Alternatives>
-                <Alternative source="Comic Vine">12345</Alternative>
-                <Alternative source="Grand Comics Database">543</Alternative>
-            </Alternatives>
-        </ID>
+         <IDS>
+            <ID source="Metron" primary="true">290431</ID>
+            <ID source="Comic Vine">12345</ID>
+            <ID source="Grand Comics Database">543</ID>
+        </IDS>
         <Publisher id="12345">
             <Name>Marvel</Name>
             <Imprint id="1234">Epic</Imprint>
@@ -169,11 +167,9 @@ def test_metadata_from_string(metron_info):
             <Genre id="1">Super-Hero</Genre>
         </Genres>
         <URLs>
-            <Primary>https://comicvine.gamespot.com/justice-league-1-justice-league-part-one/4000-290431/</Primary>
-            <Alternatives>
-                <Alternative>https://foo.bar</Alternative>
-                <Alternative>https://bar.foo</Alternative>
-            </Alternatives>
+            <URL primary="true">https://comicvine.gamespot.com/justice-league-1-justice-league-part-one/4000-290431/</URL>
+            <URL>https://foo.bar</URL>
+            <URL>https://bar.foo</URL>
         </URLs>
         <Arcs>
             <Arc>
@@ -215,12 +211,12 @@ def test_metadata_from_string(metron_info):
     assert result.gtin.upc == 76194130593600111
     assert result.story_arcs[0].name == "Arc1"
     assert (
-        result.web_link[2].url
+        result.web_link[0].url
         == "https://comicvine.gamespot.com/justice-league-1-justice-league-part-one/4000-290431/"
     )
-    assert result.web_link[2].primary is True
+    assert result.web_link[0].primary is True
     assert len(result.web_link) == 3
-    assert result.web_link[0].url == "https://foo.bar"
+    assert result.web_link[1].url == "https://foo.bar"
     assert result.genres[0].id_ == 1
     assert result.genres[0].name == "Super-Hero"
     assert result.credits[0].person == "Stan Lee"
