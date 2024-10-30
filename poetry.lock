@@ -320,6 +320,20 @@ files = [
 ]
 
 [[package]]
+name = "elementpath"
+version = "4.6.0"
+description = "XPath 1.0/2.0/3.0/3.1 parsers and selectors for ElementTree and lxml"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "elementpath-4.6.0-py3-none-any.whl", hash = "sha256:e578677f19ccc6ff374c4477c687c547ecbaf7b478d98abb951b7b4b45260a17"},
+    {file = "elementpath-4.6.0.tar.gz", hash = "sha256:ba46bf07f66774927727ade55022b6c435fac06b2523cb3cd7689a1884d33468"},
+]
+
+[package.extras]
+dev = ["Sphinx", "coverage", "flake8", "lxml", "lxml-stubs", "memory-profiler", "memray", "mypy", "tox", "xmlschema (>=3.3.2)"]
+
+[[package]]
 name = "exceptiongroup"
 version = "1.2.2"
 description = "Backport of PEP 654 (exception groups)"
@@ -1630,7 +1644,26 @@ files = [
 [package.dependencies]
 bracex = ">=2.1.1"
 
+[[package]]
+name = "xmlschema"
+version = "3.4.2"
+description = "An XML Schema validator and decoder"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "xmlschema-3.4.2-py3-none-any.whl", hash = "sha256:c6b4de5f8aadeb45e74229f09a2129342b446456efc5e5a27388050afdfedec8"},
+    {file = "xmlschema-3.4.2.tar.gz", hash = "sha256:d35023ea504ea46127302d1297b046d023b96fec5fe4b4b690534ea85b5e9bf8"},
+]
+
+[package.dependencies]
+elementpath = ">=4.4.0,<5.0.0"
+
+[package.extras]
+codegen = ["elementpath (>=4.4.0,<5.0.0)", "jinja2"]
+dev = ["Sphinx", "coverage", "elementpath (>=4.4.0,<5.0.0)", "flake8", "jinja2", "lxml", "lxml-stubs", "memory-profiler", "mypy", "sphinx-rtd-theme", "tox"]
+docs = ["Sphinx", "elementpath (>=4.4.0,<5.0.0)", "jinja2", "sphinx-rtd-theme"]
+
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "7ed86a50a051c1a12dc19802b9813689e5fee57a965531b5c19972e7fb69a424"
+content-hash = "32a507ac078eeaca234fba5bf9284ab43bed8b50f70c25993a568efe09cf7bf5"
