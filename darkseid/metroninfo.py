@@ -7,10 +7,12 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET  # noqa: N817
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from defusedxml.ElementTree import fromstring, parse
+from xmlschema import XMLSchema11, XMLSchemaValidationError
 
+from darkseid.exceptions import XmlError
 from darkseid.issue_string import IssueString
 from darkseid.metadata import (
     GTIN,
@@ -30,8 +32,8 @@ from darkseid.metadata import (
     WebsiteInfo,
 )
 
-if TYPE_CHECKING:
-    from pathlib import Path
+# TODO: Need to add the xsd to main package since we are validating *before* writing the file
+METRON_INFO_XSD = Path().cwd() / "tests" / "test_files" / "MetronInfo.xsd"
 
 
 class MetronInfo:
@@ -170,10 +172,7 @@ class MetronInfo:
 
     @staticmethod
     def _get_root(xml: any) -> ET.Element:
-        root = ET.ElementTree(fromstring(xml)).getroot() if xml else ET.Element("MetronInfo")
-        root.attrib["xmlns:xsi"] = "https://www.w3.org/2001/XMLSchema-instance"
-        root.attrib["xmlns:xsd"] = "https://www.w3.org/2001/XMLSchema"
-        return root
+        return ET.ElementTree(fromstring(xml)).getroot() if xml else ET.Element("MetronInfo")
 
     @classmethod
     def _valid_info_source(cls, val: str | None = None) -> bool:
@@ -676,6 +675,14 @@ class MetronInfo:
             xml (optional): Optional XML bytes to include.
         """
         tree = self.convert_metadata_to_xml(md, xml)
+        # Let's validate the xml
+        schema = XMLSchema11(METRON_INFO_XSD)
+        try:
+            schema.validate(tree)
+        except XMLSchemaValidationError as e:
+            msg = f"Failed to validate XML: {e!r}"
+            raise XmlError(msg) from e
+
         tree.write(filename, encoding="UTF-8", xml_declaration=True)
 
     def read_xml(self, filename: Path) -> Metadata:
