@@ -419,6 +419,21 @@ class Notes:
 
 
 @dataclass
+class AgeRatings:
+    """
+    Represents age ratings for comics, storing information from different sources.
+    This class holds metadata related to age ratings, allowing for easy access and management.
+
+    Attributes:
+        metron_info (str): Information related to age ratings from Metron.
+        comic_rack (str): Information related to age ratings from Comic Rack.
+    """
+
+    metron_info: str = ""
+    comic_rack: str = ""
+
+
+@dataclass
 class GTIN(Validations):
     """
     A data class representing a GTIN (Global Trade Item Number) with validations.
@@ -529,7 +544,7 @@ class Metadata:
         manga (Optional[str]): The manga information.
         black_and_white (Optional[bool]): Indicates if the comic is black and white.
         page_count (Optional[int]): The count of pages.
-        age_rating (Optional[str]): The age rating.
+        age_rating (Optional[AgeRatings]): The age rating.
         story_arcs (list[Arc]): The list of story arcs.
         series_group (Optional[str]): The series group.
         scan_info (Optional[str]): The scan information.
@@ -590,7 +605,7 @@ class Metadata:
     manga: str | None = None
     black_and_white: bool | None = None
     page_count: int | None = None
-    age_rating: str | None = None
+    age_rating: AgeRatings | None = None
 
     story_arcs: list[Arc] = field(default_factory=list)
     series_group: str | None = None

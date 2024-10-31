@@ -7,7 +7,18 @@ import pytest
 from lxml import etree
 
 from darkseid.comicinfo import ComicInfo
-from darkseid.metadata import Arc, Basic, Credit, Links, Metadata, Notes, Publisher, Role, Series
+from darkseid.metadata import (
+    AgeRatings,
+    Arc,
+    Basic,
+    Credit,
+    Links,
+    Metadata,
+    Notes,
+    Publisher,
+    Role,
+    Series,
+)
 
 CI_XSD = Path("tests/test_files/ComicInfo.xsd")
 
@@ -53,7 +64,7 @@ def test_meta_data(test_credits: list[Credit]) -> Metadata:
         Arc("Death of Aquagirl"),
     ]
     md.black_and_white = True
-    md.age_rating = "MA15+"
+    md.age_rating = AgeRatings(comic_rack="MA15+")
     md.manga = "YesAndRightToLeft"
     md.web_link = [
         Links("https://metron.cloud/issue/ultramega-2021-5/", True),
@@ -140,14 +151,14 @@ def test_meta_write_to_existing_file(test_meta_data: Metadata, tmp_path: Path) -
 def test_invalid_age_write_to_file(tmp_path: Path) -> None:
     """Test writing of invalid age rating value to a file."""
     aquaman = Series("Aquaman")
-    bad_metadata = Metadata(series=aquaman, age_rating="MA 15+")
+    bad_metadata = Metadata(series=aquaman, age_rating=AgeRatings(comic_rack="MA 15+"))
     tmp_file = tmp_path / "test-age-write.xml"
     ci = ComicInfo()
     ci.write_to_external_file(tmp_file, bad_metadata)
     result_md = ci.read_from_external_file(tmp_file)
     assert tmp_file.read_text() is not None
     assert validate(tmp_file, CI_XSD) is True
-    assert result_md.age_rating == "Unknown"
+    assert result_md.age_rating.comic_rack == "Unknown"
 
 
 def test_invalid_manga_write_to_file(tmp_path: Path) -> None:

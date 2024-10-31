@@ -14,6 +14,7 @@ from defusedxml.ElementTree import fromstring, parse
 
 from darkseid.issue_string import IssueString
 from darkseid.metadata import (
+    AgeRatings,
     Arc,
     Basic,
     Credit,
@@ -295,7 +296,8 @@ class ComicInfo:
         assign("Locations", get_resource_list(md.locations))
         assign("ScanInformation", md.scan_info)
         assign("StoryArc", get_resource_list(md.story_arcs))
-        assign("AgeRating", self.validate_value(md.age_rating, self.ci_age_ratings))
+        if md.age_rating is not None and md.age_rating.comic_rack:
+            assign("AgeRating", self.validate_value(md.age_rating.comic_rack, self.ci_age_ratings))
 
         #  loop and add the page entries under pages node
         pages_node = root.find("Pages")
@@ -351,6 +353,9 @@ class ComicInfo:
         def get_note(note_txt: str) -> Notes | None:
             return Notes(comic_rack=note_txt) if note_txt else None
 
+        def get_age_rating(age_text: str) -> AgeRatings | None:
+            return AgeRatings(comic_rack=age_text) if age_text else None
+
         md = Metadata()
         md.series = Series(name=xlate(get("Series")))
         md.stories = self.string_to_resource(xlate(get("Title")))
@@ -388,7 +393,7 @@ class ComicInfo:
         md.scan_info = xlate(get("ScanInformation"))
         md.story_arcs = self.string_to_arc(xlate(get("StoryArc")))
         md.series_group = xlate(get("SeriesGroup"))
-        md.age_rating = xlate(get("AgeRating"))
+        md.age_rating = get_age_rating(xlate(get("AgeRating")))
 
         tmp = xlate(get("BlackAndWhite"))
         md.black_and_white = False

@@ -16,6 +16,7 @@ from darkseid.exceptions import XmlError
 from darkseid.issue_string import IssueString
 from darkseid.metadata import (
     GTIN,
+    AgeRatings,
     AlternativeNames,
     Arc,
     Basic,
@@ -399,7 +400,8 @@ class MetronInfo:
             self._assign_basic_children(root, "Reprints", "Reprint", md.reprints)
         if md.gtin:
             self._assign_gtin(root, md.gtin)
-        self._assign(root, "AgeRating", self._valid_age_rating(md.age_rating))
+        if md.age_rating is not None and md.age_rating.metron_info:
+            self._assign(root, "AgeRating", self._valid_age_rating(md.age_rating.metron_info))
         if md.web_link:
             self._assign_urls(root, md.web_link)
         self._assign_datetime(root, "LastModified", md.modified)
@@ -578,6 +580,9 @@ class MetronInfo:
         def get_note(note_node: ET.Element) -> Notes | None:
             return None if note_node is None else Notes(note_node.text)
 
+        def get_age_rating(node: ET.Element) -> AgeRatings | None:
+            return None if node is None else AgeRatings(metron_info=node.text)
+
         def get_credits(credits_node: ET.Element) -> list[Credit] | None:
             if credits_node is None:
                 return None
@@ -615,6 +620,7 @@ class MetronInfo:
         prices_node = root.find("Prices")
         url_node = root.find("URLs")
         note_node = root.find("Notes")
+        age_rating_node = root.find("AgeRating")
 
         md = Metadata()
         md.info_source = get_info_sources(id_node)
@@ -644,7 +650,7 @@ class MetronInfo:
         md.locations = get_resource_list(root.find("Locations"))
         md.reprints = get_resource_list(root.find("Reprints"))
         md.gtin = get_gtin(gtin_node)
-        md.age_rating = get("AgeRating")
+        md.age_rating = get_age_rating(age_rating_node)
         md.web_link = get_urls(url_node)
         md.modified = get_modified(modified_node)
         md.credits = get_credits(credits_node)
