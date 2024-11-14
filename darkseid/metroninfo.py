@@ -265,21 +265,27 @@ class MetronInfo:
                 k: v for k, v in (("id", str(series.id_)), ("lang", series.language)) if v
             }
 
-        ET.SubElement(series_node, "Name").text = series.name
-        ET.SubElement(series_node, "SortName").text = series.sort_name
-        ET.SubElement(series_node, "Volume").text = str(series.volume)
-        ET.SubElement(series_node, "Format").text = (
+        create_sub_element = ET.SubElement
+
+        create_sub_element(series_node, "Name").text = series.name
+        create_sub_element(series_node, "SortName").text = series.sort_name
+        create_sub_element(series_node, "Volume").text = str(series.volume)
+        create_sub_element(series_node, "Format").text = (
             series.format if series.format in MetronInfo.mix_series_format else "Single Issue"
         )
         if series.start_year:
-            ET.SubElement(series_node, "StartYear").text = str(series.start_year)
+            create_sub_element(series_node, "StartYear").text = str(series.start_year)
+        if series.issue_count:
+            create_sub_element(series_node, "IssueCount").text = str(series.issue_count)
+        if series.volume_count:
+            create_sub_element(series_node, "VolumeCount").text = str(series.volume_count)
         if series.alternative_names:
-            alt_names_node = ET.SubElement(series_node, "AlternativeNames")
+            alt_names_node = create_sub_element(series_node, "AlternativeNames")
             for alt_name in series.alternative_names:
                 alt_attrib = {
                     k: v for k, v in (("id", str(alt_name.id_)), ("lang", alt_name.language)) if v
                 }
-                ET.SubElement(alt_names_node, "Name", attrib=alt_attrib).text = alt_name.name
+                create_sub_element(alt_names_node, "Name", attrib=alt_attrib).text = alt_name.name
 
     @staticmethod
     def _assign_info_source(root: ET.Element, info_source: list[InfoSources]) -> None:
@@ -533,6 +539,8 @@ class MetronInfo:
                 "Volume": "volume",
                 "Format": "format",
                 "StartYear": "start_year",
+                "IssueCount": "issue_count",
+                "VolumeCount": "volume_count",
                 "AlternativeNames": "_create_alt_name_list",
             }
 
@@ -541,7 +549,7 @@ class MetronInfo:
                 if attr:
                     if attr == "_create_alt_name_list":
                         series_md.alternative_names = _create_alt_name_list(item)
-                    elif attr in ["volume", "start_year"]:
+                    elif attr in ["volume", "start_year", "issue_count", "volume_count"]:
                         setattr(series_md, attr, int(item.text))
                     else:
                         setattr(series_md, attr, item.text)
