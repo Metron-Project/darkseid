@@ -240,7 +240,8 @@ class ComicInfo:
         if md.series is not None:
             assign("Series", md.series.name)
         assign("Number", md.issue)
-        assign("Count", md.issue_count)
+        if md.series is not None and md.series.issue_count is not None:
+            assign("Count", md.series.issue_count)
         if md.series is not None:
             assign("Volume", md.series.volume)
         assign("AlternateSeries", md.alternate_series)
@@ -360,7 +361,7 @@ class ComicInfo:
         md.series = Series(name=xlate(get("Series")))
         md.stories = self.string_to_resource(xlate(get("Title")))
         md.issue = IssueString(xlate(get("Number"))).as_string()
-        md.issue_count = xlate(get("Count"), True)
+        md.series.issue_count = xlate(get("Count"), True)
         md.series.volume = xlate(get("Volume"), True)
         md.alternate_series = xlate(get("AlternateSeries"))
         md.alternate_number = IssueString(xlate(get("AlternateNumber"))).as_string()
