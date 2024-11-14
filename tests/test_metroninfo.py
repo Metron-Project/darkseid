@@ -100,6 +100,8 @@ def test_convert_metadata_to_xml(metron_info):
             id_=50,
             language="en",
             start_year=1990,
+            issue_count=650,
+            volume_count=5,
             alternative_names=[
                 AlternativeNames("Bug Boy", 50),
                 AlternativeNames("Spider", language="de"),
@@ -149,6 +151,8 @@ def test_metadata_from_string(metron_info):
             <Volume>1</Volume>
             <Format>Omnibus</Format>
             <StartYear>1964</StartYear>
+            <IssueCount>650</IssueCount>
+            <VolumeCount>5</VolumeCount>
             <AlternativeNames>
                 <Name id="1234">Foo</Name>
                 <Name lang="de">Hüsker Dü</Name>
@@ -201,6 +205,8 @@ def test_metadata_from_string(metron_info):
     assert result.series.name == "Spider-Man"
     assert result.series.format == "Omnibus"
     assert result.series.start_year == 1964
+    assert result.series.issue_count == 650
+    assert result.series.volume_count == 5
     assert len(result.series.alternative_names) == 2
     assert result.series.alternative_names[0].name == "Foo"
     assert result.series.alternative_names[0].id_ == 1234

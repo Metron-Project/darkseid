@@ -25,7 +25,13 @@ def fake_metadata() -> Metadata:
         InfoSources("Comic Vine", 20012),
     ]
     md.series = Series(
-        name="Aquaman", sort_name="Aquaman", volume=1, format="Annual", start_year=1961
+        name="Aquaman",
+        sort_name="Aquaman",
+        volume=1,
+        format="Annual",
+        start_year=1961,
+        volume_count=4,
+        issue_count=64,
     )
     md.issue = "0"
     md.stories = [Basic("A Crash of Symbols")]
