@@ -279,6 +279,8 @@ class Series(Basic, Validations):
         volume (int | None): The volume of the series, defaults to None.
         format (str | None): The format of the series, defaults to None.
         start_year (int | None): The year that the series started in. A 4 digit value.
+        issue_count (Optional[int]): The count of issues.
+        volume_count (int | None): The count of volumes.
         alternative_names: list[AlternativeNames]: A list of alternative names for series.
         language (str | None): The 2-letter ISO code of the language, defaults to None.
 
@@ -290,6 +292,8 @@ class Series(Basic, Validations):
     volume: int | None = None
     format: str | None = None
     start_year: int | None = None
+    issue_count: int | None = None
+    volume_count: int | None = None
     alternative_names: list[AlternativeNames] = field(default_factory=list)
     language: str | None = None  # 2-letter iso code
 
@@ -530,10 +534,8 @@ class Metadata:
         store_date (Optional[date]): The store date.
         prices (list[Price]): The list of prices.
         gtin (Optional[GTIN]): The GTIN (Global Trade Item Number).
-        issue_count (Optional[int]): The count of issues.
         genres (list[Basic]): The list of genres.
         comments (Optional[str]): The comments.
-        volume_count (Optional[str]): The count of volumes.
         critical_rating (Optional[str]): The critical rating.
         country (Optional[str]): The country.
         alternate_series (Optional[str]): The alternate series.
@@ -589,11 +591,9 @@ class Metadata:
     store_date: date | None = None
     prices: list[Price] = field(default_factory=list)
     gtin: GTIN | None = None
-    issue_count: int | None = None
     genres: list[Basic] = field(default_factory=list)
     comments: str | None = None  # use same way as Summary in CIX
 
-    volume_count: str | None = None
     critical_rating: str | None = None
     country: str | None = None
 
@@ -689,7 +689,6 @@ class Metadata:
         assign("info_source", new_md.info_source)
         assign("issue", new_md.issue)
         assign("collection_title", new_md.collection_title)
-        assign("issue_count", new_md.issue_count)
         if len(new_md.stories) > 0:
             assign("stories", new_md.stories)
         assign("publisher", new_md.publisher)
@@ -698,7 +697,6 @@ class Metadata:
         if len(new_md.prices) > 0:
             assign("price", new_md.prices)
         assign("gtin", new_md.gtin)
-        assign("volume_count", new_md.volume_count)
         if len(new_md.genres) > 0:
             assign("genre", new_md.genres)
         assign("country", new_md.country)
