@@ -11,5 +11,6 @@ __pycache__
 .ruff_cache
 /test-results
 /tests/test_files
+/darkseid/schemas
 .tox
 .venv*
