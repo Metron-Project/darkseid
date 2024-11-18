@@ -32,8 +32,7 @@ from darkseid.metadata import (
     Universe,
 )
 
-# TODO: Need to add the xsd to main package since we are validating *before* writing the file
-METRON_INFO_XSD = Path().cwd() / "tests" / "test_files" / "MetronInfo.xsd"
+METRON_INFO_XSD = Path("darkseid") / "schemas" / "MetronInfo" / "v1" / "MetronInfo.xsd"
 
 
 class MetronInfo:

@@ -22,8 +22,6 @@ from darkseid.metadata import (
 )
 from darkseid.metroninfo import MetronInfo
 
-MI_XSD = "tests/test_files/MetronInfo.xsd"
-
 
 @pytest.fixture()
 def metron_info():
