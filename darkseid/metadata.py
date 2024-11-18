@@ -162,7 +162,7 @@ class Basic:
     """
 
     name: str
-    id_: int | None = None
+    id_: int | str | None = None
 
 
 @dataclass
