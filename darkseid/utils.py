@@ -7,6 +7,21 @@ from collections import defaultdict
 from pathlib import Path
 
 
+def cast_id_as_str(id_: str | int) -> str:
+    """Convert an ID to a string.
+
+    This function takes an ID that can be either a string or an integer and returns it as a string. If the input is
+    an integer, it will be converted to a string; if it is already a string, it will be returned unchanged.
+
+    Args:
+        id_ (str | int): The ID to be converted.
+
+    Returns:
+        str: The ID represented as a string.
+    """
+    return str(id_) if isinstance(id_, int) else id_
+
+
 def get_recursive_filelist(path_list: list[Path]) -> list[Path]:
     """
     Retrieves a list of files recursively from the provided paths.

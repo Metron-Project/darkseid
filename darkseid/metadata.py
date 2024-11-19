@@ -180,7 +180,7 @@ class InfoSources:
     """
 
     name: str
-    id_: int
+    id_: int | str
     primary: bool = False
 
 

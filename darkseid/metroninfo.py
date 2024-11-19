@@ -31,6 +31,7 @@ from darkseid.metadata import (
     Series,
     Universe,
 )
+from darkseid.utils import cast_id_as_str
 
 METRON_INFO_XSD = Path("darkseid") / "schemas" / "MetronInfo" / "v1" / "MetronInfo.xsd"
 
@@ -224,15 +225,13 @@ class MetronInfo:
             name = val.name
             child_node.text = name
             if id_ := val.id_:
-                child_node.attrib["id"] = str(id_) if isinstance(id_, int) else id_
+                child_node.attrib["id"] = cast_id_as_str(id_)
 
     @staticmethod
     def _assign_arc(root: ET.Element, vals: list[Arc]) -> None:
         parent_node = MetronInfo._get_or_create_element(root, "Arcs")
         for val in vals:
-            attributes = (
-                {"id": str(val.id_) if isinstance(val.id_, int) else val.id_} if val.id_ else {}
-            )
+            attributes = {"id": cast_id_as_str(val.id_)} if val.id_ else {}
             child_node = ET.SubElement(parent_node, "Arc", attrib=attributes)
             ET.SubElement(child_node, "Name").text = val.name
             if val.number:
@@ -244,9 +243,7 @@ class MetronInfo:
             return
         publisher_node = MetronInfo._get_or_create_element(root, "Publisher")
         if publisher.id_:
-            publisher_node.attrib = {
-                "id": str(publisher.id_) if isinstance(publisher.id_, int) else publisher.id_
-            }
+            publisher_node.attrib = {"id": cast_id_as_str(publisher.id_)}
 
         ET.SubElement(publisher_node, "Name").text = publisher.name
 
@@ -254,13 +251,7 @@ class MetronInfo:
             imprint_node = ET.SubElement(
                 publisher_node,
                 "Imprint",
-                {
-                    "id": str(publisher.imprint.id_)
-                    if isinstance(publisher.imprint.id_, int)
-                    else publisher.imprint.id_
-                }
-                if publisher.imprint.id_
-                else {},
+                {"id": cast_id_as_str(publisher.imprint.id_)} if publisher.imprint.id_ else {},
             )
             imprint_node.text = publisher.imprint.name
 
@@ -273,7 +264,7 @@ class MetronInfo:
             series_node.attrib = {
                 k: v
                 for k, v in (
-                    ("id", str(series.id_) if isinstance(series.id_, int) else series.id_),
+                    ("id", cast_id_as_str(series.id_)),
                     ("lang", series.language),
                 )
                 if v
@@ -299,10 +290,7 @@ class MetronInfo:
                 alt_attrib = {
                     k: v
                     for k, v in (
-                        (
-                            "id",
-                            str(alt_name.id_) if isinstance(alt_name.id_, int) else alt_name.id_,
-                        ),
+                        ("id", cast_id_as_str(alt_name.id_)),
                         ("lang", alt_name.language),
                     )
                     if v
@@ -320,7 +308,7 @@ class MetronInfo:
                 attributes["primary"] = "true"
 
             child_node = create_sub_element(id_node, "ID", attrib=attributes)
-            child_node.text = str(src.id_)
+            child_node.text = cast_id_as_str(src.id_)
 
     @staticmethod
     def _assign_gtin(root: ET.Element, gtin: GTIN) -> None:
@@ -345,7 +333,7 @@ class MetronInfo:
         for u in universes:
             universe_node = sub_element(universes_node, "Universe")
             if u.id_:
-                universe_node.attrib["id"] = str(u.id_) if isinstance(u.id_, int) else u.id_
+                universe_node.attrib["id"] = cast_id_as_str(u.id_)
             sub_element(universe_node, "Name").text = u.name
             if u.designation:
                 sub_element(universe_node, "Designation").text = u.designation
@@ -371,9 +359,7 @@ class MetronInfo:
             creator_node = sub_element(
                 credit_node,
                 "Creator",
-                attrib={"id": str(item.id_) if isinstance(item.id_, int) else item.id_}
-                if item.id_
-                else {},
+                attrib={"id": cast_id_as_str(item.id_)} if item.id_ else {},
             )
             creator_node.text = item.person
             roles_node = sub_element(credit_node, "Roles")
@@ -382,7 +368,7 @@ class MetronInfo:
                 role_node = sub_element(
                     roles_node,
                     "Role",
-                    attrib={"id": str(r.id_) if isinstance(r.id_, int) else r.id_} if r.id_ else {},
+                    attrib={"id": cast_id_as_str(r.id_)} if r.id_ else {},
                 )
                 role_node.text = r.name if r.name.lower() in mix_roles else "Other"
 
@@ -498,7 +484,7 @@ class MetronInfo:
             return [
                 InfoSources(
                     child.attrib.get("source"),
-                    int(child.text),
+                    int(child.text) if child.text.isdigit() else child.text,
                     bool(primary.title()) if (primary := child.attrib.get("primary")) else False,
                 )
                 for child in child_nodes
