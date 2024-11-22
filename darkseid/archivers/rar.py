@@ -109,7 +109,7 @@ class RarArchiver(Archiver):
         try:
             with rarfile.RarFile(self.path) as rf:
                 return sorted(rf.namelist())
-        except rarfile.RarCannotExec as e:
+        except (rarfile.RarCannotExec, rarfile.BadRarFile) as e:
             raise RarError(e) from e
 
     def copy_from_archive(
