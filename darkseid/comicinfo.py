@@ -13,7 +13,19 @@ from typing import Any, ClassVar, cast
 from defusedxml.ElementTree import fromstring, parse
 
 from darkseid.issue_string import IssueString
-from darkseid.metadata import Arc, Basic, Credit, ImageMetadata, Metadata, Role, Series
+from darkseid.metadata import (
+    AgeRatings,
+    Arc,
+    Basic,
+    Credit,
+    ImageMetadata,
+    Links,
+    Metadata,
+    Notes,
+    Publisher,
+    Role,
+    Series,
+)
 from darkseid.utils import list_to_string, xlate
 
 
@@ -221,11 +233,15 @@ class ComicInfo:
         def get_resource_list(resource: list[Basic] | list[Arc]) -> str | None:
             return list_to_string([i.name for i in resource]) if resource else None
 
+        def create_url_string(links: list[Links]) -> str:
+            return ",".join(link.url for link in links)
+
         assign("Title", get_resource_list(md.stories))
         if md.series is not None:
             assign("Series", md.series.name)
         assign("Number", md.issue)
-        assign("Count", md.issue_count)
+        if md.series is not None and md.series.issue_count is not None:
+            assign("Count", md.series.issue_count)
         if md.series is not None:
             assign("Volume", md.series.volume)
         assign("AlternateSeries", md.alternate_series)
@@ -233,7 +249,8 @@ class ComicInfo:
         assign("SeriesGroup", md.series_group)
         assign("AlternateCount", md.alternate_count)
         assign("Summary", md.comments)
-        assign("Notes", md.notes)
+        if md.notes is not None and md.notes.comic_rack:
+            assign("Notes", md.notes.comic_rack)
         if md.cover_date is not None:
             assign("Year", md.cover_date.year)
             assign("Month", md.cover_date.month)
@@ -263,10 +280,11 @@ class ComicInfo:
 
         if md.publisher:
             assign("Publisher", md.publisher.name)
-        if md.imprint:
-            assign("Imprint", md.imprint.name)
+            if md.publisher.imprint:
+                assign("Imprint", md.publisher.imprint.name)
         assign("Genre", get_resource_list(md.genres))
-        assign("Web", md.web_link)
+        if md.web_link:
+            assign("Web", create_url_string(md.web_link))
         assign("PageCount", md.page_count)
         if md.series is not None:
             assign("LanguageISO", md.series.language)
@@ -279,7 +297,8 @@ class ComicInfo:
         assign("Locations", get_resource_list(md.locations))
         assign("ScanInformation", md.scan_info)
         assign("StoryArc", get_resource_list(md.story_arcs))
-        assign("AgeRating", self.validate_value(md.age_rating, self.ci_age_ratings))
+        if md.age_rating is not None and md.age_rating.comic_rack:
+            assign("AgeRating", self.validate_value(md.age_rating.comic_rack, self.ci_age_ratings))
 
         #  loop and add the page entries under pages node
         pages_node = root.find("Pages")
@@ -324,17 +343,31 @@ class ComicInfo:
             tag = root.find(txt)
             return None if tag is None else tag.text
 
+        def get_urls(txt: str) -> list[Links] | None:
+            if not txt:
+                return None
+            # ComicInfo schema states URL string can be separated by a comma or space
+            urls = self._split_sting(txt, [",", " "])
+            # We're assuming the first link is the main source url.
+            return [Links(urls[0], primary=True)] + [Links(url) for url in urls[1:]]
+
+        def get_note(note_txt: str) -> Notes | None:
+            return Notes(comic_rack=note_txt) if note_txt else None
+
+        def get_age_rating(age_text: str) -> AgeRatings | None:
+            return AgeRatings(comic_rack=age_text) if age_text else None
+
         md = Metadata()
         md.series = Series(name=xlate(get("Series")))
         md.stories = self.string_to_resource(xlate(get("Title")))
         md.issue = IssueString(xlate(get("Number"))).as_string()
-        md.issue_count = xlate(get("Count"), True)
+        md.series.issue_count = xlate(get("Count"), True)
         md.series.volume = xlate(get("Volume"), True)
         md.alternate_series = xlate(get("AlternateSeries"))
         md.alternate_number = IssueString(xlate(get("AlternateNumber"))).as_string()
         md.alternate_count = xlate(get("AlternateCount"), True)
         md.comments = xlate(get("Summary"))
-        md.notes = xlate(get("Notes"))
+        md.notes = get_note(xlate(get("Notes")))
         # Cover Year
         tmp_year = xlate(get("Year"), True)
         tmp_month = xlate(get("Month"), True)
@@ -344,12 +377,13 @@ class ComicInfo:
                 md.cover_date = date(tmp_year, tmp_month, tmp_day)
             else:
                 md.cover_date = date(tmp_year, tmp_month, 1)
+        # Publisher info
+        pub = xlate(get("Publisher"))
+        imprint = xlate(get("Imprint"))
+        md.publisher = Publisher(pub, imprint=Basic(imprint) if imprint else None)
 
-        md.publisher = Basic(xlate(get("Publisher")))
-        if imprint := xlate(get("Imprint")):  # Make sure Imprint element is present.
-            md.imprint = Basic(imprint)
         md.genres = self.string_to_resource(xlate(get("Genre")))
-        md.web_link = xlate(get("Web"))
+        md.web_link = get_urls(xlate(get("Web")))
         md.series.language = xlate(get("LanguageISO"))
         md.series.format = xlate(get("Format"))
         md.manga = xlate(get("Manga"))
@@ -360,7 +394,7 @@ class ComicInfo:
         md.scan_info = xlate(get("ScanInformation"))
         md.story_arcs = self.string_to_arc(xlate(get("StoryArc")))
         md.series_group = xlate(get("SeriesGroup"))
-        md.age_rating = xlate(get("AgeRating"))
+        md.age_rating = get_age_rating(xlate(get("AgeRating")))
 
         tmp = xlate(get("BlackAndWhite"))
         md.black_and_white = False

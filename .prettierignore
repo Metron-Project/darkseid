@@ -1,3 +1,4 @@
+/darkseid/schemas
 dist
 docs/darkseid
 .git
@@ -10,5 +11,6 @@ __pycache__
 .pytest_cache
 .ruff_cache
 /test-results
+/tests/test_files
 .tox
 .venv*

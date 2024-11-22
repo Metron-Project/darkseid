@@ -15,7 +15,7 @@ from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
-    from datetime import date
+    from datetime import date, datetime
     from decimal import Decimal
 
 
@@ -24,9 +24,13 @@ import pycountry
 MAX_UPC = 17
 MAX_ISBN = 13
 COUNTRY_LEN = 2
+YEAR_LEN = 4
 
 
 class Validations:
+    def __init__(self):
+        self.__dataclass_fields__ = None
+
     def __post_init__(self: Validations) -> None:
         """
         Run validation methods if declared.
@@ -158,7 +162,26 @@ class Basic:
     """
 
     name: str
-    id_: int | None = None
+    id_: int | str | None = None
+
+
+@dataclass
+class InfoSources:
+    """
+    Dataclass representing information sources with associated metadata.
+
+    This class is used to store the name, identifier, and primary status of an information source. It allows for
+    structured representation of sources, facilitating easier management and access to their attributes.
+
+    Attributes:
+        name (str): The name of the information source.
+        id_ (int): The unique identifier for the information source.
+        primary (bool): A flag indicating if this source is the primary one. Defaults to False.
+    """
+
+    name: str
+    id_: int | str
+    primary: bool = False
 
 
 @dataclass
@@ -190,26 +213,20 @@ class Role(Basic):
 
 
 @dataclass
-class Series(Basic, Validations):
+class AlternativeNames(Basic):
     """
-    A data class representing a series with basic information and validations.
+    A data class representing an alternative name for a series with basic information and validations.
 
     Attributes:
-        name (str): The name associated with the basic information.
-        id_ (int | None): The ID associated with the basic information, defaults to None.
-        sort_name (str | None): The sort name of the series, defaults to None.
-        volume (int | None): The volume of the series, defaults to None.
-        format (str | None): The format of the series, defaults to None.
+        name (str): The alternative name for a series.
+        id_ (int | None): The ID associated with the alternative name, defaults to None.
         language (str | None): The 2-letter ISO code of the language, defaults to None.
 
     Static Methods:
         validate_language(value: str, **_: any) -> str | None: Validates a language value.
     """
 
-    sort_name: str | None = None
-    volume: int | None = None
-    format: str | None = None
-    language: str | None = None  # 2-letter iso code
+    language: str | None = None
 
     @staticmethod
     def validate_language(value: str, **_: any) -> str | None:
@@ -251,6 +268,100 @@ class Series(Basic, Validations):
 
 
 @dataclass
+class Series(Basic, Validations):
+    """
+    A data class representing a series with basic information and validations.
+
+    Attributes:
+        name (str): The name associated with the basic information.
+        id_ (int | None): The ID associated with the basic information, defaults to None.
+        sort_name (str | None): The sort name of the series, defaults to None.
+        volume (int | None): The volume of the series, defaults to None.
+        format (str | None): The format of the series, defaults to None.
+        start_year (int | None): The year that the series started in. A 4 digit value.
+        issue_count (Optional[int]): The count of issues.
+        volume_count (int | None): The count of volumes.
+        alternative_names: list[AlternativeNames]: A list of alternative names for series.
+        language (str | None): The 2-letter ISO code of the language, defaults to None.
+
+    Static Methods:
+        validate_language(value: str, **_: any) -> str | None: Validates a language value.
+    """
+
+    sort_name: str | None = None
+    volume: int | None = None
+    format: str | None = None
+    start_year: int | None = None
+    issue_count: int | None = None
+    volume_count: int | None = None
+    alternative_names: list[AlternativeNames] = field(default_factory=list)
+    language: str | None = None  # 2-letter iso code
+
+    @staticmethod
+    def validate_start_year(value: int, **_: any) -> int | None:
+        if not value:
+            return None
+
+        if len(str(value)) == YEAR_LEN:
+            return value
+
+        msg = f"Year: {value} length must be {YEAR_LEN}"
+        raise ValueError(msg)
+
+    @staticmethod
+    def validate_language(value: str, **_: any) -> str | None:
+        """
+        Validates a language value.
+
+        If the value is empty, it returns None. Otherwise, it strips any leading or trailing
+        whitespace from the value. If the length of the value is 2, it tries to find the
+        language object using the alpha-2 code. Otherwise, it tries to look up the language
+        object using the value. If the language object is not found, it raises a ValueError.
+
+        Args:
+            value (str): The language value to validate.
+            **_ (any): Additional keyword arguments (ignored).
+
+        Returns:
+            Optional[str]: The validated language code, or None if the value is empty.
+
+        Raises:
+            ValueError: Raised when the language object cannot be found.
+        """
+
+        if not value:
+            return None
+        value = value.strip()
+
+        if len(value) == COUNTRY_LEN:
+            obj = pycountry.languages.get(alpha_2=value)
+        else:
+            try:
+                obj = pycountry.languages.lookup(value)
+            except LookupError as e:
+                msg = f"Couldn't find language {value}"
+                raise ValueError(msg) from e
+        if obj is None:
+            msg = f"Couldn't find language {value}"
+            raise ValueError(msg)
+        return obj.alpha_2
+
+
+@dataclass
+class Publisher(Basic):
+    """
+    A data class representing a Publisher with basic information.
+
+    Attributes:
+        name (str): The name associated with the basic information.
+        id_ (int | None): The ID associated with the basic information, defaults to None.
+        imprint (Basic | None): The Imprint of a Publisher with basic information, defaults to None.
+    """
+
+    imprint: Basic | None = None
+
+
+@dataclass
 class Arc(Basic):
     """
     A data class representing an arc with basic information.
@@ -278,6 +389,52 @@ class Credit:
     person: str
     role: list[Role]
     id_: int | None = None
+
+
+@dataclass
+class Links:
+    """
+    Dataclass representing a URL with an optional primary flag.
+
+    This class is used to store a URL and indicate whether it is the primary URL. It can be extended to include validation for the URL format in the future.
+
+    Attributes:
+        url (str): The URL string.
+        primary (bool): A flag indicating if this URL is the primary one. Defaults to False.
+    """
+
+    # TODO: Probably worthwhile to validate the strings are URLS.
+    url: str
+    primary: bool = False
+
+
+@dataclass
+class Notes:
+    """
+    Notes is a data class designed to hold notes for the different formats.
+
+    Attributes:
+        metron_info (str): A string containing information about the metronome.
+        comic_rack (str): A string representing the comic book collection.
+    """
+
+    metron_info: str = ""
+    comic_rack: str = ""
+
+
+@dataclass
+class AgeRatings:
+    """
+    Represents age ratings for comics, storing information from different sources.
+    This class holds metadata related to age ratings, allowing for easy access and management.
+
+    Attributes:
+        metron_info (str): Information related to age ratings from Metron.
+        comic_rack (str): Information related to age ratings from Comic Rack.
+    """
+
+    metron_info: str = ""
+    comic_rack: str = ""
 
 
 @dataclass
@@ -367,32 +524,29 @@ class Metadata:
     Attributes:
         is_empty (bool): Indicates if the metadata is empty.
         tag_origin (Optional[str]): The origin of the tag.
-        info_source (Optional[Basic]): The information source.
+        info_source (Optional[list[InfoSources]]): The information source.
         series (Optional[Series]): The series information.
         issue (Optional[str]): The issue information.
         collection_title (Optional[str]): The title of the collection.
         stories (list[Basic]): The list of stories.
-        publisher (Optional[Basic]): The publisher information.
-        imprint (Optional[Basic]): The imprint information.
+        publisher (Optional[Publisher]): The publisher information.
         cover_date (Optional[date]): The cover date.
         store_date (Optional[date]): The store date.
         prices (list[Price]): The list of prices.
         gtin (Optional[GTIN]): The GTIN (Global Trade Item Number).
-        issue_count (Optional[int]): The count of issues.
         genres (list[Basic]): The list of genres.
         comments (Optional[str]): The comments.
-        volume_count (Optional[str]): The count of volumes.
         critical_rating (Optional[str]): The critical rating.
         country (Optional[str]): The country.
         alternate_series (Optional[str]): The alternate series.
         alternate_number (Optional[str]): The alternate number.
         alternate_count (Optional[int]): The count of alternates.
-        notes (Optional[str]): The notes.
-        web_link (Optional[str]): The web link.
+        notes (Optional[Notes]): The notes.
+        web_link (Optional[list[Links]]): The web link.
         manga (Optional[str]): The manga information.
         black_and_white (Optional[bool]): Indicates if the comic is black and white.
         page_count (Optional[int]): The count of pages.
-        age_rating (Optional[str]): The age rating.
+        age_rating (Optional[AgeRatings]): The age rating.
         story_arcs (list[Arc]): The list of story arcs.
         series_group (Optional[str]): The series group.
         scan_info (Optional[str]): The scan information.
@@ -427,34 +581,31 @@ class Metadata:
     is_empty: bool = True
     tag_origin: str | None = None
 
-    info_source: Basic | None = None
+    info_source: list[InfoSources] | None = None
     series: Series | None = None
     issue: str | None = None
     collection_title: str | None = None
     stories: list[Basic] = field(default_factory=list)
-    publisher: Basic | None = None
-    imprint: Basic | None = None
+    publisher: Publisher | None = None
     cover_date: date | None = None
     store_date: date | None = None
     prices: list[Price] = field(default_factory=list)
     gtin: GTIN | None = None
-    issue_count: int | None = None
     genres: list[Basic] = field(default_factory=list)
     comments: str | None = None  # use same way as Summary in CIX
 
-    volume_count: str | None = None
     critical_rating: str | None = None
     country: str | None = None
 
     alternate_series: str | None = None
     alternate_number: str | None = None
     alternate_count: int | None = None
-    notes: str | None = None
-    web_link: str | None = None
+    notes: Notes | None = None
+    web_link: list[Links] | None = None
     manga: str | None = None
     black_and_white: bool | None = None
     page_count: int | None = None
-    age_rating: str | None = None
+    age_rating: AgeRatings | None = None
 
     story_arcs: list[Arc] = field(default_factory=list)
     series_group: str | None = None
@@ -469,6 +620,8 @@ class Metadata:
     reprints: list[Basic] = field(default_factory=list)
     tags: list[Basic] = field(default_factory=list)
     pages: list[ImageMetadata] = field(default_factory=list)
+
+    modified: datetime | None = None
 
     def __post_init__(self: Metadata) -> None:
         """
@@ -536,7 +689,6 @@ class Metadata:
         assign("info_source", new_md.info_source)
         assign("issue", new_md.issue)
         assign("collection_title", new_md.collection_title)
-        assign("issue_count", new_md.issue_count)
         if len(new_md.stories) > 0:
             assign("stories", new_md.stories)
         assign("publisher", new_md.publisher)
@@ -545,7 +697,6 @@ class Metadata:
         if len(new_md.prices) > 0:
             assign("price", new_md.prices)
         assign("gtin", new_md.gtin)
-        assign("volume_count", new_md.volume_count)
         if len(new_md.genres) > 0:
             assign("genre", new_md.genres)
         assign("country", new_md.country)
@@ -553,7 +704,6 @@ class Metadata:
         assign("alternate_series", new_md.alternate_series)
         assign("alternate_number", new_md.alternate_number)
         assign("alternate_count", new_md.alternate_count)
-        assign("imprint", new_md.imprint)
         assign("web_link", new_md.web_link)
         assign("manga", new_md.manga)
         assign("black_and_white", new_md.black_and_white)

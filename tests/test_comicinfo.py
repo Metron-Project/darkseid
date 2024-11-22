@@ -7,7 +7,18 @@ import pytest
 from lxml import etree
 
 from darkseid.comicinfo import ComicInfo
-from darkseid.metadata import Arc, Basic, Credit, Metadata, Role, Series
+from darkseid.metadata import (
+    AgeRatings,
+    Arc,
+    Basic,
+    Credit,
+    Links,
+    Metadata,
+    Notes,
+    Publisher,
+    Role,
+    Series,
+)
 
 CI_XSD = Path("tests/test_files/ComicInfo.xsd")
 
@@ -29,8 +40,7 @@ def test_credits() -> list[Credit]:
 @pytest.fixture()
 def test_meta_data(test_credits: list[Credit]) -> Metadata:
     md = Metadata()
-    md.publisher = Basic("DC Comics", 1)
-    md.imprint = Basic("DC Black Label", 2)
+    md.publisher = Publisher("DC Comics", 1, Basic("DC Black Label", 2))
     md.series = Series(
         "Aquaman",
         sort_name="Aquaman",
@@ -54,8 +64,14 @@ def test_meta_data(test_credits: list[Credit]) -> Metadata:
         Arc("Death of Aquagirl"),
     ]
     md.black_and_white = True
-    md.age_rating = "MA15+"
+    md.age_rating = AgeRatings(comic_rack="MA15+")
     md.manga = "YesAndRightToLeft"
+    md.web_link = [
+        Links("https://metron.cloud/issue/ultramega-2021-5/", True),
+        Links("https://metron.cloud/issue/the-body-trade-2024-1/"),
+        Links("https://metron.cloud/issue/the-body-trade-2024-2/"),
+    ]
+    md.notes = Notes(comic_rack="This is a test")
     for c in test_credits:
         md.add_credit(c)
     return md
@@ -93,12 +109,12 @@ def test_meta_with_no_imprint(test_meta_data: Metadata, tmp_path: Path) -> None:
     """Test of writing the metadata with no imprint to a file."""
     tmp_file = tmp_path / "test-write.xml"
     old_md = test_meta_data
-    old_md.imprint = None
+    old_md.publisher.imprint = None
     ComicInfo().write_to_external_file(tmp_file, test_meta_data)
     assert tmp_file.read_text() is not None
     assert validate(tmp_file, CI_XSD) is True
     new_md = ComicInfo().read_from_external_file(tmp_file)
-    assert new_md.imprint is None
+    assert new_md.publisher.imprint is None
     assert old_md.characters == new_md.characters
 
 
@@ -135,14 +151,14 @@ def test_meta_write_to_existing_file(test_meta_data: Metadata, tmp_path: Path) -
 def test_invalid_age_write_to_file(tmp_path: Path) -> None:
     """Test writing of invalid age rating value to a file."""
     aquaman = Series("Aquaman")
-    bad_metadata = Metadata(series=aquaman, age_rating="MA 15+")
+    bad_metadata = Metadata(series=aquaman, age_rating=AgeRatings(comic_rack="MA 15+"))
     tmp_file = tmp_path / "test-age-write.xml"
     ci = ComicInfo()
     ci.write_to_external_file(tmp_file, bad_metadata)
     result_md = ci.read_from_external_file(tmp_file)
     assert tmp_file.read_text() is not None
     assert validate(tmp_file, CI_XSD) is True
-    assert result_md.age_rating == "Unknown"
+    assert result_md.age_rating.comic_rack == "Unknown"
 
 
 def test_invalid_manga_write_to_file(tmp_path: Path) -> None:
@@ -179,4 +195,5 @@ def test_read_from_file(test_meta_data: Metadata, tmp_path: Path) -> None:
     assert new_md.locations == test_meta_data.locations
     assert new_md.black_and_white == test_meta_data.black_and_white
     assert new_md.publisher.name == test_meta_data.publisher.name
-    assert new_md.imprint.name == test_meta_data.imprint.name
+    assert new_md.publisher.imprint.name == test_meta_data.publisher.imprint.name
+    assert new_md.notes.comic_rack == "This is a test"

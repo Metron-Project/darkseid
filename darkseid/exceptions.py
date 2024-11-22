@@ -8,3 +8,7 @@ This module provides the following classes:
 
 class RarError(Exception):
     """Class for a Rar error."""
+
+
+class XmlError(Exception):
+    """Class for an XML error."""

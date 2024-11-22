@@ -33,6 +33,7 @@ natsort = "^8.0.0"
 rarfile = "^4.0"
 pycountry = "^24.6.1"
 defusedxml = "^0.7.1"
+xmlschema = "^3.4.2"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.7.0"
