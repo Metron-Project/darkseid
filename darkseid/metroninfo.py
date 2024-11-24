@@ -72,13 +72,7 @@ class MetronInfo:
         }
     )
     mix_age_ratings = frozenset(
-        {
-            "unknown",
-            "everyone",
-            "teen",
-            "teen plus",
-            "mature",
-        }
+        {"unknown", "everyone", "teen", "teen plus", "mature", "explicit", "adult"}
     )
     mix_series_format = frozenset(
         {
