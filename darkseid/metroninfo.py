@@ -233,12 +233,13 @@ class MetronInfo:
     @staticmethod
     def _assign_arc(root: ET.Element, vals: list[Arc]) -> None:
         parent_node = MetronInfo._get_or_create_element(root, "Arcs")
+        create_sub_element = ET.SubElement
         for val in vals:
             attributes = {"id": cast_id_as_str(val.id_)} if val.id_ else {}
-            child_node = ET.SubElement(parent_node, "Arc", attrib=attributes)
-            ET.SubElement(child_node, "Name").text = val.name
+            child_node = create_sub_element(parent_node, "Arc", attrib=attributes)
+            create_sub_element(child_node, "Name").text = val.name
             if val.number:
-                ET.SubElement(child_node, "Number").text = str(val.number)
+                create_sub_element(child_node, "Number").text = str(val.number)
 
     @staticmethod
     def _assign_publisher(root: ET.Element, publisher: Publisher) -> None:
