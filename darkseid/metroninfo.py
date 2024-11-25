@@ -33,7 +33,7 @@ from darkseid.metadata import (
 )
 from darkseid.utils import cast_id_as_str
 
-METRON_INFO_XSD = Path("darkseid") / "schemas" / "MetronInfo" / "v1" / "MetronInfo.xsd"
+EARLIEST_YEAR = 1900
 
 
 class MetronInfo:
@@ -190,7 +190,7 @@ class MetronInfo:
         return element
 
     @staticmethod
-    def _assign(root: ET.Element, element: str, val: str | int | date | None = None) -> None:
+    def _assign(root: ET.Element, element: str, val: str | int | None = None) -> None:
         et_entry = root.find(element)
         if val is None:
             if et_entry is not None:
@@ -198,7 +198,7 @@ class MetronInfo:
         else:
             if et_entry is None:
                 et_entry = ET.SubElement(root, element)
-            et_entry.text = val.strftime("%Y-%m-%d") if isinstance(val, date) else str(val)
+            et_entry.text = str(val) if isinstance(val, int) else val
 
     @staticmethod
     def _assign_datetime(root: ET.Element, element: str, val: datetime | None = None) -> None:
@@ -223,6 +223,19 @@ class MetronInfo:
             child_node.text = name
             if id_ := val.id_:
                 child_node.attrib["id"] = cast_id_as_str(id_)
+
+    @staticmethod
+    def _assign_date(root: ET.Element, element: str, val: date | None = None) -> None:
+        et_entry = root.find(element)
+        if val is None:
+            if et_entry is not None:
+                root.remove(et_entry)
+        else:
+            if val.year < EARLIEST_YEAR:  # Info source has a bad year
+                return
+            if et_entry is None:
+                et_entry = ET.SubElement(root, element)
+            et_entry.text = val.strftime("%Y-%m-%d")
 
     @staticmethod
     def _assign_arc(root: ET.Element, vals: list[Arc]) -> None:
@@ -395,8 +408,8 @@ class MetronInfo:
         self._assign(root, "Summary", md.comments)
         if md.prices:
             self._assign_price(root, md.prices)
-        self._assign(root, "CoverDate", md.cover_date)
-        self._assign(root, "StoreDate", md.store_date)
+        self._assign_date(root, "CoverDate", md.cover_date)
+        self._assign_date(root, "StoreDate", md.store_date)
         self._assign(root, "PageCount", md.page_count)
         if md.notes is not None and md.notes.metron_info:
             self._assign(root, "Notes", md.notes.metron_info)
@@ -691,8 +704,9 @@ class MetronInfo:
             xml (optional): Optional XML bytes to include.
         """
         tree = self.convert_metadata_to_xml(md, xml)
+        mi_xsd = Path("darkseid") / "schemas" / "MetronInfo" / "v1" / "MetronInfo.xsd"
+        schema = XMLSchema11(mi_xsd)
         # Let's validate the xml
-        schema = XMLSchema11(METRON_INFO_XSD)
         try:
             schema.validate(tree)
         except XMLSchemaValidationError as e:
