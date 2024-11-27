@@ -406,11 +406,11 @@ class ComicInfo:
                 n.tag in ["Writer", "Penciller", "Inker", "Colorist", "Letterer", "Editor"]
                 and n.text is not None
             ):
-                for name in self._split_sting(n.text, [";"]):
+                for name in self._split_sting(n.text, [";", ","]):
                     md.add_credit(Credit(name.strip(), [Role(n.tag)]))
 
             if n.tag == "CoverArtist" and n.text is not None:
-                for name in self._split_sting(n.text, [";"]):
+                for name in self._split_sting(n.text, [";", ","]):
                     md.add_credit(Credit(name.strip(), [Role("Cover")]))
 
         # parse page data now
