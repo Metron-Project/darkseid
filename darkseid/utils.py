@@ -3,8 +3,38 @@
 # Copyright 2019 Brian Pepple
 
 import itertools
+import re
 from collections import defaultdict
+from enum import StrEnum
 from pathlib import Path
+
+
+class DataSources(StrEnum):
+    COMIC_VINE = "Comic Vine"
+    METRON = "Metron"
+    GCD = "Grand Comics Database"
+
+
+def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:  # NOQA: C901
+    if not note_txt:
+        return None
+    note_lower = note_txt.lower()
+
+    if "comictagger" in note_lower:
+        if "comic vine" in note_lower:
+            if match := re.search(r"(issue id (\d+))|(cvdb(\d+))", note_lower):
+                return {"source": DataSources.COMIC_VINE, "id": match[2] or match[4]}
+        elif "metron" in note_lower:
+            if match := re.search(r"issue id (\d+)", note_lower):
+                return {"source": DataSources.METRON, "id": match[1]}
+        elif "grand comics database" in note_lower:  # NOQA: SIM102
+            if match := re.search(r"issue id (\d+)", note_lower):
+                return {"source": DataSources.GCD, "id": match[1]}
+    elif "metrontagger" in note_lower:  # NOQA: SIM102
+        if match := re.search(r"issue_id:(\d+)", note_lower):
+            return {"source": DataSources.METRON, "id": match[1]}
+
+    return None
 
 
 def cast_id_as_str(id_: str | int) -> str:
