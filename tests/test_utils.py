@@ -3,11 +3,11 @@ from pathlib import Path
 import pytest
 
 from darkseid import utils
-from darkseid.utils import get_issue_id_from_note, DataSources
+from darkseid.utils import DataSources, get_issue_id_from_note
 
 
 @pytest.mark.parametrize(
-    "note_txt, expected",
+    ("note_txt", "expected"),
     [
         # Happy path tests
         (
