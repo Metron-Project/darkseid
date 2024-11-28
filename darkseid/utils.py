@@ -43,7 +43,7 @@ def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:
             for website, src_enum in source_map.items():
                 if website in note_lower:
                     return {"source": src_enum, "id": match[2] or match[4]}
-    elif "metrontagger" in note_lower:
+    elif "metrontagger" in note_lower:  # NOQA: SIM102
         if match := re.search(r"issue_id:(\d+)", note_lower):
             return {"source": DataSources.METRON, "id": match[1]}
 
