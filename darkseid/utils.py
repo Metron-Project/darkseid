@@ -15,22 +15,35 @@ class DataSources(StrEnum):
     GCD = "Grand Comics Database"
 
 
-def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:  # NOQA: C901
+def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:
+    """
+    Extracts the issue ID from a given note text based on specific keywords and formats.
+    This function identifies the source of the issue ID and returns it along with the ID itself.
+
+    Args:
+        note_txt (str): The text from which to extract the issue ID.
+
+    Returns:
+        dict[str, str] | None: A dictionary containing the source and the issue ID if found,
+        otherwise None.
+    """
+
     if not note_txt:
         return None
+
     note_lower = note_txt.lower()
+    source_map = {
+        "comic vine": DataSources.COMIC_VINE,
+        "metron": DataSources.METRON,
+        "grand comics database": DataSources.GCD,
+    }
 
     if "comictagger" in note_lower:
-        if "comic vine" in note_lower:
-            if match := re.search(r"(issue id (\d+))|(cvdb(\d+))", note_lower):
-                return {"source": DataSources.COMIC_VINE, "id": match[2] or match[4]}
-        elif "metron" in note_lower:
-            if match := re.search(r"issue id (\d+)", note_lower):
-                return {"source": DataSources.METRON, "id": match[1]}
-        elif "grand comics database" in note_lower:  # NOQA: SIM102
-            if match := re.search(r"issue id (\d+)", note_lower):
-                return {"source": DataSources.GCD, "id": match[1]}
-    elif "metrontagger" in note_lower:  # NOQA: SIM102
+        if match := re.search(r"(issue id (\d+))|(cvdb(\d+))", note_lower):
+            for website, src_enum in source_map.items():
+                if website in note_lower:
+                    return {"source": src_enum, "id": match[2] or match[4]}
+    elif "metrontagger" in note_lower:
         if match := re.search(r"issue_id:(\d+)", note_lower):
             return {"source": DataSources.METRON, "id": match[1]}
 
