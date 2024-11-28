@@ -3,6 +3,62 @@ from pathlib import Path
 import pytest
 
 from darkseid import utils
+from darkseid.utils import get_issue_id_from_note, DataSources
+
+
+@pytest.mark.parametrize(
+    "note_txt, expected",
+    [
+        # Happy path tests
+        (
+            "Tagged with ComicTagger 1.6.0b3.dev0 using info from Comic Vine on 2024-11-26 10:44:04. [Issue ID 806681]",
+            {"source": DataSources.COMIC_VINE, "id": "806681"},
+        ),
+        (
+            "Tagged with the ninjas.walk.alone fork of ComicTagger 1.3.5 using info from Comic Vine on "
+            "2023-05-09 22:26:42.  [CVDB806681]",
+            {"source": DataSources.COMIC_VINE, "id": "806681"},
+        ),
+        (
+            "Tagged with ComicTagger 1.6.0b3.dev0 using info from Grand Comics Database on "
+            "2024-11-26 10:44:04. [Issue ID 806681]",
+            {"source": DataSources.GCD, "id": "806681"},
+        ),
+        (
+            "Tagged with MetronTagger-2.3.0 using info from Metron on 2024-06-22 20:32:47. [issue_id:48013]",
+            {"source": DataSources.METRON, "id": "48013"},
+        ),
+        # Edge cases
+        ("", None),
+        ("ComicTagger issue id 0000 Comic Vine", {"source": DataSources.COMIC_VINE, "id": "0000"}),
+        ("ComicTagger issue id 1234", None),
+        ("MetronTagger issue_id:", None),
+        # Error cases
+        ("Random text with no issue id", None),
+        ("ComicTagger issue id abc Comic Vine", None),
+        ("MetronTagger issue_id:abc", None),
+    ],
+    ids=[
+        "comic_vine_issue_id",
+        "comic_vine_cvdb",
+        "gcd_issue_id",
+        "metrontagger_issue_id",
+        "zero_issue_id",
+        "empty_note",
+        "missing_source",
+        "missing_id_after_colon",
+        "no_issue_id",
+        "non_numeric_issue_id",
+        "non_numeric_metron_id",
+    ],
+)
+def test_get_issue_id_from_note(note_txt, expected):
+    # Act
+    result = get_issue_id_from_note(note_txt)
+
+    # Assert
+    assert result == expected
+
 
 test_articles = [
     pytest.param("The Champions & Inhumans", "Test string with '&'", "Champions Inhumans"),
