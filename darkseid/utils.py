@@ -5,11 +5,12 @@
 import itertools
 import re
 from collections import defaultdict
-from enum import StrEnum
+from enum import Enum
 from pathlib import Path
 
 
-class DataSources(StrEnum):
+# TODO: Change to StrEnum when Python-3.10 support dropped
+class DataSources(str, Enum):
     COMIC_VINE = "Comic Vine"
     METRON = "Metron"
     GCD = "Grand Comics Database"
