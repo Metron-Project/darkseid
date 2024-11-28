@@ -19,6 +19,7 @@ from darkseid.metadata import (
     Basic,
     Credit,
     ImageMetadata,
+    InfoSources,
     Links,
     Metadata,
     Notes,
@@ -26,7 +27,7 @@ from darkseid.metadata import (
     Role,
     Series,
 )
-from darkseid.utils import list_to_string, xlate
+from darkseid.utils import get_issue_id_from_note, list_to_string, xlate
 
 
 class ComicInfo:
@@ -368,6 +369,10 @@ class ComicInfo:
         md.alternate_count = xlate(get("AlternateCount"), True)
         md.comments = xlate(get("Summary"))
         md.notes = get_note(xlate(get("Notes")))
+        if md.notes is not None and md.notes.comic_rack is not None:
+            src = get_issue_id_from_note(md.notes.comic_rack)
+            if src is not None:
+                md.info_source = [InfoSources(src["source"], src["id"], True)]
         # Cover Year
         tmp_year = xlate(get("Year"), True)
         tmp_month = xlate(get("Month"), True)

@@ -284,8 +284,10 @@ class MetronInfo:
         create_sub_element = ET.SubElement
 
         create_sub_element(series_node, "Name").text = series.name
-        create_sub_element(series_node, "SortName").text = series.sort_name
-        create_sub_element(series_node, "Volume").text = str(series.volume)
+        if series.sort_name is not None:
+            create_sub_element(series_node, "SortName").text = series.sort_name
+        if series.volume is not None:
+            create_sub_element(series_node, "Volume").text = str(series.volume)
         create_sub_element(series_node, "Format").text = (
             series.format if series.format in MetronInfo.mix_series_format else "Single Issue"
         )

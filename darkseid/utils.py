@@ -3,8 +3,52 @@
 # Copyright 2019 Brian Pepple
 
 import itertools
+import re
 from collections import defaultdict
+from enum import Enum
 from pathlib import Path
+
+
+# TODO: Change to StrEnum when Python-3.10 support dropped
+class DataSources(str, Enum):
+    COMIC_VINE = "Comic Vine"
+    METRON = "Metron"
+    GCD = "Grand Comics Database"
+
+
+def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:
+    """
+    Extracts the issue ID from a given note text based on specific keywords and formats.
+    This function identifies the source of the issue ID and returns it along with the ID itself.
+
+    Args:
+        note_txt (str): The text from which to extract the issue ID.
+
+    Returns:
+        dict[str, str] | None: A dictionary containing the source and the issue ID if found,
+        otherwise None.
+    """
+
+    if not note_txt:
+        return None
+
+    note_lower = note_txt.lower()
+    source_map = {
+        "comic vine": DataSources.COMIC_VINE,
+        "metron": DataSources.METRON,
+        "grand comics database": DataSources.GCD,
+    }
+
+    if "comictagger" in note_lower:
+        if match := re.search(r"(issue id (\d+))|(cvdb(\d+))", note_lower):
+            for website, src_enum in source_map.items():
+                if website in note_lower:
+                    return {"source": src_enum, "id": match[2] or match[4]}
+    elif "metrontagger" in note_lower:  # NOQA: SIM102
+        if match := re.search(r"issue_id:(\d+)", note_lower):
+            return {"source": DataSources.METRON, "id": match[1]}
+
+    return None
 
 
 def cast_id_as_str(id_: str | int) -> str:
