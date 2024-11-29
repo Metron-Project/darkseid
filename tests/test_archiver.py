@@ -5,7 +5,7 @@ import pytest
 from darkseid.archivers.archiver import Archiver
 
 
-@pytest.fixture()
+@pytest.fixture
 def archiver():
     return Archiver(Path("/fake/path"))
 

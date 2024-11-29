@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-import xml.etree.ElementTree as ET  # noqa: N817
+import xml.etree.ElementTree as ET
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path

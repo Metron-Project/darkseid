@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import re
-import xml.etree.ElementTree as ET  # noqa: N817
+import xml.etree.ElementTree as ET
 from datetime import date
 from typing import Any, ClassVar, cast
 

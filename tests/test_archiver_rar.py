@@ -3,7 +3,7 @@ import pytest
 from darkseid.archivers.rar import RarArchiver
 
 
-@pytest.fixture()
+@pytest.fixture
 def rar_archiver(tmp_path):
     # Arrange
     rar_path = tmp_path / "test.rar"

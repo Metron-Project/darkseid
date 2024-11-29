@@ -3,4 +3,4 @@ repos:
       - id: ruff
       - id: ruff-format
     repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.2
+    rev: v0.8.1

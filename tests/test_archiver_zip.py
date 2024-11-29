@@ -6,7 +6,7 @@ import pytest
 from darkseid.archivers.zip import ZipArchiver
 
 
-@pytest.fixture()
+@pytest.fixture
 def temp_zip_file():
     with tempfile.NamedTemporaryFile(suffix=".cbz", delete=False) as tmp:
         yield Path(tmp.name)
@@ -14,7 +14,7 @@ def temp_zip_file():
     Path(tmp.name).unlink(missing_ok=True)
 
 
-@pytest.fixture()
+@pytest.fixture
 def zip_archiver(temp_zip_file):
     return ZipArchiver(temp_zip_file)
 
@@ -101,7 +101,7 @@ def test_get_filename_list(zip_archiver, archive_file, data):
 )
 def test_copy_from_archive(zip_archiver, other_archive_files, data):
     # Arrange
-    other_archive = ZipArchiver(Path(tempfile.NamedTemporaryFile(suffix=".cbz", delete=False).name))
+    other_archive = ZipArchiver(Path(tempfile.NamedTemporaryFile(suffix=".cbz", delete=False).name))  # NOQA: SIM115
     for file, content in zip(other_archive_files, data, strict=False):
         other_archive.write_file(file, content)
 
