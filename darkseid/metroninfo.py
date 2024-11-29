@@ -134,6 +134,13 @@ class MetronInfo:
         }
     )
 
+    unknown_synonyms = frozenset({"rating pending"})
+    everyone_synonyms = frozenset({"everyone 10+", "g", "kids to adults", "early childhood"})
+    teen_synonyms = frozenset({"pg"})
+    teen_plus_synonyms = frozenset({"ma15+"})
+    mature_synonyms = frozenset({"adults only 18+", "mature 17+", "r18+", "m"})
+    explicit_synonyms = frozenset({"x18+"})
+
     def metadata_from_string(self, string: str) -> Metadata:
         """Convert an XML string to a Metadata object.
 
@@ -176,10 +183,28 @@ class MetronInfo:
         return val is not None and val.lower() in cls.mix_info_sources
 
     @classmethod
-    def _valid_age_rating(cls, val: str | None = None) -> str | None:
+    def _valid_age_rating(cls, val: AgeRatings | None = None) -> str | None:
         if val is None:
             return None
-        return "Unknown" if val.lower() not in cls.mix_age_ratings else val
+        if val.metron_info:
+            return (
+                "Unknown" if val.metron_info.lower() not in cls.mix_age_ratings else val.metron_info
+            )
+
+        if val.comic_rack:
+            ratings_mapping = {
+                "Unknown": cls.unknown_synonyms,
+                "Everyone": cls.everyone_synonyms,
+                "Teen": cls.teen_synonyms,
+                "Teen Plus": cls.teen_plus_synonyms,
+                "Mature": cls.mature_synonyms,
+                "Explicit": cls.explicit_synonyms,
+            }
+            lower_val = val.comic_rack.lower()
+            for rating, synonyms in ratings_mapping.items():
+                if lower_val in synonyms:
+                    return rating
+        return None
 
     @staticmethod
     def _get_or_create_element(parent: ET.Element, tag: str) -> ET.Element:
@@ -433,8 +458,8 @@ class MetronInfo:
             self._assign_basic_children(root, "Reprints", "Reprint", md.reprints)
         if md.gtin:
             self._assign_gtin(root, md.gtin)
-        if md.age_rating is not None and md.age_rating.metron_info:
-            self._assign(root, "AgeRating", self._valid_age_rating(md.age_rating.metron_info))
+        if md.age_rating is not None and (md.age_rating.metron_info or md.age_rating.comic_rack):
+            self._assign(root, "AgeRating", self._valid_age_rating(md.age_rating))
         if md.web_link:
             self._assign_urls(root, md.web_link)
         self._assign_datetime(root, "LastModified", md.modified)
