@@ -134,9 +134,11 @@ class MetronInfo:
         }
     )
 
-    unknown_synonyms = frozenset({"rating pending"})
-    everyone_synonyms = frozenset({"everyone 10+", "g", "kids to adults", "early childhood"})
-    teen_synonyms = frozenset({"pg"})
+    unknown_synonyms = frozenset({"rating pending", "unknown"})
+    everyone_synonyms = frozenset(
+        {"everyone", "everyone 10+", "g", "kids to adults", "early childhood"}
+    )
+    teen_synonyms = frozenset({"pg", "teen"})
     teen_plus_synonyms = frozenset({"ma15+"})
     mature_synonyms = frozenset({"adults only 18+", "mature 17+", "r18+", "m"})
     explicit_synonyms = frozenset({"x18+"})
