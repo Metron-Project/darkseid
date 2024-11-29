@@ -34,6 +34,7 @@ from darkseid.metadata import (
 from darkseid.utils import cast_id_as_str
 
 EARLIEST_YEAR = 1900
+ONE_THOUSAND = 1000
 
 
 class MetronInfo:
@@ -330,32 +331,31 @@ class MetronInfo:
             imprint_node.text = publisher.imprint.name
 
     @classmethod
-    def _assign_series(cls, root: ET.Element, series: Series) -> None:  # NOQA: C901
+    def _assign_series(cls, root: ET.Element, series: Series) -> None:  # NOQA: PLR0912, C901
         if series is None:
             return
         series_node = MetronInfo._get_or_create_element(root, "Series")
         if series.id_ or series.language:
-            series_node.attrib = {
-                k: v
-                for k, v in (
-                    ("id", cast_id_as_str(series.id_)),
-                    ("lang", series.language),
-                )
-                if v
-            }
+            series_node.attrib = {}
+        if series.id_:
+            series_node.attrib["id"] = cast_id_as_str(series.id_)
+        if series.language:
+            series_node.attrib["lang"] = series.language
 
         create_sub_element = ET.SubElement
 
         create_sub_element(series_node, "Name").text = series.name
         if series.sort_name is not None:
             create_sub_element(series_node, "SortName").text = series.sort_name
-        if series.volume is not None:
+        if series.volume is not None and series.volume < ONE_THOUSAND:
             create_sub_element(series_node, "Volume").text = str(series.volume)
         series_fmt = cls._valid_series_format(series.format)
         if series_fmt is not None:
             create_sub_element(series_node, "Format").text = series_fmt
         if series.start_year:
             create_sub_element(series_node, "StartYear").text = str(series.start_year)
+        elif series.volume is not None and series.volume >= ONE_THOUSAND:
+            create_sub_element(series_node, "StartYear").text = str(series.volume)
         if series.issue_count:
             create_sub_element(series_node, "IssueCount").text = str(series.issue_count)
         if series.volume_count:
@@ -363,14 +363,11 @@ class MetronInfo:
         if series.alternative_names:
             alt_names_node = create_sub_element(series_node, "AlternativeNames")
             for alt_name in series.alternative_names:
-                alt_attrib = {
-                    k: v
-                    for k, v in (
-                        ("id", cast_id_as_str(alt_name.id_)),
-                        ("lang", alt_name.language),
-                    )
-                    if v
-                }
+                alt_attrib = {}
+                if alt_name.id_:
+                    alt_attrib["id"] = cast_id_as_str(alt_name.id_)
+                if alt_name.language:
+                    alt_attrib["lang"] = alt_name.language
                 create_sub_element(alt_names_node, "Name", attrib=alt_attrib).text = alt_name.name
 
     @staticmethod
