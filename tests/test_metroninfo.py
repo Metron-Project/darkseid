@@ -1,4 +1,4 @@
-import xml.etree.ElementTree as ET  # noqa: N817
+import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -24,7 +24,7 @@ from darkseid.metadata import (
 from darkseid.metroninfo import MetronInfo
 
 
-@pytest.fixture()
+@pytest.fixture
 def metron_info():
     return MetronInfo()
 

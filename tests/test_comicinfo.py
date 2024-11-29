@@ -23,7 +23,7 @@ from darkseid.metadata import (
 CI_XSD = Path("tests/test_files/ComicInfo.xsd")
 
 
-@pytest.fixture()
+@pytest.fixture
 def test_credits() -> list[Credit]:
     return [
         Credit("Peter David", [Role("Writer")]),
@@ -37,7 +37,7 @@ def test_credits() -> list[Credit]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def test_meta_data(test_credits: list[Credit]) -> Metadata:
     md = Metadata()
     md.publisher = Publisher("DC Comics", 1, Basic("DC Black Label", 2))
