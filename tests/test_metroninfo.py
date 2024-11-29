@@ -68,6 +68,49 @@ def test_valid_info_source(metron_info, val, expected_result):
 
 
 @pytest.mark.parametrize(
+    ("val", "expected"),
+    [
+        ("Annual", "Annual"),  # happy path
+        ("Digital Chapter", "Digital Chapter"),  # happy path
+        ("Graphic Novel", "Graphic Novel"),  # happy path
+        ("Hardcover", "Hardcover"),  # happy path
+        ("Limited Series", "Limited Series"),  # happy path
+        ("Omnibus", "Omnibus"),  # happy path
+        ("One-Shot", "One-Shot"),  # happy path
+        ("Single Issue", "Single Issue"),  # happy path
+        ("Trade Paperback", "Trade Paperback"),  # happy path
+        ("", None),  # edge case: empty string
+        (None, None),  # edge case: None value
+        ("Unknown Format", None),  # edge case: unknown format
+        ("annual", "Annual"),  # edge case: case insensitivity
+        ("ANNUAL", "Annual"),  # edge case: uppercase
+    ],
+    ids=[
+        "valid_annual",
+        "valid_digital_chapter",
+        "valid_graphic_novel",
+        "valid_hardcover",
+        "valid_limited_series",
+        "valid_omnibus",
+        "valid_one_shot",
+        "valid_single_issue",
+        "valid_trade_paperback",
+        "empty_string",
+        "none_value",
+        "unknown_format",
+        "case_insensitivity_lower",
+        "case_insensitivity_upper",
+    ],
+)
+def test_valid_series_format(metron_info, val, expected):
+    # Act
+    result = metron_info._valid_series_format(val)  # NOQA: SLF001
+
+    # Assert
+    assert result == expected
+
+
+@pytest.mark.parametrize(
     ("val", "expected_result"),
     [
         # Happy path
