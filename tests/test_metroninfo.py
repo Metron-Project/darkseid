@@ -7,6 +7,7 @@ import pytest
 
 from darkseid.metadata import (
     GTIN,
+    AgeRatings,
     AlternativeNames,
     Arc,
     Basic,
@@ -70,13 +71,23 @@ def test_valid_info_source(metron_info, val, expected_result):
     ("val", "expected_result"),
     [
         # Happy path
-        ("Teen", "Teen"),
+        (AgeRatings(metron_info="Teen"), "Teen"),
+        (AgeRatings(comic_rack="R18+"), "Mature"),
+        (AgeRatings(comic_rack="G"), "Everyone"),
+        (AgeRatings(comic_rack="M"), "Mature"),
         # Edge case: None value
         (None, None),
         # Error case: invalid rating
-        ("InvalidRating", "Unknown"),
+        (AgeRatings(metron_info="InvalidRating"), "Unknown"),
     ],
-    ids=["valid_rating", "none_value", "invalid_rating"],
+    ids=[
+        "valid_mi_rating",
+        "valid_ci_rating",
+        "valid_ci_g_rating",
+        "valid_ci_m_rating",
+        "none_value",
+        "invalid_rating",
+    ],
 )
 def test_valid_age_rating(metron_info, val, expected_result):
     # Act
