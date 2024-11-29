@@ -134,6 +134,7 @@ class MetronInfo:
         }
     )
 
+    # Ratings Mapping
     unknown_synonyms = frozenset({"rating pending", "unknown"})
     everyone_synonyms = frozenset(
         {"everyone", "everyone 10+", "g", "kids to adults", "early childhood"}
@@ -142,6 +143,19 @@ class MetronInfo:
     teen_plus_synonyms = frozenset({"ma15+"})
     mature_synonyms = frozenset({"adults only 18+", "mature 17+", "r18+", "m"})
     explicit_synonyms = frozenset({"x18+"})
+
+    # Series Format Mapping
+    annual_synonyms = frozenset({"annual"})
+    digital_chapter_synonyms = frozenset({"digital chapter", "digital"})
+    graphic_novel_synonyms = frozenset({"graphic novel"})
+    hardcover_synonyms = frozenset({"hardcover", "hard-cover"})
+    limited_series_synonyms = frozenset({"limited series"})
+    omnibus_synonyms = frozenset({"omnibus"})
+    one_shot_synonyms = frozenset({"1 shot", "1-shot", "fcbd", "one shot", "one-shot", "preview"})
+    single_issue_synonyms = frozenset(
+        {"single issue", "magazine", "series", "giant", "giant size", "giant-size"}
+    )
+    trade_paperback_synonyms = frozenset({"trade paperback", "tpb", "trade paper back"})
 
     def metadata_from_string(self, string: str) -> Metadata:
         """Convert an XML string to a Metadata object.
@@ -207,6 +221,28 @@ class MetronInfo:
                 if lower_val in synonyms:
                     return rating
         return None
+
+    @classmethod
+    def _valid_series_format(cls, val: str | None) -> str | None:
+        if not val or val is None:
+            return None
+
+        format_mapping = {
+            "Annual": cls.annual_synonyms,
+            "Digital Chapter": cls.digital_chapter_synonyms,
+            "Graphic Novel": cls.graphic_novel_synonyms,
+            "Hardcover": cls.hardcover_synonyms,
+            "Limited Series": cls.limited_series_synonyms,
+            "Omnibus": cls.omnibus_synonyms,
+            "One-Shot": cls.one_shot_synonyms,
+            "Single Issue": cls.single_issue_synonyms,
+            "Trade Paperback": cls.trade_paperback_synonyms,
+        }
+        lower_val = val.lower()
+        return next(
+            (fmt for fmt, synonyms in format_mapping.items() if lower_val in synonyms),
+            None,
+        )
 
     @staticmethod
     def _get_or_create_element(parent: ET.Element, tag: str) -> ET.Element:
@@ -293,8 +329,8 @@ class MetronInfo:
             )
             imprint_node.text = publisher.imprint.name
 
-    @staticmethod
-    def _assign_series(root: ET.Element, series: Series) -> None:
+    @classmethod
+    def _assign_series(cls, root: ET.Element, series: Series) -> None:  # NOQA: C901
         if series is None:
             return
         series_node = MetronInfo._get_or_create_element(root, "Series")
@@ -315,9 +351,9 @@ class MetronInfo:
             create_sub_element(series_node, "SortName").text = series.sort_name
         if series.volume is not None:
             create_sub_element(series_node, "Volume").text = str(series.volume)
-        create_sub_element(series_node, "Format").text = (
-            series.format if series.format in MetronInfo.mix_series_format else "Single Issue"
-        )
+        series_fmt = cls._valid_series_format(series.format)
+        if series_fmt is not None:
+            create_sub_element(series_node, "Format").text = series_fmt
         if series.start_year:
             create_sub_element(series_node, "StartYear").text = str(series.start_year)
         if series.issue_count:
