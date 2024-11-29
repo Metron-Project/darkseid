@@ -33,20 +33,20 @@ def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:
         return None
 
     note_lower = note_txt.lower()
-    source_map = {
-        "comic vine": DataSources.COMIC_VINE,
-        "metron": DataSources.METRON,
-        "grand comics database": DataSources.GCD,
-    }
+    if "metrontagger" in note_lower:
+        if match := re.search(r"issue_id:(\d+)", note_lower):
+            return {"source": DataSources.METRON.value, "id": match[1]}
+    elif "comictagger" in note_lower:
+        source_map = {
+            "comic vine": DataSources.COMIC_VINE,
+            "metron": DataSources.METRON,
+            "grand comics database": DataSources.GCD,
+        }
 
-    if "comictagger" in note_lower:
         if match := re.search(r"(issue id (\d+))|(cvdb(\d+))", note_lower):
             for website, src_enum in source_map.items():
                 if website in note_lower:
-                    return {"source": src_enum, "id": match[2] or match[4]}
-    elif "metrontagger" in note_lower:  # NOQA: SIM102
-        if match := re.search(r"issue_id:(\d+)", note_lower):
-            return {"source": DataSources.METRON, "id": match[1]}
+                    return {"source": src_enum.value, "id": match[2] or match[4]}
 
     return None
 
