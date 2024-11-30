@@ -23,6 +23,48 @@ from darkseid.metadata import (
 CI_XSD = Path("tests/test_files/ComicInfo.xsd")
 
 
+@pytest.mark.parametrize(
+    ("tmp_year", "tmp_month", "tmp_day", "expected"),
+    [
+        # Happy path tests
+        (2023, 5, 15, date(2023, 5, 15)),  # Valid full date
+        (2023, 5, None, date(2023, 5, 1)),  # Valid year and month, no day
+        # Edge cases
+        (2023, 2, 28, date(2023, 2, 28)),  # End of February non-leap year
+        (2024, 2, 29, date(2024, 2, 29)),  # Leap year
+        (2023, 1, 1, date(2023, 1, 1)),  # Start of the year
+        (2023, 12, 31, date(2023, 12, 31)),  # End of the year
+        # Error cases
+        (2023, 2, 30, None),  # Invalid day in February
+        (2023, 13, 1, None),  # Invalid month
+        (2023, 0, 1, None),  # Invalid month
+        (2023, 1, 0, None),  # Invalid day
+        (None, 5, 15, None),  # Missing year
+        (2023, None, 15, None),  # Missing month
+    ],
+    ids=[
+        "valid_full_date",
+        "valid_year_month_no_day",
+        "end_of_february_non_leap",
+        "leap_year",
+        "start_of_year",
+        "end_of_year",
+        "invalid_day_february",
+        "invalid_month_13",
+        "invalid_month_0",
+        "invalid_day_0",
+        "missing_year",
+        "missing_month",
+    ],
+)
+def test_set_cover_date(tmp_year, tmp_month, tmp_day, expected):
+    # Act
+    result = ComicInfo()._set_cover_date(tmp_year, tmp_month, tmp_day)  # NOQA: SLF001
+
+    # Assert
+    assert result == expected
+
+
 @pytest.fixture
 def test_credits() -> list[Credit]:
     return [

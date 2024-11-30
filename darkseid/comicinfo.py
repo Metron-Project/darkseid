@@ -122,6 +122,23 @@ class ComicInfo:
         }
     )
 
+    @staticmethod
+    def _set_cover_date(
+        tmp_year: int | None, tmp_month: int | None, tmp_day: int | None
+    ) -> date | None:
+        if tmp_year is None or tmp_month is None:
+            return None
+
+        try:
+            cov_date = (
+                date(tmp_year, tmp_month, 1)
+                if tmp_day is None
+                else date(tmp_year, tmp_month, tmp_day)
+            )
+        except ValueError:
+            return None
+        return cov_date
+
     def metadata_from_string(self: ComicInfo, string: str) -> Metadata:
         """
         Parses an XML string representation into a Metadata object.
@@ -377,11 +394,9 @@ class ComicInfo:
         tmp_year = xlate(get("Year"), True)
         tmp_month = xlate(get("Month"), True)
         tmp_day = xlate(get("Day"), True)
-        if tmp_year is not None and tmp_month is not None:
-            if tmp_day is not None:
-                md.cover_date = date(tmp_year, tmp_month, tmp_day)
-            else:
-                md.cover_date = date(tmp_year, tmp_month, 1)
+        cover_date = self._set_cover_date(tmp_year, tmp_month, tmp_day)
+        if cover_date is not None:
+            md.cover_date = cover_date
         # Publisher info
         pub = xlate(get("Publisher"))
         imprint = xlate(get("Imprint"))
