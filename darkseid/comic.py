@@ -590,6 +590,8 @@ class Comic:
                             page["ImageWidth"] = str(width)
                         except OSError:
                             page["ImageSize"] = str(len(data))
+                        except Image.DecompressionBombError:  # Let's skip these images
+                            continue
 
     def export_as_zip(self: Comic, zip_filename: Path) -> bool:
         """
