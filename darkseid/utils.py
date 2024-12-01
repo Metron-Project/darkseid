@@ -11,9 +11,26 @@ from pathlib import Path
 
 # TODO: Change to StrEnum when Python-3.10 support dropped
 class DataSources(str, Enum):
+    """Enumeration for various comic data sources.
+
+    This class defines a set of constants representing different sources of comic data.
+    Each constant is a string that corresponds to a specific data source name.
+
+    Attributes:
+        COMIC_VINE (str): Represents the Comic Vine data source.
+        METRON (str): Represents the Metron data source.
+        GCD (str): Represents the Grand Comics Database data source.
+        KITSU (str): Represents the Kitsu data source.
+        MANGADEX (str): Represents the MangaDex data source.
+        MANGAUPDATES (str): Represents the MangaUpdates data source.
+    """
+
     COMIC_VINE = "Comic Vine"
     METRON = "Metron"
     GCD = "Grand Comics Database"
+    KITSU = "Kitsu"
+    MANGADEX = "MangaDex"
+    MANGAUPDATES = "MangaUpdates"
 
 
 def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:
@@ -41,6 +58,9 @@ def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:
             "comic vine": DataSources.COMIC_VINE,
             "metron": DataSources.METRON,
             "grand comics database": DataSources.GCD,
+            "mangadex": DataSources.MANGADEX,
+            "mangaupdates": DataSources.MANGAUPDATES,
+            "kitsu": DataSources.KITSU,
         }
 
         if match := re.search(r"(issue id (\d+))|(cvdb(\d+))", note_lower):
