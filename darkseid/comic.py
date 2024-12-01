@@ -425,7 +425,7 @@ class Comic:
     def _write_mi(self: Comic, metadata: Metadata | None) -> bool:
         if metadata is None or not self.is_writable():
             return False
-        self.apply_archive_info_to_metadata(metadata, calc_page_sizes=True)
+        self.apply_archive_info_to_metadata(metadata, calc_page_sizes=False)
         if raw_metadata := self.read_raw_mi_metadata():
             md_string = MetronInfo().string_from_metadata(metadata, raw_metadata.encode("utf-8"))
         else:
@@ -590,6 +590,8 @@ class Comic:
                             page["ImageWidth"] = str(width)
                         except OSError:
                             page["ImageSize"] = str(len(data))
+                        except Image.DecompressionBombError:  # Let's skip these images
+                            continue
 
     def export_as_zip(self: Comic, zip_filename: Path) -> bool:
         """
