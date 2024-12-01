@@ -25,6 +25,9 @@ class DataSources(str, Enum):
     COMIC_VINE = "Comic Vine"
     METRON = "Metron"
     GCD = "Grand Comics Database"
+    KITSU = "Kitsu"
+    MANGADEX = "MangaDex"
+    MANGAUPDATES = "MangaUpdates"
 
 
 def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:
@@ -52,6 +55,9 @@ def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:
             "comic vine": DataSources.COMIC_VINE,
             "metron": DataSources.METRON,
             "grand comics database": DataSources.GCD,
+            "mangadex": DataSources.MANGADEX,
+            "mangaupdates": DataSources.MANGAUPDATES,
+            "kitsu": DataSources.KITSU,
         }
 
         if match := re.search(r"(issue id (\d+))|(cvdb(\d+))", note_lower):
