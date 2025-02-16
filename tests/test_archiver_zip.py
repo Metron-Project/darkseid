@@ -1,5 +1,6 @@
 import tempfile
 from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
 
@@ -113,3 +114,16 @@ def test_copy_from_archive(zip_archiver, other_archive_files, data):
     for file in other_archive_files:
         assert file in zip_archiver.get_filename_list()
         assert zip_archiver.read_file(file).decode() == content
+
+
+def test_read_file_key_error(tmp_path):
+    # Arrange
+    zip_path = tmp_path / "test.zip"
+    with ZipFile(zip_path, "w") as zf:
+        zf.writestr("existing_file.txt", b"test content")
+
+    archiver = ZipArchiver(zip_path)
+
+    # Act & Assert
+    with pytest.raises(KeyError):
+        archiver.read_file("non_existing_file.txt")
