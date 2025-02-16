@@ -59,6 +59,13 @@ class ZipArchiver(Archiver):
                 archive_file,
             )
             raise OSError from e
+        except KeyError:
+            logger.exception(
+                "File does not exist in zip archive %s :: %s",
+                self.path,
+                archive_file,
+            )
+            raise
 
     def remove_file(self: ZipArchiver, archive_file: str) -> bool:
         """
@@ -130,6 +137,13 @@ class ZipArchiver(Archiver):
         except (BadZipfile, OSError):
             logger.exception(
                 "Error writing zip archive %s :: %s",
+                self.path,
+                fn,
+            )
+            return False
+        except KeyError:
+            logger.exception(
+                "File does not exist in zip archive %s :: %s",
                 self.path,
                 fn,
             )
