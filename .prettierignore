@@ -13,4 +13,5 @@ __pycache__
 /test-results
 /tests/test_files
 .tox
+uv.lock
 .venv*

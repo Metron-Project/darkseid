@@ -440,7 +440,7 @@ class ComicInfo:
                 p: dict[str, Any] = page.attrib
                 if "Image" in p:
                     p["Image"] = int(p["Image"])
-                md.pages.append(cast(ImageMetadata, p))
+                md.pages.append(cast("ImageMetadata", p))
 
         md.is_empty = False
 
