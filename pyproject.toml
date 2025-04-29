@@ -39,19 +39,21 @@ Homepage = "https://github.com/Metron-Project/darkseid"
 
 [dependency-groups]
 dev = [
-  "pre-commit>=3.7.0,<4",
+  "pre-commit>=4",
   "toml-cli>=0.7.0",
-  "tox>=4.14.2,<5",
-  "tox-uv>=1.25.0",
-]
-test = ["coverage[toml]~=7.0", "pytest-cov>=5.0.0,<6", "pytest-mock>=3.14.0,<4"]
-lint = [
   "codespell>=2.1.0,<3",
   "pyright>=1.1.232,<2",
   "radon[toml]>=6.0.1,<7",
-  "ruff>=0.8.1,<0.9",
+  "ruff>=0.11.0",
   "types-python-dateutil>=2.8.19,<3",
   "vulture~=2.3",
+]
+test = [
+  "coverage[toml]~=7.0",
+  "pytest-cov>=5.0.0,<6",
+  "pytest-mock>=3.14.0,<4",
+  "tox>=4.14.2,<5",
+  "tox-uv>=1.25.0",
   "lxml>=5.1.0,<6",
 ]
 docs = [
@@ -62,7 +64,7 @@ docs = [
 ]
 
 [tool.uv]
-default-groups = ["dev", "test", "lint", "docs"]
+default-groups = ["dev", "test", "docs"]
 
 [tool.hatch.build.targets.sdist]
 include = ["darkseid", "tests"]
@@ -234,3 +236,11 @@ exclude = [
 ]
 min_confidence = 61
 sort_by_size = true
+
+[tool.tox]
+env_list = ["3.10", "3.11", "3.12", "3.13"]
+min_version = "4.22"
+
+[tool.tox.env_run_base]
+commands = [["pytest"]]
+dependency_groups = ["test"]
