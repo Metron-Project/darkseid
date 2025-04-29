@@ -271,7 +271,7 @@ requires-dist = [
     { name = "pillow", specifier = ">=10.0.1,<11" },
     { name = "pycountry", specifier = ">=24.6.1,<25" },
     { name = "rarfile", specifier = "~=4.0" },
-    { name = "xmlschema", specifier = ">=3.4.2,<4" },
+    { name = "xmlschema", specifier = ">=4" },
 ]
 
 [package.metadata.requires-dev]
@@ -320,11 +320,11 @@ wheels = [
 
 [[package]]
 name = "elementpath"
-version = "4.8.0"
+version = "5.0.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ac/41/afdd82534c80e9675d1c51dc21d0889b72d023bfe395a2f5a44d751d3a73/elementpath-4.8.0.tar.gz", hash = "sha256:5822a2560d99e2633d95f78694c7ff9646adaa187db520da200a8e9479dc46ae", size = 358528, upload_time = "2025-03-03T20:51:08.397Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/b2/b1a3c5b34824d317d712271be1771e60a3227dbf38c80683f65f7c5592bf/elementpath-5.0.0.tar.gz", hash = "sha256:932ff1087120eaddf38bc82c6345d547cd29b32c293718cbdd36485c704df861", size = 361913, upload_time = "2025-04-27T21:15:43.551Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/45/95/615af832e7f507fe5ce4562b4be1bd2fec080c4ff6da88dcd0c2dbfca582/elementpath-4.8.0-py3-none-any.whl", hash = "sha256:5393191f84969bcf8033b05ec4593ef940e58622ea13cefe60ecefbbf09d58d9", size = 243271, upload_time = "2025-03-03T20:51:03.027Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/fa/7558852b959b33b484b79e4e30b8aa56579be56106143ed748dca40c9f34/elementpath-5.0.0-py3-none-any.whl", hash = "sha256:1e4735400e5cccba26f290144519dd64b3ed587e2daf185ae98129e9bf04c98a", size = 244966, upload_time = "2025-04-27T21:15:40.451Z" },
 ]
 
 [[package]]
@@ -1443,12 +1443,12 @@ wheels = [
 
 [[package]]
 name = "xmlschema"
-version = "3.4.5"
+version = "4.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "elementpath" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/dd/de/a3b013b89addf4e22ea764acccc7c1a4f7ad407ea90d2acef8326b7921ef/xmlschema-3.4.5.tar.gz", hash = "sha256:243244743f151ec859ec0bbf1368fa3f70e5f29e977b77f72e1c9b8f8ae670f6", size = 592281, upload_time = "2025-03-22T07:56:18.873Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cf/11/ac67a468665b72c77ae01e3cd3f3f478ffcc4c3bc4aa61675179e99a80be/xmlschema-4.0.1.tar.gz", hash = "sha256:9a8598daa2e2859c499f6f08242f7547804ae0c2d037971c44bcb9aae154ff22", size = 625283, upload_time = "2025-04-13T20:41:25.622Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f8/e8/e8e9ff6d727a68a62909037b0bb8a5456885e6c5e99e0b85dbbcc1e5e4dc/xmlschema-3.4.5-py3-none-any.whl", hash = "sha256:c91a2fca387dc4e8a2f2cb4a411ed23bef9da539968e5d858a3fe7f76a65464e", size = 418192, upload_time = "2025-03-22T07:56:15.272Z" },
+    { url = "https://files.pythonhosted.org/packages/6c/28/ce7a7b48f8020291c53e425ad1ad581ea8152b0df4a5e6d289c24ef82bbe/xmlschema-4.0.1-py3-none-any.whl", hash = "sha256:cf94d3380c5005fc027532ec4760b4bec414d6b4ead425285fa5bf8eb6c515c6", size = 452804, upload_time = "2025-04-13T20:41:21.521Z" },
 ]

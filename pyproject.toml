@@ -30,7 +30,7 @@ dependencies = [
   "rarfile~=4.0",
   "pycountry>=24.6.1,<25",
   "defusedxml>=0.7.1,<0.8",
-  "xmlschema>=3.4.2,<4",
+  "xmlschema>=4",
 ]
 
 [project.urls]
