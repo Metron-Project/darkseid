@@ -10,7 +10,7 @@ on:
 
 jobs:
   tox:
-    name: "Tox Tests"
+    name: "Tests"
     strategy:
       fail-fast: false
       matrix:
@@ -26,6 +26,10 @@ jobs:
       #----------------------------------------------
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+      - name: Setup Python
+        run: uv python install ${{ matrix.python-version }}
       - name: Install unrar
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
@@ -34,17 +38,8 @@ jobs:
             echo "$RUNNER_OS not supported"
           fi
         shell: bash
-      - name: Setup python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      #----------------------------------------------
-      #  -----  install & configure poetry  -----
-      #----------------------------------------------
-      - name: Install uv
-        uses: hynek/setup-cached-uv@v2
-      #----------------------------------------------
-      #    Run tox testing
-      #----------------------------------------------
-      - name: Test with tox
-        run: uvx --with tox-uv tox -e py
+      - name: Install project
+        run: uv sync --group test
+      - name: Run tests
+        run: uv run pytest
+
