@@ -1,14 +1,13 @@
-[tool.poetry]
+[project]
 name = "darkseid"
 version = "5.1.2"
 description = "A library to interact with comic archives"
-authors = ["Brian Pepple <bdpepple@gmail.com>"]
-license = "GPL-3.0-or-later"
-maintainers = ["Brian Pepple <bdpepple@gmail.com>"]
+authors = [{ name = "Brian Pepple", email = "bpepple@metron.cloud" }]
+requires-python = "~=3.10"
 readme = "README.md"
-packages = [{ include = "darkseid" }]
-exclude = ["*/**/*~"]
-include = [{ path = "tests", format = "sdist" }]
+license = "GPL-3.0-or-later"
+maintainers = [{ name = "Brian Pepple", email = "bpepple@metron.cloud" }]
+keywords = ["comics", "comic", "metadata", "tagging", "tagger"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
@@ -25,51 +24,52 @@ classifiers = [
   "Operating System :: POSIX :: Linux",
   "Operating System :: Microsoft :: Windows",
 ]
-keywords = ["comics", "comic", "metadata", "tagging", "tagger"]
+dependencies = [
+  "Pillow>=10.0.1,<11",
+  "natsort>=8.0.0,<9",
+  "rarfile~=4.0",
+  "pycountry>=24.6.1,<25",
+  "defusedxml>=0.7.1,<0.8",
+  "xmlschema>=3.4.2,<4",
+]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-Pillow = "^10.0.1"
-natsort = "^8.0.0"
-rarfile = "^4.0"
-pycountry = "^24.6.1"
-defusedxml = "^0.7.1"
-xmlschema = "^3.4.2"
+[project.urls]
+Homepage = "https://github.com/Metron-Project/darkseid"
+"Bug Tracker" = "https://github.com/Metron-Project/darkseid/issues"
 
-[tool.poetry.group.dev.dependencies]
-pre-commit = "^3.7.0"
-tox = "^4.14.2"
+[dependency-groups]
+dev = ["pre-commit>=3.7.0,<4", "tox>=4.14.2,<5", "tox-uv>=1.25.0"]
+test = ["coverage[toml]~=7.0", "pytest-cov>=5.0.0,<6", "pytest-mock>=3.14.0,<4"]
+lint = [
+  "codespell>=2.1.0,<3",
+  "pyright>=1.1.232,<2",
+  "radon[toml]>=6.0.1,<7",
+  "ruff>=0.8.1,<0.9",
+  "types-python-dateutil>=2.8.19,<3",
+  "vulture~=2.3",
+  "lxml>=5.1.0,<6",
+]
+docs = [
+  "mkdocs>=1.6.0,<2",
+  "mkdocs-include-markdown-plugin>=6.2.0,<7",
+  "mkdocs-material>=9.5.27,<10",
+  "mkdocstrings[python]>=0.25.1,<0.26",
+]
 
-[tool.poetry.group.test.dependencies]
-coverage = { extras = ["toml"], version = "^7.0" }
-pytest-cov = "^5.0.0"
-pytest-mock = "^3.14.0"
+[tool.uv]
+default-groups = ["dev", "test", "lint", "docs"]
 
-[tool.poetry.group.lint.dependencies]
-codespell = "^2.1.0"
-pyright = "^1.1.232"
-radon = { version = "^6.0.1", extras = ["toml"] }
-ruff = "^0.8.1"
-types-python-dateutil = "^2.8.19"
-vulture = "^2.3"
-lxml = "^5.1.0"
+[tool.hatch.build.targets.sdist]
+include = ["darkseid", "tests"]
+exclude = ["*/**/*~"]
 
-[tool.poetry.group.docs]
-optional = true
-
-[tool.poetry.group.docs.dependencies]
-mkdocs = "^1.6.0"
-mkdocs-include-markdown-plugin = "^6.2.0"
-mkdocs-material = "^9.5.27"
-mkdocstrings = { extras = ["python"], version = "^0.25.1" }
+[tool.hatch.build.targets.wheel]
+include = ["darkseid"]
+exclude = ["*/**/*~", "docs"]
 
 [build-system]
-requires = ["poetry-core>=1.1.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.urls]
-"Homepage" = "https://github.com/Metron-Project/darkseid"
-"Bug Tracker" = "https://github.com/Metron-Project/darkseid/issues"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.codespell]
 skip = './cache,./dist,./test-results,.git,.mypy_cache,.pytest_cache,.venv*,node_modules,package-lock.json,poetry.lock,run.spec'
@@ -219,12 +219,13 @@ exclude = [
   ".git/",
   ".mypy_cache/",
   ".pytest_cache/",
-  "*.venv*",
+  ".tox/",
+  ".venv/",
   "*/__pycache__",
   "dist/",
   "node_modules/",
   "test_results/",
-  "typings/",
+  "tests/",
 ]
 min_confidence = 61
 sort_by_size = true
