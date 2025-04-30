@@ -169,6 +169,11 @@ class ZipArchiver(Archiver):
             logger.exception("Error listing files in zip archive: %s", self.path)
             return []
 
+    def _remove_partial_file(self) -> None:
+        # Remove any partial files created
+        if self.path.exists():
+            self.path.unlink()
+
     def copy_from_archive(self: ZipArchiver, other_archive: Archiver) -> bool:
         """
         Copies files from another archive to the ZIP archive.
@@ -186,8 +191,9 @@ class ZipArchiver(Archiver):
                     try:
                         data = other_archive.read_file(filename)
                     except rarfile.BadRarFile:
-                        # Skip any bad images in the file.
-                        continue
+                        # Let's bail on any bad images.
+                        self._remove_partial_file()
+                        return False
                     if data is not None:
                         compress = (
                             ZIP_DEFLATED
@@ -197,8 +203,7 @@ class ZipArchiver(Archiver):
                         zout.writestr(filename, data, compress_type=compress, compresslevel=9)
         except (BadZipfile, OSError) as e:
             # Remove any partial files created
-            if self.path.exists():
-                self.path.unlink()
+            self._remove_partial_file()
             logger.warning("Error while copying to %s: %s", self.path, e)
             return False
         else:
