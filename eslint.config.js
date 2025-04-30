@@ -181,7 +181,6 @@ export default [
       "dist",
       "node_modules",
       "package-lock.json",
-      "poetry.lock",
       "test-results",
       "typings",
     ],
