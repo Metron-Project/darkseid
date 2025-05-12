@@ -40,7 +40,6 @@ Homepage = "https://github.com/Metron-Project/darkseid"
 [dependency-groups]
 dev = [
   "pre-commit>=4",
-  "toml-cli>=0.7.0",
   "codespell>=2.1.0,<3",
   "pyright>=1.1.232,<2",
   "radon[toml]>=6.0.1,<7",
