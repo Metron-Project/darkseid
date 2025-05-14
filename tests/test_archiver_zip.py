@@ -8,6 +8,7 @@ from rarfile import BadRarFile
 
 from darkseid.archivers.archiver import Archiver
 from darkseid.archivers.zip import ZipArchiver
+from darkseid.comic import Comic, MetadataFormat
 
 
 @pytest.fixture
@@ -21,6 +22,12 @@ def temp_zip_file():
 @pytest.fixture
 def zip_archiver(temp_zip_file):
     return ZipArchiver(temp_zip_file)
+
+
+def test_check_has_comicinfo():
+    comic = Comic(Path.cwd() / "tests" / "test_files" / "Test #1.cbz")
+    assert isinstance(comic, Comic)
+    assert comic.has_metadata(MetadataFormat.COMIC_RACK) is True
 
 
 @pytest.mark.parametrize(
