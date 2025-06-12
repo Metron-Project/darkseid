@@ -59,7 +59,7 @@ docs = [
   "mkdocs>=1.6.0,<2",
   "mkdocs-include-markdown-plugin>=6.2.0,<7",
   "mkdocs-material>=9.5.27,<10",
-  "mkdocstrings[python]>=0.25.1,<0.26",
+  "mkdocstrings[python]>=0.29.1,<0.30",
 ]
 
 [tool.uv]
