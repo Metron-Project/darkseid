@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -126,7 +126,7 @@ class Archiver(ABC):
             True if successful, False otherwise.
         """
 
-    def __enter__(self) -> Self:
+    def __enter__(self):
         """Context manager entry."""
         return self
 
