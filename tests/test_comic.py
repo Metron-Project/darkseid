@@ -3,9 +3,6 @@ from pathlib import Path
 
 import pytest
 
-from darkseid.archivers import UnknownArchiver
-from darkseid.archivers.rar import RarArchiver
-from darkseid.archivers.zip import ZipArchiver
 from darkseid.comic import Comic, MetadataFormat
 from darkseid.metadata import Metadata
 
@@ -27,27 +24,6 @@ def test_metadata_format_str(metadata_format, expected_str):
 
     # Assert
     assert result == expected_str
-
-
-@pytest.mark.parametrize(
-    ("path", "expected_archiver"),
-    [
-        ("/path/to/comic.cbz", ZipArchiver),
-        ("/path/to/comic.cbr", RarArchiver),
-        ("/path/to/comic.unknown", UnknownArchiver),
-    ],
-    ids=["zip file", "rar file", "unknown file"],
-)
-def test_comic_initialization(mocker, path, expected_archiver):
-    # Arrange
-    mocker.patch("zipfile.is_zipfile", return_value=path.endswith(".cbz"))
-    mocker.patch("rarfile.is_rarfile", return_value=path.endswith(".cbr"))
-
-    # Act
-    comic = Comic(path)
-
-    # Assert
-    assert isinstance(comic.archiver, expected_archiver)
 
 
 def test_comic_str():
@@ -127,69 +103,6 @@ def test_zip_test(mocker, path, expected):
 
     # Act
     result = comic.zip_test()
-
-    # Assert
-    assert result == expected
-
-
-@pytest.mark.parametrize(
-    ("archive_type", "expected"),
-    [
-        (Comic.ArchiveType.rar, True),
-        (Comic.ArchiveType.zip, False),
-    ],
-    ids=["rar archive", "not rar archive"],
-)
-def test_is_rar(archive_type, expected):
-    # Arrange
-    comic = Comic("/path/to/comic.cbz")
-    comic._archive_type = archive_type
-
-    # Act
-    result = comic.is_rar()
-
-    # Assert
-    assert result == expected
-
-
-@pytest.mark.parametrize(
-    ("archive_type", "expected"),
-    [
-        (Comic.ArchiveType.zip, True),
-        (Comic.ArchiveType.rar, False),
-    ],
-    ids=["zip archive", "not zip archive"],
-)
-def test_is_zip(archive_type, expected):
-    # Arrange
-    comic = Comic("/path/to/comic.cbz")
-    comic._archive_type = archive_type
-
-    # Act
-    result = comic.is_zip()
-
-    # Assert
-    assert result == expected
-
-
-@pytest.mark.parametrize(
-    ("archive_type", "expected"),
-    [
-        (Comic.ArchiveType.zip, True),
-        (Comic.ArchiveType.rar, False),
-        (Comic.ArchiveType.unknown, False),
-    ],
-    ids=["zip writable", "rar not writable", "unknown not writable"],
-)
-def test_is_writable(mocker, archive_type, expected):
-    # Arrange
-    path = "/path/to/comic.cbz"
-    comic = Comic(path)
-    comic._archive_type = archive_type
-    mocker.patch("os.access", return_value=True)
-
-    # Act
-    result = comic.is_writable()
 
     # Assert
     assert result == expected

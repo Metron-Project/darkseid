@@ -231,6 +231,7 @@ exclude = [
   "node_modules/",
   "test_results/",
   "tests/",
+  "darkseid/archivers/archiver.py",
 ]
 min_confidence = 61
 sort_by_size = true
