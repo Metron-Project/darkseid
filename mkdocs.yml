@@ -39,7 +39,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Archivers:
-      - Unknown Archive: darkseid/archivers/__init__.md
+      - ArchiverFactory: darkseid/archivers/factory.md
       - Archiver: darkseid/archivers/archiver.md
       - Rar: darkseid/archivers/rar.md
       - Zip: darkseid/archivers/zip.md
