@@ -353,16 +353,14 @@ class Comic:
         if self._metadata is not None:
             return self._metadata
 
-        raw_metadata = self.read_raw_ci_metadata()
-        if not raw_metadata:
-            self._metadata = Metadata()
-        else:
+        if raw_metadata := self.read_raw_ci_metadata():
             try:
                 self._metadata = ComicInfo().metadata_from_string(raw_metadata)
             except Exception:
                 logger.exception("Error parsing ComicInfo metadata from %s", self._path)
                 self._metadata = Metadata()
-
+        else:
+            self._metadata = Metadata()
         self._validate_and_fix_page_list()
         return self._metadata
 
@@ -371,16 +369,14 @@ class Comic:
         if self._metadata is not None:
             return self._metadata
 
-        raw_metadata = self.read_raw_mi_metadata()
-        if not raw_metadata:
-            self._metadata = Metadata()
-        else:
+        if raw_metadata := self.read_raw_mi_metadata():
             try:
                 self._metadata = MetronInfo().metadata_from_string(raw_metadata)
             except Exception:
                 logger.exception("Error parsing MetronInfo metadata from %s", self._path)
                 self._metadata = Metadata()
-
+        else:
+            self._metadata = Metadata()
         self._validate_and_fix_page_list()
         return self._metadata
 
@@ -740,7 +736,7 @@ class Comic:
     def _should_calculate_page_info(page: ImageMetadata) -> bool:
         """Determines if page information should be calculated."""
         required_keys = {"ImageSize", "ImageHeight", "ImageWidth"}
-        return not all(key in page for key in required_keys)
+        return any(key not in page for key in required_keys)
 
     def _calculate_page_info(self, page: ImageMetadata) -> None:
         """Calculates and sets page information."""
