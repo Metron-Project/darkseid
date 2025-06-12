@@ -1,6 +1,9 @@
+"""RAR archive implementation."""
+
 from __future__ import annotations
 
 import io
+import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -9,121 +12,124 @@ if TYPE_CHECKING:
 import rarfile
 
 from darkseid.archivers.archiver import Archiver
-from darkseid.exceptions import RarError
+from darkseid.exceptions import ArchiverReadError
+
+logger = logging.getLogger(__name__)
 
 
 class RarArchiver(Archiver):
     """
     Handles archiving operations specific to RAR files.
 
-    This class provides methods for reading, writing, and removing files within a RAR archive.
+    Note: RAR files are read-only due to format limitations.
     """
 
-    def __init__(self: RarArchiver, path: Path) -> None:
-        """
-        Initializes a RarArchiver object with the provided path.
-
-        Args:
-            path (Path): The path associated with the RAR file.
-
-        Returns:
-            None
-        """
-
+    def __init__(self, path: Path) -> None:
+        """Initialize a RarArchiver with the provided path."""
         super().__init__(path)
 
-    def read_file(self: RarArchiver, archive_file: str) -> bytes:
+    def is_write_operation_expected(self) -> bool:
+        """RAR files are read-only."""
+        return False
+
+    def read_file(self, archive_file: str) -> bytes:
         """
-        Reads the contents of a file from the RAR archive.
+        Read the contents of a file from the RAR archive.
 
         Args:
-            archive_file (str): The file to read from the archive.
+            archive_file: Path of the file within the archive.
 
         Returns:
-            bytes: The content of the file as bytes.
+            File contents as bytes.
 
         Raises:
-            RarError: If an error occurs during reading.
+            ArchiverReadError: If the file cannot be read.
         """
-
         try:
             with rarfile.RarFile(self.path) as rf:
-                data: bytes = rf.read(archive_file)
+                return rf.read(archive_file)
         except rarfile.RarCannotExec as e:
-            raise RarError(e) from e
+            self._handle_error("read", archive_file, e)
+            msg = f"Cannot execute RAR command: {e}"
+            raise ArchiverReadError(msg) from e
+        except rarfile.BadRarFile as e:
+            self._handle_error("read", archive_file, e)
+            msg = f"Corrupt RAR file: {e}"
+            raise ArchiverReadError(msg) from e
+        except KeyError as e:
+            msg = f"File not found in archive: {archive_file}"
+            raise ArchiverReadError(msg) from e
         except io.UnsupportedOperation:
-            """If rar directory doesn't contain any data, return None."""
+            # Handle empty directories
             return b""
-        else:
-            return data
 
-    def remove_file(self: RarArchiver, archive_file: str) -> bool:  # noqa: ARG002
+    def write_file(self, archive_file: str, data: str | bytes) -> bool:  # noqa: ARG002
         """
-        Removes a file from the RAR archive.
+        Write data to a file in the RAR archive.
 
         Args:
-            archive_file (str): The file to remove from the archive.
-        Returns:
-            bool: False, as RAR files are read-only.
-        """
+            archive_file: Path of the file within the archive.
+            data: Data to write.
 
+        Returns:
+            False, as RAR files are read-only.
+        """
+        logger.warning("Cannot write to RAR archive: %s", archive_file)
         return False
 
-    def remove_files(self: RarArchiver, filename_lst: list[str]) -> bool:  # noqa: ARG002
+    def remove_file(self, archive_file: str) -> bool:
         """
-        Removes multiple files from the RAR archive.
+        Remove a file from the RAR archive.
 
         Args:
-            filename_lst (list[str]): The list of files to remove from the archive.
+            archive_file: Path of the file to remove.
 
         Returns:
-            bool: False, as RAR files are read-only.
+            False, as RAR files are read-only.
         """
-
+        logger.warning("Cannot remove file from RAR archive: %s", archive_file)
         return False
 
-    def write_file(self: RarArchiver, archive_file: str, data: str) -> bool:  # noqa: ARG002
+    def remove_files(self, filename_list: list[str]) -> bool:
         """
-        Writes data to a file in the RAR archive.
+        Remove multiple files from the RAR archive.
 
         Args:
-            archive_file (str): The file to write to in the archive.
-            data (str): The data to write to the file.
+            filename_list: List of files to remove.
 
         Returns:
-            bool: False, as RAR files are read-only.
+            False, as RAR files are read-only.
         """
+        logger.warning("Cannot remove files from RAR archive: %s", filename_list)
         return False
 
-    def get_filename_list(self: RarArchiver) -> list[str]:
+    def get_filename_list(self) -> list[str]:
         """
-        Returns a list of filenames in the RAR archive.
+        Get a list of all files in the RAR archive.
 
         Returns:
-            list[str]: A sorted list of filenames in the archive.
+            Sorted list of file paths within the archive.
 
         Raises:
-            RarError: If an error occurs during retrieval.
+            ArchiverReadError: If the archive cannot be read.
         """
-
         try:
             with rarfile.RarFile(self.path) as rf:
                 return sorted(rf.namelist())
         except (rarfile.RarCannotExec, rarfile.BadRarFile) as e:
-            raise RarError(e) from e
+            self._handle_error("list", "", e)
+            msg = f"Cannot read RAR archive: {e}"
+            raise ArchiverReadError(msg) from e
 
-    def copy_from_archive(
-        self: RarArchiver,
-        other_archive: Archiver,  # noqa: ARG002
-    ) -> bool:
+    def copy_from_archive(self, other_archive: Archiver) -> bool:
         """
-        Copies files from another archive to the RAR archive.
+        Copy files from another archive to the RAR archive.
 
         Args:
-            other_archive (Archiver): The archive to copy files from.
+            other_archive: Source archive to copy from.
 
         Returns:
-            bool: False, as RAR files are read-only.
+            False, as RAR files are read-only.
         """
-
+        logger.warning("Cannot copy to RAR archive from: %s", other_archive.path)
         return False

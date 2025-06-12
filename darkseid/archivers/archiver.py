@@ -1,130 +1,157 @@
+"""Base archiver class providing common interface for archive operations."""
+
 from __future__ import annotations
 
+import logging
 import re
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+logger = logging.getLogger(__name__)
 
-class Archiver:
+
+class Archiver(ABC):
     """
-    Handles archiving operations for files.
+    Abstract base class for archive operations.
 
-    This class provides methods for reading, writing, and removing files within an archive.
+    Provides a common interface for reading, writing, and managing files
+    within different archive formats.
     """
 
     IMAGE_EXT_RE = re.compile(r"\.(jpe?g|png|webp|gif)$", re.IGNORECASE)
 
-    def __init__(self: Archiver, path: Path) -> None:
+    def __init__(self, path: Path) -> None:
         """
-        Initializes an Archiver object with a specified path.
+        Initialize an Archiver with the specified path.
 
         Args:
-            path (Path): The path associated with the Archiver.
-
-        Returns:
-            None
-        """
-
-        self._path = path
-
-    @property
-    def path(self: Archiver) -> Path:
-        """
-        Returns the path associated with the Archiver.
-
-        Returns:
-            Path: The path associated with the Archiver.
-        """
-
-        return self._path
-
-    def read_file(self: Archiver, archive_file: str) -> bytes:
-        """
-        Reads the content of a file from the archive.
-
-        Args:
-            archive_file (str): The file to read from the archive.
-
-        Returns:
-            bytes: The content of the file as bytes.
+            path: Path to the archive file.
 
         Raises:
-            NotImplementedError: Method or function hasn't been implemented yet.
+            FileNotFoundError: If the archive file doesn't exist for read operations.
         """
+        self._path = path
+        self._validate_path()
 
-        raise NotImplementedError
+    def _validate_path(self) -> None:
+        """Validate the archive path."""
+        if not self._path.exists() and not self.is_write_operation_expected():
+            logger.warning("Archive file does not exist: %s", self._path)
 
-    def write_file(
-        self: Archiver,
-        archive_file: str,  # noqa: ARG002
-        data: str,  # noqa: ARG002
-    ) -> bool:
+    def is_write_operation_expected(self) -> bool:
+        """Check if this archiver is expected to be used for write operations."""
+        return True  # Override in read-only implementations
+
+    @property
+    def path(self) -> Path:
+        """Get the path associated with this archiver."""
+        return self._path
+
+    @abstractmethod
+    def read_file(self, archive_file: str) -> bytes:
         """
-        Writes data to a file in the archive.
+        Read the contents of a file from the archive.
 
         Args:
-            archive_file (str): The file to write to in the archive.
-            data (str): The data to write to the file.
+            archive_file: Path of the file within the archive.
 
         Returns:
-            bool: True if the write operation was successful, False otherwise.
+            The file contents as bytes.
+
+        Raises:
+            ArchiverReadError: If the file cannot be read or doesn't exist.
         """
 
-        return False
-
-    def remove_file(self: Archiver, archive_file: str) -> bool:  # noqa: ARG002
+    @abstractmethod
+    def write_file(self, archive_file: str, data: str | bytes) -> bool:
         """
-        Removes a file from the archive.
+        Write data to a file in the archive.
 
         Args:
-            archive_file (str): The file to remove from the archive.
+            archive_file: Path of the file within the archive.
+            data: Data to write (string or bytes).
 
         Returns:
-            bool: True if the file was successfully removed, False otherwise.
+            True if successful, False otherwise.
+
+        Raises:
+            ArchiverWriteError: If the write operation fails.
         """
 
-        return False
-
-    def remove_files(
-        self: Archiver,
-        filename_lst: list[str],  # noqa: ARG002
-    ) -> bool:
+    @abstractmethod
+    def remove_file(self, archive_file: str) -> bool:
         """
-        Removes multiple files from the archive.
+        Remove a file from the archive.
 
         Args:
-            filename_lst (list[str]): The list of files to remove from the archive.
+            archive_file: Path of the file to remove.
 
         Returns:
-            bool: True if all files were successfully removed, False otherwise.
+            True if successful, False otherwise.
         """
 
-        return False
-
-    def get_filename_list(self: Archiver) -> list[str]:
+    @abstractmethod
+    def remove_files(self, filename_list: list[str]) -> bool:
         """
-        Returns an empty list of filenames from the archive.
-
-        Returns:
-            list[str]: An empty list of filenames.
-        """
-
-        return []
-
-    def copy_from_archive(
-        self: Archiver,
-        other_archive: Archiver,  # noqa: ARG002
-    ) -> bool:
-        """
-        Copies files from another archive.
+        Remove multiple files from the archive.
 
         Args:
-            other_archive (Archiver): The archive to copy files from.
+            filename_list: List of file paths to remove.
 
         Returns:
-            bool: True if the copy operation was successful, False otherwise.
+            True if all files were successfully removed, False otherwise.
         """
 
-        return False
+    @abstractmethod
+    def get_filename_list(self) -> list[str]:
+        """
+        Get a list of all files in the archive.
+
+        Returns:
+            List of file paths within the archive.
+        """
+
+    @abstractmethod
+    def copy_from_archive(self, other_archive: Archiver) -> bool:
+        """
+        Copy files from another archive to this archive.
+
+        Args:
+            other_archive: Source archive to copy from.
+
+        Returns:
+            True if successful, False otherwise.
+        """
+
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # noqa: B027
+        """Context manager exit."""
+
+    def _handle_error(self, operation: str, filename: str, error: Exception) -> None:  # noqa: ARG002
+        """
+        Centralized error handling and logging.
+
+        Args:
+            operation: Description of the operation that failed.
+            filename: Name of the file involved in the operation.
+            error: The exception that occurred.
+        """
+        logger.exception("Error during %s operation on %s :: %s", operation, self.path, filename)
+
+    def exists(self, archive_file: str) -> bool:
+        """
+        Check if a file exists in the archive.
+
+        Args:
+            archive_file: Path of the file to check.
+
+        Returns:
+            True if file exists, False otherwise.
+        """
+        return archive_file in self.get_filename_list()

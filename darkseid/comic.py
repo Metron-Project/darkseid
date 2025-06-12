@@ -15,8 +15,7 @@ import rarfile
 from natsort import natsorted, ns
 from PIL import Image
 
-from darkseid.archivers import UnknownArchiver
-from darkseid.archivers.rar import RarArchiver
+from darkseid.archivers import ArchiverFactory
 from darkseid.archivers.zip import ZipArchiver
 from darkseid.comicinfo import ComicInfo
 from darkseid.metadata import Metadata
@@ -51,15 +50,6 @@ class Comic:
     The Comic class represents a comic object with methods for interacting with comic archives.
     """
 
-    class ArchiveType:
-        """
-        Types of archives supported.
-
-        The ArchiveType class defines the types of archives supported, including zip, rar, and unknown.
-        """
-
-        zip, rar, unknown = list(range(3))  # noqa: RUF012
-
     def __init__(self: Comic, path: Path | str) -> None:
         """
         Initializes a Comic object with the provided path.
@@ -71,6 +61,7 @@ class Comic:
             None
         """
         self._path: Path = Path(path) if isinstance(path, str) else path
+        self._archiver = ArchiverFactory.create_archiver(self._path)
         self._ci_xml_filename: str = "ComicInfo.xml"  # Comic Rack format
         self._mi_xml_filename: str = "MetronInfo.xml"
         self._has_ci: bool | None = None
@@ -78,16 +69,6 @@ class Comic:
         self._page_count: int | None = None
         self._page_list: list[str] | None = None
         self._metadata: Metadata | None = None
-
-        if self.zip_test():
-            self._archive_type: int = self.ArchiveType.zip
-            self._archiver = ZipArchiver(self._path)
-        elif self.rar_test():
-            self._archive_type: int = self.ArchiveType.rar
-            self._archiver = RarArchiver(self._path)
-        else:
-            self._archive_type = self.ArchiveType.unknown
-            self._archiver = UnknownArchiver(self._path)
 
     def __str__(self: Comic) -> str:
         """
@@ -106,17 +87,6 @@ class Comic:
         """
 
         return self._path
-
-    @property
-    def archiver(self: Comic) -> RarArchiver | ZipArchiver | UnknownArchiver:
-        """
-        Returns the archiver used for the comic.
-
-        Returns:
-            RarArchiver | ZipArchiver | UnknownArchiver: The archiver object used for the comic.
-        """
-
-        return self._archiver
 
     def _reset_cache(self: Comic) -> None:
         """
@@ -154,14 +124,14 @@ class Comic:
         Returns a boolean indicating whether the archive is a rarfile.
         """
 
-        return self._archive_type == self.ArchiveType.rar
+        return self._path.suffix in {".cbr", ".rar"}
 
     def is_zip(self: Comic) -> bool:
         """
         Returns a boolean indicating whether the archive is a zipfile.
         """
 
-        return self._archive_type == self.ArchiveType.zip
+        return self._path.suffix in {".cbz", ".zip"}
 
     def is_writable(self: Comic) -> bool:
         """
@@ -170,8 +140,7 @@ class Comic:
         Returns:
             bool: True if the archive is writable, False otherwise.
         """
-
-        if self._archive_type in [self.ArchiveType.unknown, self.ArchiveType.rar]:
+        if not self._archiver.is_write_operation_expected():
             return False
 
         return bool(os.access(self._path, os.W_OK))
@@ -238,7 +207,6 @@ class Comic:
         Returns:
             bool: True if the path is an image file, False otherwise.
         """
-
         suffix_list = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
         return name_path.suffix.casefold() in suffix_list and name_path.name[0] != "."
 
@@ -604,7 +572,7 @@ class Comic:
             bool: True if the export operation was successful, False otherwise.
         """
 
-        if self._archive_type == self.ArchiveType.zip:
+        if self.is_zip():
             # nothing to do, we're already a zip
             return True
 
