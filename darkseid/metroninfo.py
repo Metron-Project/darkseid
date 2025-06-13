@@ -195,6 +195,8 @@ class MetronInfo:
         """
         tree = self._convert_metadata_to_xml(metadata, xml_bytes)
         self._validate_xml(tree)
+        # Create parent directories if they don't exist
+        Path(filename.parent).mkdir(parents=True, exist_ok=True)
         tree.write(filename, encoding="UTF-8", xml_declaration=True)
 
     def read_xml(self, filename: Path) -> Metadata:
