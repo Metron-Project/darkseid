@@ -262,7 +262,9 @@ class MetronInfo:
         Returns:
             True if valid, False otherwise.
         """
-        return source is not None and source.lower() in VALID_INFO_SOURCES
+        if not isinstance(source, str):
+            return False
+        return source.strip().lower() in VALID_INFO_SOURCES
 
     @staticmethod
     def _normalize_age_rating(age_rating: AgeRatings | None) -> str | None:
@@ -305,7 +307,7 @@ class MetronInfo:
         if not format_str:
             return None
 
-        lower_val = format_str.lower()
+        lower_val = format_str.strip().lower()
         return next(
             (fmt for fmt, synonyms in FORMAT_MAPPINGS.items() if lower_val in synonyms),
             None,
