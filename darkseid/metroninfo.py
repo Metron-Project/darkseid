@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 from defusedxml.ElementTree import fromstring, parse
 from xmlschema import XMLSchema11, XMLSchemaValidationError
@@ -33,8 +34,116 @@ from darkseid.metadata import (
 )
 from darkseid.utils import cast_id_as_str
 
+# Constants
 EARLIEST_YEAR = 1900
-ONE_THOUSAND = 1000
+VOLUME_THRESHOLD = 1000
+DEFAULT_COUNTRY = "US"
+
+# Validation sets
+VALID_INFO_SOURCES = frozenset(
+    {
+        "anilist",
+        "comic vine",
+        "grand comics database",
+        "kitsu",
+        "mangadex",
+        "mangaupdates",
+        "marvel",
+        "metron",
+        "myanimelist",
+        "league of comic geeks",
+    }
+)
+
+VALID_AGE_RATINGS = frozenset(
+    {"unknown", "everyone", "teen", "teen plus", "mature", "explicit", "adult"}
+)
+
+VALID_SERIES_FORMATS = frozenset(
+    {
+        "annual",
+        "digital chapter",
+        "graphic novel",
+        "hardcover",
+        "limited series",
+        "omnibus",
+        "one-shot",
+        "single issue",
+        "trade paperback",
+    }
+)
+
+VALID_ROLES = frozenset(
+    {
+        "writer",
+        "script",
+        "story",
+        "plot",
+        "interviewer",
+        "artist",
+        "penciller",
+        "layouts",
+        "breakdowns",
+        "illustrator",
+        "inker",
+        "embellisher",
+        "finishes",
+        "ink assists",
+        "colorist",
+        "color separations",
+        "color assists",
+        "color flats",
+        "digital art technician",
+        "gray tone",
+        "letterer",
+        "cover",
+        "editor",
+        "consulting editor",
+        "assistant editor",
+        "associate editor",
+        "group editor",
+        "senior editor",
+        "managing editor",
+        "collection editor",
+        "production",
+        "designer",
+        "logo design",
+        "translator",
+        "supervising editor",
+        "executive editor",
+        "editor in chief",
+        "president",
+        "publisher",
+        "chief creative officer",
+        "executive producer",
+        "other",
+    }
+)
+
+# Rating mappings
+RATING_MAPPINGS = {
+    "Unknown": frozenset({"rating pending", "unknown"}),
+    "Everyone": frozenset({"everyone", "everyone 10+", "g", "kids to adults", "early childhood"}),
+    "Teen": frozenset({"pg", "teen"}),
+    "Teen Plus": frozenset({"ma15+"}),
+    "Mature": frozenset({"adults only 18+", "mature 17+", "r18+", "m"}),
+    "Explicit": frozenset({"x18+"}),
+}
+
+# Series format mappings
+FORMAT_MAPPINGS = {
+    "Annual": frozenset({"annual"}),
+    "Digital Chapter": frozenset({"digital chapter", "digital"}),
+    "Graphic Novel": frozenset({"graphic novel"}),
+    "Hardcover": frozenset({"hardcover", "hard-cover"}),
+    "Limited Series": frozenset({"limited series"}),
+    "Omnibus": frozenset({"omnibus"}),
+    "One-Shot": frozenset({"1 shot", "1-shot", "fcbd", "one shot", "one-shot", "preview"}),
+    "Single Issue": frozenset(
+        {"single issue", "magazine", "series", "giant", "giant size", "giant-size"}
+    ),
+    "Trade Paperback": frozenset({"trade paperback", "tpb", "trade paper back"}),
+}
 
 
 class MetronInfo:
@@ -42,211 +151,166 @@ class MetronInfo:
 
     This class provides methods to convert metadata to and from XML format, validate information sources,
     and manage various attributes related to comic series, genres, and roles.
-
-    Attributes:
-        mix_info_sources (frozenset): A set of valid information sources.
-        mix_age_ratings (frozenset): A set of valid age ratings.
-        mix_series_format (frozenset): A set of valid series formats.
-        mix_roles (frozenset): A set of valid roles for creators.
-
-    Methods:
-        metadata_from_string(string): Converts an XML string to a Metadata object.
-        string_from_metadata(md, xml): Converts a Metadata object to an XML string.
-        convert_metadata_to_xml(md, xml): Converts a Metadata object into an XML ElementTree.
-        convert_xml_to_metadata(tree): Converts an XML ElementTree into a Metadata object.
-        write_xml(filename, md, xml): Writes the XML representation of metadata to a file.
-        read_xml(filename): Reads XML data from a file and converts it into a Metadata object.
     """
 
-    mix_info_sources = frozenset(
-        {
-            "anilist",
-            "comic vine",
-            "grand comics database",
-            "kitsu",
-            "mangadex",
-            "mangaupdates",
-            "marvel",
-            "metron",
-            "myanimelist",
-            "league of comic geeks",
-        }
-    )
-    mix_age_ratings = frozenset(
-        {"unknown", "everyone", "teen", "teen plus", "mature", "explicit", "adult"}
-    )
-    mix_series_format = frozenset(
-        {
-            "annual",
-            "digital chapter",
-            "graphic novel",
-            "hardcover",
-            "limited series",
-            "omnibus",
-            "one-shot",
-            "single issue",
-            "trade paperback",
-        }
-    )
-    mix_roles = frozenset(
-        {
-            "writer",
-            "script",
-            "story",
-            "plot",
-            "interviewer",
-            "artist",
-            "penciller",
-            "layouts",
-            "breakdowns",
-            "illustrator",
-            "inker",
-            "embellisher",
-            "finishes",
-            "ink assists",
-            "colorist",
-            "color separations",
-            "color assists",
-            "color flats",
-            "digital art technician",
-            "gray tone",
-            "letterer",
-            "cover",
-            "editor",
-            "consulting editor",
-            "assistant editor",
-            "associate editor",
-            "group editor",
-            "senior editor",
-            "managing editor",
-            "collection editor",
-            "production",
-            "designer",
-            "logo design",
-            "translator",
-            "supervising editor",
-            "executive editor",
-            "editor in chief",
-            "president",
-            "publisher",
-            "chief creative officer",
-            "executive producer",
-            "other",
-        }
-    )
+    def __init__(self) -> None:
+        """Initialize the MetronInfo instance."""
+        self._schema_path = Path("darkseid") / "schemas" / "MetronInfo" / "v1" / "MetronInfo.xsd"
 
-    # Ratings Mapping
-    unknown_synonyms = frozenset({"rating pending", "unknown"})
-    everyone_synonyms = frozenset(
-        {"everyone", "everyone 10+", "g", "kids to adults", "early childhood"}
-    )
-    teen_synonyms = frozenset({"pg", "teen"})
-    teen_plus_synonyms = frozenset({"ma15+"})
-    mature_synonyms = frozenset({"adults only 18+", "mature 17+", "r18+", "m"})
-    explicit_synonyms = frozenset({"x18+"})
-
-    # Series Format Mapping
-    annual_synonyms = frozenset({"annual"})
-    digital_chapter_synonyms = frozenset({"digital chapter", "digital"})
-    graphic_novel_synonyms = frozenset({"graphic novel"})
-    hardcover_synonyms = frozenset({"hardcover", "hard-cover"})
-    limited_series_synonyms = frozenset({"limited series"})
-    omnibus_synonyms = frozenset({"omnibus"})
-    one_shot_synonyms = frozenset({"1 shot", "1-shot", "fcbd", "one shot", "one-shot", "preview"})
-    single_issue_synonyms = frozenset(
-        {"single issue", "magazine", "series", "giant", "giant size", "giant-size"}
-    )
-    trade_paperback_synonyms = frozenset({"trade paperback", "tpb", "trade paper back"})
-
-    def metadata_from_string(self, string: str) -> Metadata:
+    def metadata_from_string(self, xml_string: str) -> Metadata:
         """Convert an XML string to a Metadata object.
 
-        This method parses the provided XML string and converts it into a Metadata object representation.
-
         Args:
-            string (str): The XML string to be converted.
+            xml_string: The XML string to be converted.
 
         Returns:
-            Metadata: The resulting Metadata object.
+            The resulting Metadata object.
         """
-        tree = ET.ElementTree(fromstring(string))
-        return self.convert_xml_to_metadata(tree)
+        tree = ET.ElementTree(fromstring(xml_string))
+        return self._convert_xml_to_metadata(tree)
 
-    def string_from_metadata(
-        self,
-        md: Metadata,
-        xml: bytes = b"",
-    ) -> str:
+    def string_from_metadata(self, metadata: Metadata, xml_bytes: bytes = b"") -> str:
         """Convert a Metadata object to an XML string.
 
-        This method generates an XML string representation of the provided Metadata object.
-
         Args:
-            md (Metadata): The Metadata object to convert.
-            xml (bytes, optional): Optional XML bytes to include. Defaults to b''.
+            metadata: The Metadata object to convert.
+            xml_bytes: Optional XML bytes to include.
 
         Returns:
-            str: The resulting XML string.
+            The resulting XML string.
         """
-        tree = self.convert_metadata_to_xml(md, xml)
+        tree = self._convert_metadata_to_xml(metadata, xml_bytes)
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
 
+    def write_xml(self, filename: Path, metadata: Metadata, xml_bytes: bytes | None = None) -> None:
+        """Write a Metadata object to an XML file.
+
+        Args:
+            filename: The path to the file where the XML will be written.
+            metadata: The Metadata object to write.
+            xml_bytes: Optional XML bytes to include.
+
+        Raises:
+            XmlError: If XML validation fails.
+        """
+        tree = self._convert_metadata_to_xml(metadata, xml_bytes)
+        self._validate_xml(tree)
+        tree.write(filename, encoding="UTF-8", xml_declaration=True)
+
+    def read_xml(self, filename: Path) -> Metadata:
+        """Read a Metadata object from an XML file.
+
+        Args:
+            filename: The path to the XML file to read.
+
+        Returns:
+            The resulting Metadata object.
+        """
+        tree = parse(filename)
+        return self._convert_xml_to_metadata(tree)
+
+    def _validate_xml(self, tree: ET.ElementTree) -> None:
+        """Validate XML against schema.
+
+        Args:
+            tree: The XML tree to validate.
+
+        Raises:
+            XmlError: If validation fails.
+        """
+        try:
+            schema = XMLSchema11(self._schema_path)
+            schema.validate(tree)
+        except XMLSchemaValidationError as e:
+            msg = f"Failed to validate XML: {e!r}"
+            raise XmlError(msg) from e
+
     @staticmethod
-    def _get_root(xml: any) -> ET.Element:
-        return ET.ElementTree(fromstring(xml)).getroot() if xml else ET.Element("MetronInfo")
+    def _get_root(xml_bytes: bytes | None) -> ET.Element:
+        """Get or create root XML element.
 
-    @classmethod
-    def _valid_info_source(cls, val: str | None = None) -> bool:
-        return val is not None and val.lower() in cls.mix_info_sources
+        Args:
+            xml_bytes: Optional XML bytes to parse.
 
-    @classmethod
-    def _valid_age_rating(cls, val: AgeRatings | None = None) -> str | None:
-        if val is None:
+        Returns:
+            Root XML element.
+        """
+        return (
+            ET.ElementTree(fromstring(xml_bytes)).getroot()
+            if xml_bytes
+            else ET.Element("MetronInfo")
+        )
+
+    @staticmethod
+    def _is_valid_info_source(source: str | None) -> bool:
+        """Check if info source is valid.
+
+        Args:
+            source: Source name to validate.
+
+        Returns:
+            True if valid, False otherwise.
+        """
+        return source is not None and source.lower() in VALID_INFO_SOURCES
+
+    @staticmethod
+    def _normalize_age_rating(age_rating: AgeRatings | None) -> str | None:
+        """Normalize age rating to valid MetronInfo format.
+
+        Args:
+            age_rating: Age rating to normalize.
+
+        Returns:
+            Normalized age rating or None.
+        """
+        if not age_rating:
             return None
-        if val.metron_info:
+
+        if age_rating.metron_info:
             return (
-                "Unknown" if val.metron_info.lower() not in cls.mix_age_ratings else val.metron_info
+                "Unknown"
+                if age_rating.metron_info.lower() not in VALID_AGE_RATINGS
+                else age_rating.metron_info
             )
 
-        if val.comic_rack:
-            ratings_mapping = {
-                "Unknown": cls.unknown_synonyms,
-                "Everyone": cls.everyone_synonyms,
-                "Teen": cls.teen_synonyms,
-                "Teen Plus": cls.teen_plus_synonyms,
-                "Mature": cls.mature_synonyms,
-                "Explicit": cls.explicit_synonyms,
-            }
-            lower_val = val.comic_rack.lower()
-            for rating, synonyms in ratings_mapping.items():
+        if age_rating.comic_rack:
+            lower_val = age_rating.comic_rack.lower()
+            for rating, synonyms in RATING_MAPPINGS.items():
                 if lower_val in synonyms:
                     return rating
+
         return None
 
-    @classmethod
-    def _valid_series_format(cls, val: str | None) -> str | None:
-        if not val or val is None:
+    @staticmethod
+    def _normalize_series_format(format_str: str | None) -> str | None:
+        """Normalize series format to valid MetronInfo format.
+
+        Args:
+            format_str: Format string to normalize.
+
+        Returns:
+            Normalized format or None.
+        """
+        if not format_str:
             return None
 
-        format_mapping = {
-            "Annual": cls.annual_synonyms,
-            "Digital Chapter": cls.digital_chapter_synonyms,
-            "Graphic Novel": cls.graphic_novel_synonyms,
-            "Hardcover": cls.hardcover_synonyms,
-            "Limited Series": cls.limited_series_synonyms,
-            "Omnibus": cls.omnibus_synonyms,
-            "One-Shot": cls.one_shot_synonyms,
-            "Single Issue": cls.single_issue_synonyms,
-            "Trade Paperback": cls.trade_paperback_synonyms,
-        }
-        lower_val = val.lower()
+        lower_val = format_str.lower()
         return next(
-            (fmt for fmt, synonyms in format_mapping.items() if lower_val in synonyms),
+            (fmt for fmt, synonyms in FORMAT_MAPPINGS.items() if lower_val in synonyms),
             None,
         )
 
     @staticmethod
     def _get_or_create_element(parent: ET.Element, tag: str) -> ET.Element:
+        """Get existing element or create new one.
+
+        Args:
+            parent: Parent element.
+            tag: Tag name.
+
+        Returns:
+            Element (existing or new).
+        """
         element = parent.find(tag)
         if element is None:
             return ET.SubElement(parent, tag)
@@ -254,87 +318,137 @@ class MetronInfo:
         return element
 
     @staticmethod
-    def _assign(root: ET.Element, element: str, val: str | int | None = None) -> None:
-        et_entry = root.find(element)
-        if val is None:
-            if et_entry is not None:
-                root.remove(et_entry)
+    def _set_element_text(root: ET.Element, tag: str, value: Any | None = None) -> None:
+        """Set or remove element text value.
+
+        Args:
+            root: Root element.
+            tag: Element tag name.
+            value: Value to set (removes element if None).
+        """
+        element = root.find(tag)
+        if value is None:
+            if element is not None:
+                root.remove(element)
         else:
-            if et_entry is None:
-                et_entry = ET.SubElement(root, element)
-            et_entry.text = str(val) if isinstance(val, int) else val
+            if element is None:
+                element = ET.SubElement(root, tag)
+            element.text = str(value)
 
     @staticmethod
-    def _assign_datetime(root: ET.Element, element: str, val: datetime | None = None) -> None:
-        et_entry = root.find(element)
-        if val is None:
-            if et_entry is not None:
-                root.remove(et_entry)
+    def _set_datetime_element(root: ET.Element, tag: str, dt: datetime | None = None) -> None:
+        """Set datetime element in ISO format.
+
+        Args:
+            root: Root element.
+            tag: Element tag name.
+            dt: Datetime value.
+        """
+        element = root.find(tag)
+        if dt is None:
+            if element is not None:
+                root.remove(element)
         else:
-            if et_entry is None:
-                et_entry = ET.SubElement(root, element)
-            et_entry.text = val.isoformat(sep="T")
+            if element is None:
+                element = ET.SubElement(root, tag)
+            element.text = dt.isoformat(sep="T")
 
     @staticmethod
-    def _assign_basic_children(
-        root: ET.Element, parent: str, child: str, vals: list[Basic]
-    ) -> None:
-        parent_node = MetronInfo._get_or_create_element(root, parent)
-        create_sub_element = ET.SubElement
-        for val in vals:
-            child_node = create_sub_element(parent_node, child)
-            name = val.name
-            child_node.text = name
-            if id_ := val.id_:
-                child_node.attrib["id"] = cast_id_as_str(id_)
+    def _set_date_element(root: ET.Element, tag: str, date_val: date | None = None) -> None:
+        """Set date element in YYYY-MM-DD format.
 
-    @staticmethod
-    def _assign_date(root: ET.Element, element: str, val: date | None = None) -> None:
-        et_entry = root.find(element)
-        if val is None:
-            if et_entry is not None:
-                root.remove(et_entry)
+        Args:
+            root: Root element.
+            tag: Element tag name.
+            date_val: Date value.
+        """
+        element = root.find(tag)
+        if date_val is None:
+            if element is not None:
+                root.remove(element)
         else:
-            if val.year < EARLIEST_YEAR:  # Info source has a bad year
+            # Skip dates with invalid years
+            if date_val.year < EARLIEST_YEAR:
                 return
-            if et_entry is None:
-                et_entry = ET.SubElement(root, element)
-            et_entry.text = val.strftime("%Y-%m-%d")
+            if element is None:
+                element = ET.SubElement(root, tag)
+            element.text = date_val.strftime("%Y-%m-%d")
 
-    @staticmethod
-    def _assign_arc(root: ET.Element, vals: list[Arc]) -> None:
-        parent_node = MetronInfo._get_or_create_element(root, "Arcs")
-        create_sub_element = ET.SubElement
-        for val in vals:
-            attributes = {"id": cast_id_as_str(val.id_)} if val.id_ else {}
-            child_node = create_sub_element(parent_node, "Arc", attrib=attributes)
-            create_sub_element(child_node, "Name").text = val.name
-            if val.number:
-                create_sub_element(child_node, "Number").text = str(val.number)
+    def _add_basic_children(
+        self, root: ET.Element, parent_tag: str, child_tag: str, items: list[Basic]
+    ) -> None:
+        """Add basic child elements with optional IDs.
 
-    @staticmethod
-    def _assign_publisher(root: ET.Element, publisher: Publisher) -> None:
-        if publisher is None:
+        Args:
+            root: Root element.
+            parent_tag: Parent container tag.
+            child_tag: Child element tag.
+            items: List of basic items to add.
+        """
+        if not items:
             return
-        publisher_node = MetronInfo._get_or_create_element(root, "Publisher")
+
+        parent_node = self._get_or_create_element(root, parent_tag)
+        for item in items:
+            child_node = ET.SubElement(parent_node, child_tag)
+            child_node.text = item.name
+            if item.id_:
+                child_node.attrib["id"] = cast_id_as_str(item.id_)
+
+    def _add_arcs(self, root: ET.Element, arcs: list[Arc]) -> None:
+        """Add story arcs to XML.
+
+        Args:
+            root: Root element.
+            arcs: List of story arcs.
+        """
+        if not arcs:
+            return
+
+        parent_node = self._get_or_create_element(root, "Arcs")
+        for arc in arcs:
+            attributes = {"id": cast_id_as_str(arc.id_)} if arc.id_ else {}
+            arc_node = ET.SubElement(parent_node, "Arc", attrib=attributes)
+            ET.SubElement(arc_node, "Name").text = arc.name
+            if arc.number:
+                ET.SubElement(arc_node, "Number").text = str(arc.number)
+
+    def _add_publisher(self, root: ET.Element, publisher: Publisher | None) -> None:
+        """Add publisher information to XML.
+
+        Args:
+            root: Root element.
+            publisher: Publisher information.
+        """
+        if not publisher:
+            return
+
+        publisher_node = self._get_or_create_element(root, "Publisher")
         if publisher.id_:
             publisher_node.attrib = {"id": cast_id_as_str(publisher.id_)}
 
         ET.SubElement(publisher_node, "Name").text = publisher.name
 
         if publisher.imprint:
-            imprint_node = ET.SubElement(
-                publisher_node,
-                "Imprint",
-                {"id": cast_id_as_str(publisher.imprint.id_)} if publisher.imprint.id_ else {},
+            imprint_attrib = (
+                {"id": cast_id_as_str(publisher.imprint.id_)} if publisher.imprint.id_ else {}
             )
+            imprint_node = ET.SubElement(publisher_node, "Imprint", imprint_attrib)
             imprint_node.text = publisher.imprint.name
 
-    @classmethod
-    def _assign_series(cls, root: ET.Element, series: Series) -> None:  # NOQA: PLR0912, C901
-        if series is None:
+    def _add_series(self, root: ET.Element, series: Series | None) -> None:  # noqa: C901,PLR0912
+        """Add series information to XML.
+
+        Args:
+            root: Root element.
+            series: Series information.
+        """
+        if not series:
             return
-        series_node = MetronInfo._get_or_create_element(root, "Series")
+
+        series_node = self._get_or_create_element(root, "Series")
+
+        # Set attributes
         if series.id_ or series.language:
             series_node.attrib = {}
         if series.id_:
@@ -342,170 +456,227 @@ class MetronInfo:
         if series.language:
             series_node.attrib["lang"] = series.language
 
-        create_sub_element = ET.SubElement
+        # Add child elements
+        ET.SubElement(series_node, "Name").text = series.name
 
-        create_sub_element(series_node, "Name").text = series.name
         if series.sort_name is not None:
-            create_sub_element(series_node, "SortName").text = series.sort_name
-        if series.volume is not None and series.volume < ONE_THOUSAND:
-            create_sub_element(series_node, "Volume").text = str(series.volume)
-        series_fmt = cls._valid_series_format(series.format)
-        if series_fmt is not None:
-            create_sub_element(series_node, "Format").text = series_fmt
+            ET.SubElement(series_node, "SortName").text = series.sort_name
+
+        if series.volume is not None and series.volume < VOLUME_THRESHOLD:
+            ET.SubElement(series_node, "Volume").text = str(series.volume)
+
+        series_format = self._normalize_series_format(series.format)
+        if series_format is not None:
+            ET.SubElement(series_node, "Format").text = series_format
+
         if series.start_year:
-            create_sub_element(series_node, "StartYear").text = str(series.start_year)
-        elif series.volume is not None and series.volume >= ONE_THOUSAND:
-            create_sub_element(series_node, "StartYear").text = str(series.volume)
+            ET.SubElement(series_node, "StartYear").text = str(series.start_year)
+        elif series.volume is not None and series.volume >= VOLUME_THRESHOLD:
+            ET.SubElement(series_node, "StartYear").text = str(series.volume)
+
         if series.issue_count:
-            create_sub_element(series_node, "IssueCount").text = str(series.issue_count)
+            ET.SubElement(series_node, "IssueCount").text = str(series.issue_count)
         if series.volume_count:
-            create_sub_element(series_node, "VolumeCount").text = str(series.volume_count)
+            ET.SubElement(series_node, "VolumeCount").text = str(series.volume_count)
+
         if series.alternative_names:
-            alt_names_node = create_sub_element(series_node, "AlternativeNames")
+            alt_names_node = ET.SubElement(series_node, "AlternativeNames")
             for alt_name in series.alternative_names:
-                alt_attrib = {}
+                attrib = {}
                 if alt_name.id_:
-                    alt_attrib["id"] = cast_id_as_str(alt_name.id_)
+                    attrib["id"] = cast_id_as_str(alt_name.id_)
                 if alt_name.language:
-                    alt_attrib["lang"] = alt_name.language
-                create_sub_element(alt_names_node, "Name", attrib=alt_attrib).text = alt_name.name
+                    attrib["lang"] = alt_name.language
+                ET.SubElement(alt_names_node, "Name", attrib=attrib).text = alt_name.name
 
-    @staticmethod
-    def _assign_info_source(root: ET.Element, info_source: list[InfoSources]) -> None:
-        id_node = MetronInfo._get_or_create_element(root, "IDS")
-        create_sub_element = ET.SubElement
+    def _add_info_sources(self, root: ET.Element, info_sources: list[InfoSources]) -> None:
+        """Add information sources to XML.
 
-        for src in info_source:
-            attributes = {"source": str(src.name)}
-            if src.primary:
+        Args:
+            root: Root element.
+            info_sources: List of information sources.
+        """
+        if not info_sources:
+            return
+
+        id_node = self._get_or_create_element(root, "IDS")
+        for source in info_sources:
+            attributes = {"source": str(source.name)}
+            if source.primary:
                 attributes["primary"] = "true"
+            child_node = ET.SubElement(id_node, "ID", attrib=attributes)
+            child_node.text = cast_id_as_str(source.id_)
 
-            child_node = create_sub_element(id_node, "ID", attrib=attributes)
-            child_node.text = cast_id_as_str(src.id_)
+    def _add_gtin(self, root: ET.Element, gtin: GTIN | None) -> None:
+        """Add GTIN information to XML.
 
-    @staticmethod
-    def _assign_gtin(root: ET.Element, gtin: GTIN) -> None:
-        gtin_node = MetronInfo._get_or_create_element(root, "GTIN")
+        Args:
+            root: Root element.
+            gtin: GTIN information.
+        """
+        if not gtin:
+            return
+
+        gtin_node = self._get_or_create_element(root, "GTIN")
         if gtin.isbn:
             ET.SubElement(gtin_node, "ISBN").text = str(gtin.isbn)
         if gtin.upc:
             ET.SubElement(gtin_node, "UPC").text = str(gtin.upc)
 
-    @staticmethod
-    def _assign_price(root: ET.Element, prices: list[Price]) -> None:
-        price_node = MetronInfo._get_or_create_element(root, "Prices")
-        create_sub_element = ET.SubElement
-        for p in prices:
-            child_node = create_sub_element(price_node, "Price", attrib={"country": p.country})
-            child_node.text = str(p.amount)
-
-    @staticmethod
-    def _assign_universes(root: ET.Element, universes: list[Universe]) -> None:
-        universes_node = MetronInfo._get_or_create_element(root, "Universes")
-        sub_element = ET.SubElement
-        for u in universes:
-            universe_node = sub_element(universes_node, "Universe")
-            if u.id_:
-                universe_node.attrib["id"] = cast_id_as_str(u.id_)
-            sub_element(universe_node, "Name").text = u.name
-            if u.designation:
-                sub_element(universe_node, "Designation").text = u.designation
-
-    @staticmethod
-    def _assign_urls(root: ET.Element, links: list[Links]) -> None:
-        urls_node = MetronInfo._get_or_create_element(root, "URLs")
-        sub_element = ET.SubElement
-        elements = [(sub_element(urls_node, "URL"), link.url, link.primary) for link in links]
-        for child_node, url, primary in elements:
-            child_node.text = url
-            if primary:
-                child_node.attrib["primary"] = "true"
-
-    @staticmethod
-    def _assign_credits(root: ET.Element, credits_lst: list[Credit]) -> None:
-        parent_node = MetronInfo._get_or_create_element(root, "Credits")
-        sub_element = ET.SubElement
-        mix_roles = MetronInfo.mix_roles
-
-        for item in credits_lst:
-            credit_node = sub_element(parent_node, "Credit")
-            creator_node = sub_element(
-                credit_node,
-                "Creator",
-                attrib={"id": cast_id_as_str(item.id_)} if item.id_ else {},
-            )
-            creator_node.text = item.person
-            roles_node = sub_element(credit_node, "Roles")
-
-            for r in item.role:
-                role_node = sub_element(
-                    roles_node,
-                    "Role",
-                    attrib={"id": cast_id_as_str(r.id_)} if r.id_ else {},
-                )
-                role_node.text = r.name if r.name.lower() in mix_roles else "Other"
-
-    def convert_metadata_to_xml(self, md: Metadata, xml=None) -> ET.ElementTree:  # noqa: PLR0912,C901
-        """Convert a Metadata object to an XML ElementTree.
-
-        This method generates an XML representation of the provided Metadata object, including all relevant details.
+    def _add_prices(self, root: ET.Element, prices: list[Price]) -> None:
+        """Add price information to XML.
 
         Args:
-            md (Metadata): The Metadata object to convert.
-            xml (optional): Optional XML bytes to include.
+            root: Root element.
+            prices: List of prices.
+        """
+        if not prices:
+            return
+
+        price_node = self._get_or_create_element(root, "Prices")
+        for price in prices:
+            child_node = ET.SubElement(price_node, "Price", attrib={"country": price.country})
+            child_node.text = str(price.amount)
+
+    def _add_universes(self, root: ET.Element, universes: list[Universe]) -> None:
+        """Add universe information to XML.
+
+        Args:
+            root: Root element.
+            universes: List of universes.
+        """
+        if not universes:
+            return
+
+        universes_node = self._get_or_create_element(root, "Universes")
+        for universe in universes:
+            universe_node = ET.SubElement(universes_node, "Universe")
+            if universe.id_:
+                universe_node.attrib["id"] = cast_id_as_str(universe.id_)
+            ET.SubElement(universe_node, "Name").text = universe.name
+            if universe.designation:
+                ET.SubElement(universe_node, "Designation").text = universe.designation
+
+    def _add_urls(self, root: ET.Element, links: list[Links]) -> None:
+        """Add URL links to XML.
+
+        Args:
+            root: Root element.
+            links: List of links.
+        """
+        if not links:
+            return
+
+        urls_node = self._get_or_create_element(root, "URLs")
+        for link in links:
+            child_node = ET.SubElement(urls_node, "URL")
+            child_node.text = link.url
+            if link.primary:
+                child_node.attrib["primary"] = "true"
+
+    def _add_credits(self, root: ET.Element, credits_: list[Credit]) -> None:
+        """Add credit information to XML.
+
+        Args:
+            root: Root element.
+            credits_: List of credits.
+        """
+        if not credits_:
+            return
+
+        parent_node = self._get_or_create_element(root, "Credits")
+        for credit in credits_:
+            credit_node = ET.SubElement(parent_node, "Credit")
+
+            # Add creator
+            creator_attrib = {"id": cast_id_as_str(credit.id_)} if credit.id_ else {}
+            creator_node = ET.SubElement(credit_node, "Creator", attrib=creator_attrib)
+            creator_node.text = credit.person
+
+            # Add roles
+            roles_node = ET.SubElement(credit_node, "Roles")
+            for role in credit.role:
+                role_attrib = {"id": cast_id_as_str(role.id_)} if role.id_ else {}
+                role_node = ET.SubElement(roles_node, "Role", attrib=role_attrib)
+                role_node.text = role.name if role.name.lower() in VALID_ROLES else "Other"
+
+    def _convert_metadata_to_xml(  # noqa: C901,PLR0912
+        self, metadata: Metadata, xml_bytes: bytes | None = None
+    ) -> ET.ElementTree:
+        """Convert a Metadata object to an XML ElementTree.
+
+        Args:
+            metadata: The Metadata object to convert.
+            xml_bytes: Optional XML bytes to include.
 
         Returns:
-            ET.ElementTree: The resulting XML ElementTree.
+            The resulting XML ElementTree.
         """
-        root = self._get_root(xml)
+        root = self._get_root(xml_bytes)
 
-        if md.info_source:
-            self._assign_info_source(root, md.info_source)
-        self._assign_publisher(root, md.publisher)
-        self._assign_series(root, md.series)
-        self._assign(root, "CollectionTitle", md.collection_title)
-        self._assign(root, "Number", md.issue)
-        if md.stories:
-            self._assign_basic_children(root, "Stories", "Story", md.stories)
-        self._assign(root, "Summary", md.comments)
-        if md.prices:
-            self._assign_price(root, md.prices)
-        self._assign_date(root, "CoverDate", md.cover_date)
-        self._assign_date(root, "StoreDate", md.store_date)
-        self._assign(root, "PageCount", md.page_count)
-        if md.notes is not None and md.notes.metron_info:
-            self._assign(root, "Notes", md.notes.metron_info)
-        if md.genres:
-            self._assign_basic_children(root, "Genres", "Genre", md.genres)
-        if md.tags:
-            self._assign_basic_children(root, "Tags", "Tag", md.tags)
-        if md.story_arcs:
-            self._assign_arc(root, md.story_arcs)
-        if md.characters:
-            self._assign_basic_children(root, "Characters", "Character", md.characters)
-        if md.teams:
-            self._assign_basic_children(root, "Teams", "Team", md.teams)
-        if md.universes:
-            self._assign_universes(root, md.universes)
-        if md.locations:
-            self._assign_basic_children(root, "Locations", "Location", md.locations)
-        if md.reprints:
-            self._assign_basic_children(root, "Reprints", "Reprint", md.reprints)
-        if md.gtin:
-            self._assign_gtin(root, md.gtin)
-        if md.age_rating is not None and (md.age_rating.metron_info or md.age_rating.comic_rack):
-            self._assign(root, "AgeRating", self._valid_age_rating(md.age_rating))
-        if md.web_link:
-            self._assign_urls(root, md.web_link)
-        self._assign_datetime(root, "LastModified", md.modified)
-        if md.credits:
-            self._assign_credits(root, md.credits)
+        # Add all metadata elements
+        if metadata.info_source:
+            self._add_info_sources(root, metadata.info_source)
+        self._add_publisher(root, metadata.publisher)
+        self._add_series(root, metadata.series)
+        self._set_element_text(root, "CollectionTitle", metadata.collection_title)
+        self._set_element_text(root, "Number", metadata.issue)
+
+        if metadata.stories:
+            self._add_basic_children(root, "Stories", "Story", metadata.stories)
+
+        self._set_element_text(root, "Summary", metadata.comments)
+
+        if metadata.prices:
+            self._add_prices(root, metadata.prices)
+
+        self._set_date_element(root, "CoverDate", metadata.cover_date)
+        self._set_date_element(root, "StoreDate", metadata.store_date)
+        self._set_element_text(root, "PageCount", metadata.page_count)
+
+        if metadata.notes and metadata.notes.metron_info:
+            self._set_element_text(root, "Notes", metadata.notes.metron_info)
+
+        if metadata.genres:
+            self._add_basic_children(root, "Genres", "Genre", metadata.genres)
+        if metadata.tags:
+            self._add_basic_children(root, "Tags", "Tag", metadata.tags)
+        if metadata.story_arcs:
+            self._add_arcs(root, metadata.story_arcs)
+        if metadata.characters:
+            self._add_basic_children(root, "Characters", "Character", metadata.characters)
+        if metadata.teams:
+            self._add_basic_children(root, "Teams", "Team", metadata.teams)
+        if metadata.universes:
+            self._add_universes(root, metadata.universes)
+        if metadata.locations:
+            self._add_basic_children(root, "Locations", "Location", metadata.locations)
+        if metadata.reprints:
+            self._add_basic_children(root, "Reprints", "Reprint", metadata.reprints)
+
+        if metadata.gtin:
+            self._add_gtin(root, metadata.gtin)
+
+        if metadata.age_rating and (
+            metadata.age_rating.metron_info or metadata.age_rating.comic_rack
+        ):
+            self._set_element_text(
+                root, "AgeRating", self._normalize_age_rating(metadata.age_rating)
+            )
+
+        if metadata.web_link:
+            self._add_urls(root, metadata.web_link)
+
+        self._set_datetime_element(root, "LastModified", metadata.modified)
+
+        if metadata.credits:
+            self._add_credits(root, metadata.credits)
 
         ET.indent(root)
         return ET.ElementTree(root)
 
     @staticmethod
-    def convert_xml_to_metadata(tree: ET.ElementTree) -> Metadata:  # noqa: C901,PLR0915
+    def _convert_xml_to_metadata(tree: ET.ElementTree) -> Metadata:  # noqa: PLR0915, C901
         """Convert an XML ElementTree to a Metadata object.
 
         This method parses the provided XML ElementTree and converts it into a Metadata object representation.
@@ -525,268 +696,304 @@ class MetronInfo:
             msg = "XML is not a MetronInfo schema"
             raise ValueError(msg)
 
+        # Pre-cache all element lookups to avoid repeated tree traversal
+        element_cache = {
+            "IDS": root.find("IDS"),
+            "GTIN": root.find("GTIN"),
+            "Publisher": root.find("Publisher"),
+            "Series": root.find("Series"),
+            "LastModified": root.find("LastModified"),
+            "Arcs": root.find("Arcs"),
+            "Credits": root.find("Credits"),
+            "Prices": root.find("Prices"),
+            "URLs": root.find("URLs"),
+            "Notes": root.find("Notes"),
+            "AgeRating": root.find("AgeRating"),
+            "Stories": root.find("Stories"),
+            "Genres": root.find("Genres"),
+            "Tags": root.find("Tags"),
+            "Characters": root.find("Characters"),
+            "Teams": root.find("Teams"),
+            "Locations": root.find("Locations"),
+            "Reprints": root.find("Reprints"),
+            "Universes": root.find("Universes"),
+        }
+
         def get_id_from_attrib(attrib: dict[str, str]) -> int | str | None:
+            """Extract ID from element attributes, converting to int if possible."""
             if id_ := attrib.get("id"):
                 return int(id_) if id_.isdigit() else id_
             return None
 
-        def get(element: str) -> str | None:
-            tag = root.find(element)
-            return None if tag is None else tag.text
+        def get_text_content(element_name: str) -> str | None:
+            """Get text content from a cached element."""
+            element = root.find(element_name)
+            return element.text if element is not None else None
 
-        def get_gtin(resource: ET.Element) -> GTIN | None:
-            if resource is None:
+        def parse_date(date_str: str | None) -> date | None:
+            """Parse date string into date object."""
+            if not date_str:
+                return None
+            try:
+                return datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc).date()
+            except ValueError:
+                return None
+
+        def parse_datetime(datetime_str: str | None) -> datetime | None:
+            """Parse datetime string into datetime object."""
+            if not datetime_str:
+                return None
+            try:
+                return datetime.fromisoformat(datetime_str)
+            except ValueError:
+                return None
+
+        def parse_int(value: str | None) -> int | None:
+            """Safely parse string to int."""
+            return int(value) if value and value.isdigit() else None
+
+        def parse_gtin(gtin_element: ET.Element) -> GTIN | None:
+            """Parse GTIN element into GTIN object."""
+            if gtin_element is None:
                 return None
 
             gtin = GTIN()
-            tag_to_attr = {"UPC": "upc", "ISBN": "isbn"}
-            found = False
+            gtin_mapping = {"UPC": "upc", "ISBN": "isbn"}
+            found_data = False
 
-            for item in resource:
-                if item.text and item.tag in tag_to_attr:
-                    setattr(gtin, tag_to_attr[item.tag], int(item.text))
-                    found = True
+            for item in gtin_element:
+                if item.text and item.tag in gtin_mapping:
+                    try:
+                        setattr(gtin, gtin_mapping[item.tag], int(item.text))
+                        found_data = True
+                    except ValueError:
+                        continue
 
-            return gtin if found else None
+            return gtin if found_data else None
 
-        def get_info_sources(id_node: ET.Element) -> list[InfoSources] | None:
-            if id_node is None:
+        def parse_info_sources(ids_element: ET.Element) -> list[InfoSources] | None:
+            """Parse IDS element into list of InfoSources."""
+            if ids_element is None:
                 return None
 
-            child_nodes = id_node.findall("ID")
-            return [
-                InfoSources(
-                    child.attrib.get("source"),
-                    int(child.text) if child.text.isdigit() else child.text,
-                    bool(primary.title()) if (primary := child.attrib.get("primary")) else False,
-                )
-                for child in child_nodes
-                if MetronInfo._valid_info_source(child.attrib.get("source"))
-            ] or None
+            sources = []
+            for child in ids_element.findall("ID"):
+                source_name = child.attrib.get("source")
+                if not MetronInfo._is_valid_info_source(source_name) or not child.text:
+                    continue
 
-        def get_resource_list(resource: ET.Element) -> list[Basic]:
-            if resource is None:
-                return []
-            return [Basic(item.text, get_id_from_attrib(item.attrib)) for item in resource]
+                source_id = int(child.text) if child.text.isdigit() else child.text
+                is_primary = child.attrib.get("primary", "").lower() == "true"
+                sources.append(InfoSources(source_name, source_id, is_primary))
 
-        def get_prices(resource: ET.Element) -> list[Price]:
-            if resource is None:
+            return sources or None
+
+        def parse_basic_list(element: ET.Element) -> list[Basic]:
+            """Parse element containing Basic objects."""
+            if element is None:
                 return []
             return [
-                Price(Decimal(item.text), item.attrib.get("country", "US")) for item in resource
+                Basic(item.text, get_id_from_attrib(item.attrib)) for item in element if item.text
             ]
 
-        def get_publisher(resource: ET.Element) -> Publisher | None:
-            if resource is None:
+        def parse_prices(prices_element: ET.Element) -> list[Price]:
+            """Parse Prices element into list of Price objects."""
+            if prices_element is None:
+                return []
+
+            prices = []
+            for item in prices_element:
+                if item.text:
+                    try:
+                        amount = Decimal(item.text)
+                        country = item.attrib.get("country", DEFAULT_COUNTRY)
+                        prices.append(Price(amount, country))
+                    except (ValueError, TypeError):
+                        continue
+            return prices
+
+        def parse_publisher(publisher_element: ET.Element) -> Publisher | None:
+            """Parse Publisher element into Publisher object."""
+            if publisher_element is None:
                 return None
 
-            publisher_name: str | None = None
-            imprint: Basic | None = None
+            publisher_name = None
+            imprint = None
 
-            tag_actions = {
-                "Name": lambda obj: obj.text,
-                "Imprint": lambda obj: Basic(obj.text, get_id_from_attrib(obj.attrib)),
-            }
+            name_elem = publisher_element.find("Name")
+            if name_elem is not None:
+                publisher_name = name_elem.text
 
-            for item in resource:
-                if item.tag in tag_actions:
-                    if item.tag == "Name":
-                        publisher_name = tag_actions[item.tag](item)
-                    elif item.tag == "Imprint":
-                        imprint = tag_actions[item.tag](item)
-                    if publisher_name and imprint:
-                        break
+            imprint_elem = publisher_element.find("Imprint")
+            if imprint_elem is not None and imprint_elem.text:
+                imprint = Basic(imprint_elem.text, get_id_from_attrib(imprint_elem.attrib))
 
-            publisher_id = get_id_from_attrib(resource.attrib)
-
+            publisher_id = get_id_from_attrib(publisher_element.attrib)
             return Publisher(publisher_name, publisher_id, imprint)
 
-        def get_modified(resource: ET.Element) -> datetime | None:
-            return None if resource is None else datetime.fromisoformat(resource.text)
-
-        def _create_alt_name_list(element: ET.Element) -> list[AlternativeNames]:
-            names = element.findall("Name")
-            return [
-                AlternativeNames(
-                    name.text, get_id_from_attrib(name.attrib), name.attrib.get("lang")
-                )
-                for name in names
-            ]
-
-        def get_series(resource: ET.Element) -> Series | None:
-            if resource is None:
+        def parse_series(series_element: ET.Element) -> Series | None:
+            """Parse Series element into Series object."""
+            if series_element is None:
                 return None
 
-            series_md = Series("None")
-            attrib = resource.attrib
-            series_md.id_ = get_id_from_attrib(attrib)
-            series_md.language = attrib.get("lang")
+            series = Series("None")
+            series.id_ = get_id_from_attrib(series_element.attrib)
+            series.language = series_element.attrib.get("lang")
 
-            tag_to_attr = {
-                "Name": "name",
-                "SortName": "sort_name",
+            # Define mapping for simple text elements
+            text_mappings = {"Name": "name", "SortName": "sort_name", "Format": "format"}
+
+            # Define mapping for integer elements
+            int_mappings = {
                 "Volume": "volume",
-                "Format": "format",
                 "StartYear": "start_year",
                 "IssueCount": "issue_count",
                 "VolumeCount": "volume_count",
-                "AlternativeNames": "_create_alt_name_list",
             }
 
-            for item in resource:
-                attr = tag_to_attr.get(item.tag)
-                if attr:
-                    if attr == "_create_alt_name_list":
-                        series_md.alternative_names = _create_alt_name_list(item)
-                    elif attr in ["volume", "start_year", "issue_count", "volume_count"]:
-                        setattr(series_md, attr, int(item.text))
-                    else:
-                        setattr(series_md, attr, item.text)
+            for child in series_element:
+                if child.tag in text_mappings:
+                    setattr(series, text_mappings[child.tag], child.text)
+                elif child.tag in int_mappings:
+                    if parsed_int := parse_int(child.text):
+                        setattr(series, int_mappings[child.tag], parsed_int)
+                elif child.tag == "AlternativeNames":
+                    alt_names = []
+                    for name_elem in child.findall("Name"):
+                        if name_elem.text:
+                            alt_name = AlternativeNames(
+                                name_elem.text,
+                                get_id_from_attrib(name_elem.attrib),
+                                name_elem.attrib.get("lang"),
+                            )
+                            alt_names.append(alt_name)
+                    series.alternative_names = alt_names
 
-            return series_md
+            return series
 
-        def get_arcs(arcs_node: ET.Element) -> list[Arc]:
-            if arcs_node is None:
+        def parse_arcs(arcs_element: ET.Element) -> list[Arc]:
+            """Parse Arcs element into list of Arc objects."""
+            if arcs_element is None:
                 return []
-            resources = arcs_node.findall("Arc")
-            if resources is None:
+
+            arcs = []
+            for arc_elem in arcs_element.findall("Arc"):
+                name_elem = arc_elem.find("Name")
+                if name_elem is None or not name_elem.text:
+                    continue
+
+                arc_id = get_id_from_attrib(arc_elem.attrib)
+                number_elem = arc_elem.find("Number")
+                number = parse_int(number_elem.text) if number_elem is not None else None
+
+                arcs.append(Arc(name_elem.text, arc_id, number))
+
+            return arcs
+
+        def parse_universes(universes_element: ET.Element) -> list[Universe]:
+            """Parse Universes element into list of Universe objects."""
+            if universes_element is None:
                 return []
 
-            return [
-                Arc(
-                    resource.find("Name").text,
-                    get_id_from_attrib(resource.attrib),
-                    int(number.text) if (number := resource.find("Number")) is not None else None,
-                )
-                for resource in resources
-            ]
+            universes = []
+            for universe_elem in universes_element.findall("Universe"):
+                name_elem = universe_elem.find("Name")
+                if name_elem is None or not name_elem.text:
+                    continue
 
-        def get_urls(url_node: ET.Element) -> list[Links] | None:
-            if url_node is None:
+                universe_id = get_id_from_attrib(universe_elem.attrib)
+                designation_elem = universe_elem.find("Designation")
+                designation = designation_elem.text if designation_elem is not None else None
+
+                universes.append(Universe(name_elem.text, universe_id, designation))
+
+            return universes
+
+        def parse_urls(urls_element: ET.Element) -> list[Links] | None:
+            """Parse URLs element into list of Links objects."""
+            if urls_element is None:
                 return None
 
-            child_nodes = url_node.findall("URL")
-            if child_nodes is None:
+            links = []
+            for url_elem in urls_element.findall("URL"):
+                if url_elem.text:
+                    is_primary = url_elem.attrib.get("primary", "").lower() == "true"
+                    links.append(Links(url_elem.text, is_primary))
+
+            return links or None
+
+        def parse_credits(credits_element: ET.Element) -> list[Credit] | None:
+            """Parse Credits element into list of Credit objects."""
+            if credits_element is None:
                 return None
 
-            return [
-                Links(child.text, child.attrib.get("primary", "") == "true")
-                for child in child_nodes
-            ]
+            credits_ = []
+            for credit_elem in credits_element.findall("Credit"):
+                creator_elem = credit_elem.find("Creator")
+                if creator_elem is None or not creator_elem.text:
+                    continue
 
-        def get_note(note_node: ET.Element) -> Notes | None:
-            return None if note_node is None else Notes(note_node.text)
+                # Parse roles
+                roles = []
+                roles_elem = credit_elem.find("Roles")
+                if roles_elem is not None:
+                    for role_elem in roles_elem.findall("Role"):
+                        if role_elem.text:
+                            role_id = get_id_from_attrib(role_elem.attrib)
+                            roles.append(Role(role_elem.text, role_id))
 
-        def get_age_rating(node: ET.Element) -> AgeRatings | None:
-            return None if node is None else AgeRatings(metron_info=node.text)
+                creator_id = get_id_from_attrib(creator_elem.attrib)
+                credits_.append(Credit(creator_elem.text, roles, creator_id))
 
-        def get_credits(credits_node: ET.Element) -> list[Credit] | None:
-            if credits_node is None:
-                return None
-            resources = credits_node.findall("Credit")
-            if resources is None:
-                return None
+            return credits_ or None
 
-            credits_list = []
-            for resource in resources:
-                roles_node = resource.find("Roles")
-                if roles_node is not None:
-                    roles = roles_node.findall("Role")
-                    role_list = (
-                        [Role(role.text, get_id_from_attrib(role.attrib)) for role in roles]
-                        if roles is not None
-                        else []
-                    )
-                else:
-                    role_list = []
-
-                creator = resource.find("Creator")
-                attrib = creator.attrib
-                credit = Credit(creator.text, role_list, get_id_from_attrib(attrib))
-                credits_list.append(credit)
-            return credits_list
-
-        # Cache root.find() results
-        id_node = root.find("IDS")
-        gtin_node = root.find("GTIN")
-        publisher_node = root.find("Publisher")
-        modified_node = root.find("LastModified")
-        series_node = root.find("Series")
-        arcs_node = root.find("Arcs")
-        credits_node = root.find("Credits")
-        prices_node = root.find("Prices")
-        url_node = root.find("URLs")
-        note_node = root.find("Notes")
-        age_rating_node = root.find("AgeRating")
-
+        # Build the metadata object using parsed data
         md = Metadata()
-        md.info_source = get_info_sources(id_node)
-        md.publisher = get_publisher(publisher_node)
-        md.series = get_series(series_node)
-        md.collection_title = get("CollectionTitle")
-        md.issue = IssueString(get("Number")).as_string()
-        md.stories = get_resource_list(root.find("Stories"))
-        md.comments = get("Summary")
-        md.prices = get_prices(prices_node)
-        if cov_date := get("CoverDate"):
-            md.cover_date = (
-                datetime.strptime(cov_date, "%Y-%m-%d").replace(tzinfo=timezone.utc).date()
-            )
-        if store_date := get("StoreDate"):
-            md.store_date = (
-                datetime.strptime(store_date, "%Y-%m-%d").replace(tzinfo=timezone.utc).date()
-            )
-        p_count = get("PageCount")
-        md.page_count = int(p_count) if p_count is not None and p_count.isdigit() else None
-        md.notes = get_note(note_node)
-        md.genres = get_resource_list(root.find("Genres"))
-        md.tags = get_resource_list(root.find("Tags"))
-        md.story_arcs = get_arcs(arcs_node)
-        md.characters = get_resource_list(root.find("Characters"))
-        md.teams = get_resource_list(root.find("Teams"))
-        md.locations = get_resource_list(root.find("Locations"))
-        md.reprints = get_resource_list(root.find("Reprints"))
-        md.gtin = get_gtin(gtin_node)
-        md.age_rating = get_age_rating(age_rating_node)
-        md.web_link = get_urls(url_node)
-        md.modified = get_modified(modified_node)
-        md.credits = get_credits(credits_node)
+        md.info_source = parse_info_sources(element_cache["IDS"])
+        md.publisher = parse_publisher(element_cache["Publisher"])
+        md.series = parse_series(element_cache["Series"])
+        md.collection_title = get_text_content("CollectionTitle")
 
+        # Handle issue number with IssueString
+        issue_number = get_text_content("Number")
+        md.issue = IssueString(issue_number).as_string() if issue_number else None
+
+        md.stories = parse_basic_list(element_cache["Stories"])
+        md.comments = get_text_content("Summary")
+        md.prices = parse_prices(element_cache["Prices"])
+        md.cover_date = parse_date(get_text_content("CoverDate"))
+        md.store_date = parse_date(get_text_content("StoreDate"))
+        md.page_count = parse_int(get_text_content("PageCount"))
+
+        # Handle notes
+        notes_elem = element_cache["Notes"]
+        md.notes = Notes(notes_elem.text) if notes_elem is not None and notes_elem.text else None
+
+        md.genres = parse_basic_list(element_cache["Genres"])
+        md.tags = parse_basic_list(element_cache["Tags"])
+        md.story_arcs = parse_arcs(element_cache["Arcs"])
+        md.characters = parse_basic_list(element_cache["Characters"])
+        md.teams = parse_basic_list(element_cache["Teams"])
+        md.universes = parse_universes(element_cache["Universes"])
+        md.locations = parse_basic_list(element_cache["Locations"])
+        md.reprints = parse_basic_list(element_cache["Reprints"])
+        md.gtin = parse_gtin(element_cache["GTIN"])
+
+        # Handle age rating
+        age_rating_elem = element_cache["AgeRating"]
+        md.age_rating = (
+            AgeRatings(metron_info=age_rating_elem.text)
+            if age_rating_elem is not None and age_rating_elem.text
+            else None
+        )
+
+        md.web_link = parse_urls(element_cache["URLs"])
+
+        # Handle last modified
+        modified_elem = element_cache["LastModified"]
+        md.modified = parse_datetime(modified_elem.text) if modified_elem is not None else None
+
+        md.credits = parse_credits(element_cache["Credits"])
         md.is_empty = False
+
         return md
-
-    def write_xml(self, filename: Path, md: Metadata, xml=None) -> None:
-        """Write a Metadata object to an XML file.
-
-        This method converts the provided Metadata object to XML and writes it to the specified file.
-
-        Args:
-            filename (Path): The path to the file where the XML will be written.
-            md (Metadata): The Metadata object to write.
-            xml (optional): Optional XML bytes to include.
-        """
-        tree = self.convert_metadata_to_xml(md, xml)
-        mi_xsd = Path("darkseid") / "schemas" / "MetronInfo" / "v1" / "MetronInfo.xsd"
-        schema = XMLSchema11(mi_xsd)
-        # Let's validate the xml
-        try:
-            schema.validate(tree)
-        except XMLSchemaValidationError as e:
-            msg = f"Failed to validate XML: {e!r}"
-            raise XmlError(msg) from e
-
-        tree.write(filename, encoding="UTF-8", xml_declaration=True)
-
-    def read_xml(self, filename: Path) -> Metadata:
-        """Read a Metadata object from an XML file.
-
-        This method reads the XML from the specified file and converts it into a Metadata object.
-
-        Args:
-            filename (Path): The path to the XML file to read.
-
-        Returns:
-            Metadata: The resulting Metadata object.
-        """
-        tree = parse(filename)
-        return self.convert_xml_to_metadata(tree)
