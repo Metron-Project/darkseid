@@ -9,6 +9,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
+from xml.etree.ElementTree import ParseError
 
 from defusedxml.ElementTree import fromstring, parse
 from xmlschema import XMLSchema11, XMLSchemaValidationError
@@ -166,7 +167,10 @@ class MetronInfo:
         Returns:
             The resulting Metadata object.
         """
-        tree = ET.ElementTree(fromstring(xml_string))
+        try:
+            tree = ET.ElementTree(fromstring(xml_string))
+        except ParseError:
+            return Metadata()
         return self._convert_xml_to_metadata(tree)
 
     def string_from_metadata(self, metadata: Metadata, xml_bytes: bytes = b"") -> str:
@@ -195,6 +199,8 @@ class MetronInfo:
         """
         tree = self._convert_metadata_to_xml(metadata, xml_bytes)
         self._validate_xml(tree)
+        # Create parent directories if they don't exist
+        Path(filename.parent).mkdir(parents=True, exist_ok=True)
         tree.write(filename, encoding="UTF-8", xml_declaration=True)
 
     def read_xml(self, filename: Path) -> Metadata:
@@ -206,7 +212,10 @@ class MetronInfo:
         Returns:
             The resulting Metadata object.
         """
-        tree = parse(filename)
+        try:
+            tree = parse(filename)
+        except ParseError:
+            return Metadata()
         return self._convert_xml_to_metadata(tree)
 
     def _validate_xml(self, tree: ET.ElementTree) -> None:
@@ -235,11 +244,13 @@ class MetronInfo:
         Returns:
             Root XML element.
         """
-        return (
-            ET.ElementTree(fromstring(xml_bytes)).getroot()
-            if xml_bytes
-            else ET.Element("MetronInfo")
-        )
+        if xml_bytes:
+            try:
+                return ET.ElementTree(fromstring(xml_bytes)).getroot()
+            except ParseError:
+                return ET.Element("MetronInfo")
+        else:
+            return ET.Element("MetronInfo")
 
     @staticmethod
     def _is_valid_info_source(source: str | None) -> bool:
@@ -251,7 +262,9 @@ class MetronInfo:
         Returns:
             True if valid, False otherwise.
         """
-        return source is not None and source.lower() in VALID_INFO_SOURCES
+        if not isinstance(source, str):
+            return False
+        return source.strip().lower() in VALID_INFO_SOURCES
 
     @staticmethod
     def _normalize_age_rating(age_rating: AgeRatings | None) -> str | None:
@@ -294,7 +307,7 @@ class MetronInfo:
         if not format_str:
             return None
 
-        lower_val = format_str.lower()
+        lower_val = format_str.strip().lower()
         return next(
             (fmt for fmt, synonyms in FORMAT_MAPPINGS.items() if lower_val in synonyms),
             None,
@@ -487,7 +500,7 @@ class MetronInfo:
                     attrib["id"] = cast_id_as_str(alt_name.id_)
                 if alt_name.language:
                     attrib["lang"] = alt_name.language
-                ET.SubElement(alt_names_node, "Name", attrib=attrib).text = alt_name.name
+                ET.SubElement(alt_names_node, "AlternativeName", attrib=attrib).text = alt_name.name
 
     def _add_info_sources(self, root: ET.Element, info_sources: list[InfoSources]) -> None:
         """Add information sources to XML.
@@ -859,7 +872,7 @@ class MetronInfo:
                         setattr(series, int_mappings[child.tag], parsed_int)
                 elif child.tag == "AlternativeNames":
                     alt_names = []
-                    for name_elem in child.findall("Name"):
+                    for name_elem in child.findall("AlternativeName"):
                         if name_elem.text:
                             alt_name = AlternativeNames(
                                 name_elem.text,
