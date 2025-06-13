@@ -9,6 +9,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
+from xml.etree.ElementTree import ParseError
 
 from defusedxml.ElementTree import fromstring, parse
 from xmlschema import XMLSchema11, XMLSchemaValidationError
@@ -166,7 +167,10 @@ class MetronInfo:
         Returns:
             The resulting Metadata object.
         """
-        tree = ET.ElementTree(fromstring(xml_string))
+        try:
+            tree = ET.ElementTree(fromstring(xml_string))
+        except ParseError:
+            return Metadata()
         return self._convert_xml_to_metadata(tree)
 
     def string_from_metadata(self, metadata: Metadata, xml_bytes: bytes = b"") -> str:
@@ -208,7 +212,10 @@ class MetronInfo:
         Returns:
             The resulting Metadata object.
         """
-        tree = parse(filename)
+        try:
+            tree = parse(filename)
+        except ParseError:
+            return Metadata()
         return self._convert_xml_to_metadata(tree)
 
     def _validate_xml(self, tree: ET.ElementTree) -> None:
@@ -237,11 +244,13 @@ class MetronInfo:
         Returns:
             Root XML element.
         """
-        return (
-            ET.ElementTree(fromstring(xml_bytes)).getroot()
-            if xml_bytes
-            else ET.Element("MetronInfo")
-        )
+        if xml_bytes:
+            try:
+                return ET.ElementTree(fromstring(xml_bytes)).getroot()
+            except ParseError:
+                return ET.Element("MetronInfo")
+        else:
+            return ET.Element("MetronInfo")
 
     @staticmethod
     def _is_valid_info_source(source: str | None) -> bool:
