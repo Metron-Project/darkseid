@@ -500,7 +500,7 @@ class MetronInfo:
                     attrib["id"] = cast_id_as_str(alt_name.id_)
                 if alt_name.language:
                     attrib["lang"] = alt_name.language
-                ET.SubElement(alt_names_node, "Name", attrib=attrib).text = alt_name.name
+                ET.SubElement(alt_names_node, "AlternativeName", attrib=attrib).text = alt_name.name
 
     def _add_info_sources(self, root: ET.Element, info_sources: list[InfoSources]) -> None:
         """Add information sources to XML.
@@ -872,7 +872,7 @@ class MetronInfo:
                         setattr(series, int_mappings[child.tag], parsed_int)
                 elif child.tag == "AlternativeNames":
                     alt_names = []
-                    for name_elem in child.findall("Name"):
+                    for name_elem in child.findall("AlternativeName"):
                         if name_elem.text:
                             alt_name = AlternativeNames(
                                 name_elem.text,
