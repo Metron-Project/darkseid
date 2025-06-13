@@ -1,3 +1,4 @@
+# ruff: noqa: SLF001
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
@@ -33,7 +34,7 @@ def metron_info():
     ("xml", "expected_root_tag"),
     [
         # Happy path
-        ("<MetronInfo></MetronInfo>", "MetronInfo"),
+        (b"<MetronInfo></MetronInfo>", "MetronInfo"),
         # Edge case: empty XML
         ("", "MetronInfo"),
     ],
@@ -41,7 +42,7 @@ def metron_info():
 )
 def test_get_root(metron_info, xml, expected_root_tag):
     # Act
-    result = metron_info._get_root(xml)  # noqa: SLF001
+    result = metron_info._get_root(xml)
 
     # Assert
     assert result.tag == expected_root_tag
@@ -61,7 +62,7 @@ def test_get_root(metron_info, xml, expected_root_tag):
 )
 def test_valid_info_source(metron_info, val, expected_result):
     # Act
-    result = metron_info._valid_info_source(val)  # noqa: SLF001
+    result = metron_info._is_valid_info_source(val)
 
     # Assert
     assert result == expected_result
@@ -104,7 +105,7 @@ def test_valid_info_source(metron_info, val, expected_result):
 )
 def test_valid_series_format(metron_info, val, expected):
     # Act
-    result = metron_info._valid_series_format(val)  # NOQA: SLF001
+    result = metron_info._normalize_series_format(val)
 
     # Assert
     assert result == expected
@@ -134,7 +135,7 @@ def test_valid_series_format(metron_info, val, expected):
 )
 def test_valid_age_rating(metron_info, val, expected_result):
     # Act
-    result = metron_info._valid_age_rating(val)  # noqa: SLF001
+    result = metron_info._normalize_age_rating(val)
 
     # Assert
     assert result == expected_result
@@ -177,7 +178,7 @@ def test_convert_metadata_to_xml(metron_info):
     )
 
     # Act
-    result = metron_info.convert_metadata_to_xml(metadata)
+    result = metron_info._convert_metadata_to_xml(metadata)
 
     # Assert
     assert isinstance(result, ET.ElementTree)
