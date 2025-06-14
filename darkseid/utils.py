@@ -4,7 +4,6 @@
 # Copyright 2019 Brian Pepple
 __all__ = [
     "DataSources",
-    "cast_id_as_str",
     "get_issue_id_from_note",
     "get_recursive_filelist",
     "remove_articles",
@@ -85,29 +84,6 @@ def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:
                     return {"source": src_enum.value, "id": issue_id}
 
     return None
-
-
-def cast_id_as_str(id_: str | int) -> str:
-    """Convert an ID to a string.
-
-    This function takes an ID that can be either a string or an integer and returns it as a string.
-    If the input is an integer, it will be converted to a string; if it is already a string,
-    it will be returned unchanged.
-
-    Args:
-        id_: The ID to be converted.
-
-    Returns:
-        The ID represented as a string.
-
-    Examples:
-        >>> cast_id_as_str(123)
-        '123'
-
-        >>> cast_id_as_str("456")
-        '456'
-    """
-    return str(id_)
 
 
 def get_recursive_filelist(path_list: list[Path]) -> list[Path]:
