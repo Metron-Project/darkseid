@@ -2,9 +2,7 @@
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2019 Brian Pepple
 
-import itertools
 import re
-from collections import defaultdict
 from enum import Enum
 from pathlib import Path
 
@@ -17,12 +15,12 @@ class DataSources(str, Enum):
     Each constant is a string that corresponds to a specific data source name.
 
     Attributes:
-        COMIC_VINE (str): Represents the Comic Vine data source.
-        METRON (str): Represents the Metron data source.
-        GCD (str): Represents the Grand Comics Database data source.
-        KITSU (str): Represents the Kitsu data source.
-        MANGADEX (str): Represents the MangaDex data source.
-        MANGAUPDATES (str): Represents the MangaUpdates data source.
+        COMIC_VINE: Represents the Comic Vine data source.
+        METRON: Represents the Metron data source.
+        GCD: Represents the Grand Comics Database data source.
+        KITSU: Represents the Kitsu data source.
+        MANGADEX: Represents the MangaDex data source.
+        MANGAUPDATES: Represents the MangaUpdates data source.
     """
 
     COMIC_VINE = "Comic Vine"
@@ -34,25 +32,32 @@ class DataSources(str, Enum):
 
 
 def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:
-    """
-    Extracts the issue ID from a given note text based on specific keywords and formats.
+    """Extract the issue ID from a given note text based on specific keywords and formats.
+
     This function identifies the source of the issue ID and returns it along with the ID itself.
 
     Args:
-        note_txt (str): The text from which to extract the issue ID.
+        note_txt: The text from which to extract the issue ID.
 
     Returns:
-        dict[str, str] | None: A dictionary containing the source and the issue ID if found,
-        otherwise None.
-    """
+        A dictionary containing the source and the issue ID if found, otherwise None.
 
+    Examples:
+        >>> get_issue_id_from_note("metrontagger issue_id:12345")
+        {'source': 'Metron', 'id': '12345'}
+
+        >>> get_issue_id_from_note("comictagger comic vine issue id 67890")
+        {'source': 'Comic Vine', 'id': '67890'}
+    """
     if not note_txt:
         return None
 
     note_lower = note_txt.lower()
+
+    # Handle MetronTagger format
     if "metrontagger" in note_lower:
         if match := re.search(r"issue_id:(\d+)", note_lower):
-            return {"source": DataSources.METRON.value, "id": match[1]}
+            return {"source": DataSources.METRON.value, "id": match.group(1)}
     elif "comictagger" in note_lower:
         source_map = {
             "comic vine": DataSources.COMIC_VINE,
@@ -63,10 +68,11 @@ def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:
             "kitsu": DataSources.KITSU,
         }
 
-        if match := re.search(r"(issue id (\d+))|(cvdb(\d+))", note_lower):
+        if match := re.search(r"issue id (\d+)|cvdb(\d+)", note_lower):
+            issue_id = match.group(1) or match.group(2)
             for website, src_enum in source_map.items():
                 if website in note_lower:
-                    return {"source": src_enum.value, "id": match[2] or match[4]}
+                    return {"source": src_enum.value, "id": issue_id}
 
     return None
 
@@ -74,66 +80,106 @@ def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:
 def cast_id_as_str(id_: str | int) -> str:
     """Convert an ID to a string.
 
-    This function takes an ID that can be either a string or an integer and returns it as a string. If the input is
-    an integer, it will be converted to a string; if it is already a string, it will be returned unchanged.
+    This function takes an ID that can be either a string or an integer and returns it as a string.
+    If the input is an integer, it will be converted to a string; if it is already a string,
+    it will be returned unchanged.
 
     Args:
-        id_ (str | int): The ID to be converted.
+        id_: The ID to be converted.
 
     Returns:
-        str: The ID represented as a string.
+        The ID represented as a string.
+
+    Examples:
+        >>> cast_id_as_str(123)
+        '123'
+
+        >>> cast_id_as_str("456")
+        '456'
     """
-    return str(id_) if isinstance(id_, int) else id_
+    return str(id_)
 
 
 def get_recursive_filelist(path_list: list[Path]) -> list[Path]:
-    """
-    Retrieves a list of files recursively from the provided paths.
+    """Retrieve a list of comic files recursively from the provided paths.
 
     Args:
-        path_list (list[Path]): List of paths to search for files.
+        path_list: List of paths to search for files.
 
     Returns:
-        list[Path]: A sorted list of files found in the provided paths.
-    """
+        A sorted list of comic files found in the provided paths.
 
+    Examples:
+        >>> paths = [Path("/comics"), Path("/manga/series.cbz")]
+        >>> files = get_recursive_filelist(paths)
+        >>> len(files) > 0  # Returns True if comic files are found
+        True
+    """
+    comic_extensions = ["*.cbz", "*.cbr"]
     filelist: list[Path] = []
-    for path_str in path_list:
-        path = Path(path_str)
+
+    for path_item in path_list:
+        path = Path(path_item)
         if path.is_dir():
-            for comic_format in ["*.cbz", "*.cbr"]:
-                filelist.extend(iter(path.rglob(comic_format)))
-        else:
+            for extension in comic_extensions:
+                filelist.extend(path.rglob(extension))
+        elif path.exists():  # Only add existing files
             filelist.append(path)
 
     return sorted(filelist)
 
 
 def list_to_string(list_of_strings: list[str]) -> str:
-    """
-    Converts a list of strings into a single comma-separated string.
+    """Convert a list of strings into a single comma-separated string.
+
+    Strings containing commas are wrapped in double quotes to preserve structure.
 
     Args:
-        list_of_strings (list[str]): The list of strings to convert.
+        list_of_strings: The list of strings to convert.
 
     Returns:
-        str: The comma-separated string.
-    """
+        The comma-separated string.
 
-    return ", ".join((f'"{item}"' if "," in item else item) for item in list_of_strings)
+    Examples:
+        >>> list_to_string(["apple", "banana", "cherry"])
+        'apple, banana, cherry'
+
+        >>> list_to_string(["item, with comma", "normal item"])
+        '"item, with comma", normal item'
+    """
+    if not list_of_strings:
+        return ""
+
+    formatted_items = []
+    for item in list_of_strings:
+        if "," in item:
+            formatted_items.append(f'"{item}"')
+        else:
+            formatted_items.append(item)
+
+    return ", ".join(formatted_items)
 
 
 def remove_articles(text: str) -> str:
-    """
-    Removes common articles from the input text.
+    """Remove common articles and stop words from the input text.
 
     Args:
-        text (str): The text from which articles are to be removed.
+        text: The text from which articles are to be removed.
 
     Returns:
-        str: The text with articles removed.
-    """
+        The text with articles removed.
 
+    Examples:
+        >>> remove_articles("The Amazing Spider-Man")
+        'Amazing Spider-Man'
+
+        >>> remove_articles("A tale of two cities")
+        'tale two cities'
+    """
+    if not text:
+        return ""
+
+    # Common articles and stop words
     articles = frozenset(
         {
             "&",
@@ -161,51 +207,74 @@ def remove_articles(text: str) -> str:
             "with",
         }
     )
-    new_text = "".join(f"{word} " for word in text.split(" ") if word.casefold() not in articles)
 
-    return new_text[:-1]
+    words = text.split()
+    filtered_words = [word for word in words if word.casefold() not in articles]
+
+    return " ".join(filtered_words)
 
 
 def unique_file(file_name: Path) -> Path:
-    """
-    Generates a unique file name by appending a number in parentheses if the original file name already exists.
+    """Generate a unique file name by appending a number in parentheses if the original exists.
 
     Args:
-        file_name (Path): The original file name to make unique.
+        file_name: The original file name to make unique.
 
     Returns:
-        Path: The unique file name.
+        The unique file name.
+
+    Examples:
+        >>> original = Path("document.txt")
+        >>> unique = unique_file(original)  # Returns "document (1).txt" if original exists
+        >>> isinstance(unique, Path)
+        True
     """
+    if not file_name.exists():
+        return file_name
 
     original_stem = file_name.stem
-    for i in itertools.count(1):  # noqa: RET503
-        if not file_name.exists():
-            return file_name
-        file_name = file_name.parent / f"{original_stem} ({i}){file_name.suffix}"
+    counter = 1
+
+    while True:
+        new_name = file_name.parent / f"{original_stem} ({counter}){file_name.suffix}"
+        if not new_name.exists():
+            return new_name
+        counter += 1
 
 
 def xlate(data: int | str | None, is_int: bool = False) -> int | str | None:
-    """
-    Translates data to an integer or string based on the provided flag.
+    """Translate data to an integer or string based on the provided flag.
+
+    This function handles data conversion with special handling for numeric extraction
+    when converting to integers.
 
     Args:
-        data (int | str | None): The data to translate.
-        is_int (bool): A flag indicating whether to translate to an integer.
+        data: The data to translate.
+        is_int: A flag indicating whether to translate to an integer.
 
     Returns:
-        int | str | None: The translated data.
-    """
+        The translated data as int, str, or None.
 
+    Examples:
+        >>> xlate("123", is_int=True)
+        123
+
+        >>> xlate("abc123def", is_int=True)
+        123
+
+        >>> xlate("hello", is_int=False)
+        'hello'
+
+        >>> xlate(None)
+        None
+    """
     if data is None or data == "":
         return None
+
     if is_int:
-        i = str(data).translate(
-            defaultdict(
-                lambda: None,
-                zip((ord(c) for c in "1234567890"), "1234567890", strict=False),
-            ),
-        )
-        if i == "0":
-            return "0"
-        return int(i) if i else None
+        if numeric_chars := "".join(char for char in str(data) if char.isdigit()):
+            # Handle special case of "0"
+            return 0 if numeric_chars == "0" else int(numeric_chars)
+        return None
+
     return str(data)
