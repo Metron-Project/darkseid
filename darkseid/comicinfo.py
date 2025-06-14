@@ -5,6 +5,8 @@
 # Copyright 2020 Brian Pepple
 from __future__ import annotations
 
+__all__ = ["ComicInfo"]
+
 import re
 import xml.etree.ElementTree as ET
 from datetime import date

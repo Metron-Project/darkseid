@@ -4,10 +4,12 @@ Class for handling the odd permutations of an 'issue number' that the
 comics industry throws at us.
 e.g.: "12", "12.1", "0", "-1", "5AU", "100-2"
 """
-
 # Copyright 2012-2014 Anthony Beville
+# Copyright 2025 Brian Pepple
 
 from __future__ import annotations
+
+__all__ = ["IssueString"]
 
 
 class IssueString:

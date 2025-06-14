@@ -4,6 +4,8 @@
 # Copyright 2019 Brian Pepple
 from __future__ import annotations
 
+__all__ = ["Comic", "ComicArchiveError", "ComicError", "ComicMetadataError", "MetadataFormat"]
+
 import io
 import logging
 import os

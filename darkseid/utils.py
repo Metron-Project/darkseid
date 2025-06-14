@@ -1,6 +1,16 @@
 """Some generic utilities."""
+
 # Copyright 2012-2014 Anthony Beville
 # Copyright 2019 Brian Pepple
+__all__ = [
+    "DataSources",
+    "cast_id_as_str",
+    "get_issue_id_from_note",
+    "get_recursive_filelist",
+    "remove_articles",
+    "unique_file",
+    "xlate",
+]
 
 import re
 from enum import Enum
