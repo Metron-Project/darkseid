@@ -63,7 +63,7 @@ def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:
             "comic vine": DataSources.COMIC_VINE,
             "metron": DataSources.METRON,
             "grand comics database": DataSources.GCD,
-            "mangadx": DataSources.MANGADEX,
+            "mangadex": DataSources.MANGADEX,
             "mangaupdates": DataSources.MANGAUPDATES,
             "kitsu": DataSources.KITSU,
         }
