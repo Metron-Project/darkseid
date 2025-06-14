@@ -11,7 +11,7 @@ possible, however lossy it might be
 # Copyright 2020 Brian Pepple
 from __future__ import annotations
 
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
@@ -21,10 +21,18 @@ if TYPE_CHECKING:
 
 import pycountry
 
+# Constants
 MAX_UPC = 17
 MAX_ISBN = 13
 COUNTRY_LEN = 2
 YEAR_LEN = 4
+# __str__ constants
+COMMENT_LEN = 50
+MAX_COMMENT_LEN = 100
+MAX_NUMBER_OF_CHARACTERS = 5
+MAX_NUMBER_OF_LOCATIONS = 3
+MAX_NUMBER_OF_STORIES = 3
+MAX_NUMBER_OF_TAGS = 5
 
 
 class Validations:
@@ -526,7 +534,7 @@ class Metadata:
         tag_origin (Optional[str]): The origin of the tag.
         info_source (Optional[list[InfoSources]]): The information source.
         series (Optional[Series]): The series information.
-        issue (Optional[str]): The issue information.
+        issue (Optional[str]): The issue number.
         collection_title (Optional[str]): The title of the collection.
         stories (list[Basic]): The list of stories.
         publisher (Optional[Publisher]): The publisher information.
@@ -924,18 +932,226 @@ class Metadata:
         else:
             self.credits.append(new_credit)
 
-    def __str__(self: Metadata) -> str:
+    # TODO: Let's split this into smaller methods sometime
+    def __str__(self: Metadata) -> str:  # noqa: PLR0912
         """
-        Returns a string representation of the Metadata object with its attributes and values.
-        """
+        Returns a formatted string representation of the Metadata object.
 
-        cls = self.__class__
-        cls_name = cls.__name__
-        indent = " " * 4
-        res = [f"{cls_name}("]
-        for f in fields(cls):
-            value = getattr(self, f.name)
-            if value is not None:
-                res.append(f"{indent}{f.name} = {value!r},")
-        res.append(")")
-        return "\n".join(res)
+        This improved version provides a more readable and organized display of the metadata,
+        grouping related fields and handling different data types appropriately.
+        """
+        if self.is_empty:
+            return "Metadata(empty)"
+
+        lines = ["Metadata:"]
+        indent = "  "
+
+        # Core identification
+        if self.series:
+            series_info = f"{self.series.name}"
+            if self.series.volume:
+                series_info += f" (v{self.series.volume})"
+            if self.series.start_year:
+                series_info += f" [{self.series.start_year}]"
+            lines.append(f"{indent}Series: {series_info}")
+
+        if self.issue:
+            lines.append(f"{indent}Issue: {self.issue}")
+
+        if self.collection_title:
+            lines.append(f"{indent}Collection: {self.collection_title}")
+
+        # Publication info
+        if self.publisher:
+            pub_info = self.publisher.name
+            if self.publisher.imprint:
+                pub_info += f" ({self.publisher.imprint.name})"
+            lines.append(f"{indent}Publisher: {pub_info}")
+
+        if self.cover_date:
+            date_info = [f"Cover: {self.cover_date}"]
+            if self.store_date:
+                date_info.append(f"Store: {self.store_date}")
+            lines.append(f"{indent}Dates: {' | '.join(date_info)}")
+        elif self.store_date:
+            date_info = [f"Store: {self.store_date}"]
+            lines.append(f"{indent}Dates: {' | '.join(date_info)}")
+
+        # Pricing and identification
+        if self.prices:
+            price_strs = [f"${price.amount} ({price.country})" for price in self.prices]
+            lines.append(f"{indent}Prices: {', '.join(price_strs)}")
+
+        if self.gtin:
+            gtin_parts = []
+            if self.gtin.upc:
+                gtin_parts.append(f"UPC: {self.gtin.upc}")
+            if self.gtin.isbn:
+                gtin_parts.append(f"ISBN: {self.gtin.isbn}")
+            if gtin_parts:
+                lines.append(f"{indent}Codes: {' | '.join(gtin_parts)}")
+
+        # Physical properties
+        physical_info = []
+        if self.page_count:
+            physical_info.append(f"{self.page_count} pages")
+        if self.black_and_white is not None:
+            physical_info.append("B&W" if self.black_and_white else "Color")
+        if self.manga:
+            physical_info.append(f"Manga: {self.manga}")
+        if physical_info:
+            lines.append(f"{indent}Physical: {' | '.join(physical_info)}")
+
+        # Content info
+        if self.genres:
+            genre_names = [genre.name for genre in self.genres]
+            lines.append(f"{indent}Genres: {', '.join(genre_names)}")
+
+        if self.age_rating and (self.age_rating.metron_info or self.age_rating.comic_rack):
+            rating_parts = []
+            if self.age_rating.metron_info:
+                rating_parts.append(f"Metron: {self.age_rating.metron_info}")
+            if self.age_rating.comic_rack:
+                rating_parts.append(f"ComicRack: {self.age_rating.comic_rack}")
+            lines.append(f"{indent}Age Rating: {' | '.join(rating_parts)}")
+
+        # Story elements
+        if self.story_arcs:
+            arc_strs = []
+            for arc in self.story_arcs:
+                arc_str = arc.name
+                if arc.number:
+                    arc_str += f" #{arc.number}"
+                arc_strs.append(arc_str)
+            lines.append(f"{indent}Story Arcs: {', '.join(arc_strs)}")
+
+        if self.characters:
+            char_names = [char.name for char in self.characters[:MAX_NUMBER_OF_CHARACTERS]]
+            char_display = ", ".join(char_names)
+            if len(self.characters) > MAX_NUMBER_OF_CHARACTERS:
+                char_display += f" (and {len(self.characters) - MAX_NUMBER_OF_CHARACTERS} more)"
+            lines.append(f"{indent}Characters: {char_display}")
+
+        if self.teams:
+            team_names = [team.name for team in self.teams]
+            lines.append(f"{indent}Teams: {', '.join(team_names)}")
+
+        if self.locations:
+            location_names = [loc.name for loc in self.locations[:MAX_NUMBER_OF_LOCATIONS]]
+            loc_display = ", ".join(location_names)
+            if len(self.locations) > MAX_NUMBER_OF_LOCATIONS:
+                loc_display += f" (and {len(self.locations) - MAX_NUMBER_OF_LOCATIONS} more)"
+            lines.append(f"{indent}Locations: {loc_display}")
+
+        if self.universes:
+            universe_strs = []
+            for universe in self.universes:
+                uni_str = universe.name
+                if universe.designation:
+                    uni_str += f" ({universe.designation})"
+                universe_strs.append(uni_str)
+            lines.append(f"{indent}Universes: {', '.join(universe_strs)}")
+
+        # Credits
+        if self.credits:
+            lines.append(f"{indent}Credits:")
+            # Group credits by role for cleaner display
+            role_groups = {}
+            for credit in self.credits:
+                for role in credit.role:
+                    role_name = role.name
+                    if role.primary:
+                        role_name += " (Primary)"
+                    if role_name not in role_groups:
+                        role_groups[role_name] = []
+                    role_groups[role_name].append(credit.person)
+
+            for role_name, people in role_groups.items():
+                people_str = ", ".join(people)
+                lines.append(f"{indent}  {role_name}: {people_str}")
+
+        # Additional metadata
+        if self.stories:
+            story_names = [story.name for story in self.stories[:MAX_NUMBER_OF_STORIES]]
+            story_display = ", ".join(story_names)
+            if len(self.stories) > MAX_NUMBER_OF_STORIES:
+                story_display += f" (and {len(self.stories) - MAX_NUMBER_OF_STORIES} more)"
+            lines.append(f"{indent}Stories: {story_display}")
+
+        if self.reprints:
+            reprint_names = [reprint.name for reprint in self.reprints]
+            lines.append(f"{indent}Reprints: {', '.join(reprint_names)}")
+
+        if self.tags:
+            tag_names = [tag.name for tag in self.tags[:MAX_NUMBER_OF_TAGS]]
+            tag_display = ", ".join(tag_names)
+            if len(self.tags) > MAX_NUMBER_OF_TAGS:
+                tag_display += f" (and {len(self.tags) - MAX_NUMBER_OF_TAGS} more)"
+            lines.append(f"{indent}Tags: {tag_display}")
+
+        # Technical info
+        tech_info = []
+        if self.critical_rating:
+            tech_info.append(f"Rating: {self.critical_rating}")
+        if self.country:
+            tech_info.append(f"Country: {self.country}")
+        if self.scan_info:
+            tech_info.append(f"Scan: {self.scan_info}")
+        if tech_info:
+            lines.append(f"{indent}Technical: {' | '.join(tech_info)}")
+
+        # Source information
+        if self.info_source:
+            source_strs = []
+            for source in self.info_source:
+                source_str = source.name
+                if source.primary:
+                    source_str += " (Primary)"
+                source_strs.append(source_str)
+            lines.append(f"{indent}Sources: {', '.join(source_strs)}")
+
+        if self.tag_origin:
+            lines.append(f"{indent}Tag Origin: {self.tag_origin}")
+
+        # Web presence
+        if self.web_link:
+            link_strs = []
+            for link in self.web_link:
+                link_str = link.url
+                if link.primary:
+                    link_str += " (Primary)"
+                link_strs.append(link_str)
+            lines.append(f"{indent}Links: {', '.join(link_strs)}")
+
+        # Comments and notes
+        if self.comments:
+            # Truncate long comments for display
+            comment_display = self.comments[:MAX_COMMENT_LEN]
+            if len(self.comments) > MAX_COMMENT_LEN:
+                comment_display += "..."
+            lines.append(f"{indent}Comments: {comment_display}")
+
+        if self.notes and (self.notes.metron_info or self.notes.comic_rack):
+            note_parts = []
+            if self.notes.metron_info:
+                note_parts.append(
+                    f"Metron: {self.notes.metron_info[:COMMENT_LEN]}"
+                    f"{'...' if len(self.notes.metron_info) > COMMENT_LEN else ''}"
+                )
+            if self.notes.comic_rack:
+                note_parts.append(
+                    f"ComicRack: {self.notes.comic_rack[:COMMENT_LEN]}"
+                    f"{'...' if len(self.notes.comic_rack) > COMMENT_LEN else ''}"
+                )
+            lines.append(f"{indent}Notes: {' | '.join(note_parts)}")
+
+        # Page information
+        if self.pages:
+            cover_count = len([p for p in self.pages if p.get("Type") == PageType.FrontCover])
+            lines.append(f"{indent}Pages: {len(self.pages)} total ({cover_count} covers)")
+
+        # Modification info
+        if self.modified:
+            lines.append(f"{indent}Modified: {self.modified}")
+
+        return "\n".join(lines)
