@@ -495,18 +495,18 @@ def test_read_metadata_comic_rack(sample_cbz_file):
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_archiver = Mock()
         mock_archiver.get_filename_list.return_value = ["page1.jpg", "ComicInfo.xml"]
-        mock_archiver.read_file.return_value = b"<ComicInfo><Title>Test</Title></ComicInfo>"
+        mock_archiver.read_file.return_value = b"<ComicInfo><Number>1</Number></ComicInfo>"
         mock_factory.return_value = mock_archiver
 
         comic = Comic(sample_cbz_file)
 
         with patch("darkseid.comicinfo.ComicInfo.metadata_from_string") as mock_parse:
             mock_metadata = Metadata()
-            mock_metadata.title = "Test"
+            mock_metadata.issue = "1"
             mock_parse.return_value = mock_metadata
 
             metadata = comic.read_metadata(MetadataFormat.COMIC_RACK)
-            assert metadata.title == "Test"
+            assert metadata.issue == "1"
 
 
 def test_read_metadata_metron_info(sample_cbz_file):
@@ -514,18 +514,18 @@ def test_read_metadata_metron_info(sample_cbz_file):
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_archiver = Mock()
         mock_archiver.get_filename_list.return_value = ["page1.jpg", "MetronInfo.xml"]
-        mock_archiver.read_file.return_value = b"<MetronInfo><Title>Test</Title></MetronInfo>"
+        mock_archiver.read_file.return_value = b"<MetronInfo><Number>2</Number></MetronInfo>"
         mock_factory.return_value = mock_archiver
 
         comic = Comic(sample_cbz_file)
 
         with patch("darkseid.metroninfo.MetronInfo.metadata_from_string") as mock_parse:
             mock_metadata = Metadata()
-            mock_metadata.title = "Test"
+            mock_metadata.issue = "2"
             mock_parse.return_value = mock_metadata
 
             metadata = comic.read_metadata(MetadataFormat.METRON_INFO)
-            assert metadata.title == "Test"
+            assert metadata.issue == "2"
 
 
 def test_read_metadata_unknown_format(sample_cbz_file):
@@ -649,7 +649,7 @@ def test_write_metadata_none_metadata(sample_cbz_file):
         mock_factory.return_value = Mock()
         comic = Comic(sample_cbz_file)
 
-        result = comic.write_metadata(None, MetadataFormat.COMIC_RACK)
+        result = comic.write_metadata(None, MetadataFormat.COMIC_RACK)  # type: ignore
         assert result is False
 
 
@@ -1287,7 +1287,7 @@ def test_full_workflow_read_metadata(sample_cbz_file):
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_archiver = Mock()
         mock_archiver.get_filename_list.return_value = ["page1.jpg", "ComicInfo.xml"]
-        mock_archiver.read_file.return_value = b"<ComicInfo><Title>Test Comic</Title></ComicInfo>"
+        mock_archiver.read_file.return_value = b"<ComicInfo><Number>1.MU</Number></ComicInfo>"
         mock_factory.return_value = mock_archiver
 
         comic = Comic(sample_cbz_file)
@@ -1298,16 +1298,16 @@ def test_full_workflow_read_metadata(sample_cbz_file):
 
         # Read raw metadata
         raw_data = comic.read_raw_ci_metadata()
-        assert raw_data == "<ComicInfo><Title>Test Comic</Title></ComicInfo>"
+        assert raw_data == "<ComicInfo><Number>1.MU</Number></ComicInfo>"
 
         # Read parsed metadata
         with patch("darkseid.comicinfo.ComicInfo.metadata_from_string") as mock_parse:
             mock_metadata = Metadata()
-            mock_metadata.title = "Test Comic"
+            mock_metadata.issue = "1.MU"
             mock_parse.return_value = mock_metadata
 
             metadata = comic.read_metadata(MetadataFormat.COMIC_RACK)
-            assert metadata.title == "Test Comic"
+            assert metadata.issue == "1.MU"
 
 
 def test_full_workflow_write_and_remove_metadata(sample_cbz_file, sample_metadata):
