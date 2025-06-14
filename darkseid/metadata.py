@@ -221,7 +221,7 @@ class Role(Basic):
 
 
 @dataclass
-class AlternativeNames(Basic):
+class AlternativeNames(Basic, Validations):
     """
     A data class representing an alternative name for a series with basic information and validations.
 
