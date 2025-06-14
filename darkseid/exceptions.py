@@ -21,9 +21,5 @@ class ArchiverWriteError(ArchiverError):
     """Raised when writing to archive fails."""
 
 
-class RarError(ArchiverError):
-    """Raised when RAR operations fail."""
-
-
 class XmlError(Exception):
     """Class for an XML error."""
