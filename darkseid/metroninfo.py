@@ -248,12 +248,11 @@ class MetronInfo:
         Returns:
             Root XML element.
         """
-        if xml_bytes:
-            try:
-                return ET.ElementTree(fromstring(xml_bytes)).getroot()
-            except ParseError:
-                return ET.Element("MetronInfo")
-        else:
+        if not xml_bytes:
+            return ET.Element("MetronInfo")
+        try:
+            return ET.ElementTree(fromstring(xml_bytes)).getroot()
+        except ParseError:
             return ET.Element("MetronInfo")
 
     @staticmethod
