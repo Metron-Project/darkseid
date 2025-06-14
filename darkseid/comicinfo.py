@@ -5,9 +5,12 @@
 # Copyright 2020 Brian Pepple
 from __future__ import annotations
 
+__all__ = ["ComicInfo"]
+
 import re
 import xml.etree.ElementTree as ET
 from datetime import date
+from pathlib import Path
 from typing import Any, ClassVar, cast
 
 from defusedxml.ElementTree import fromstring, parse
@@ -448,7 +451,7 @@ class ComicInfo:
 
     def write_to_external_file(
         self: ComicInfo,
-        filename: str,
+        filename: Path,
         md: Metadata,
         xml: bytes = b"",
     ) -> None:
@@ -464,9 +467,11 @@ class ComicInfo:
             None
         """
         tree = self.convert_metadata_to_xml(md, xml)
+        # Create parent directories if they don't exist
+        Path(filename.parent).mkdir(parents=True, exist_ok=True)
         tree.write(filename, encoding="utf-8", xml_declaration=True)
 
-    def read_from_external_file(self: ComicInfo, filename: str) -> Metadata:
+    def read_from_external_file(self: ComicInfo, filename: Path) -> Metadata:
         """
         Reads Metadata from an external file in XML format.
 
@@ -476,7 +481,10 @@ class ComicInfo:
         Returns:
             Metadata: The Metadata object extracted from the file.
         """
-        tree = parse(filename)
+        try:
+            tree = parse(filename)
+        except ET.ParseError:
+            return Metadata()
         return self.convert_xml_to_metadata(tree)
 
     @staticmethod

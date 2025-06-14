@@ -5,7 +5,6 @@ from tempfile import TemporaryDirectory
 
 from darkseid.utils import (
     DataSources,
-    cast_id_as_str,
     get_issue_id_from_note,
     get_recursive_filelist,
     list_to_string,
@@ -100,26 +99,6 @@ def test_get_issue_id_from_note_no_match():
     note = "random text without ids"
     result = get_issue_id_from_note(note)
     assert result is None
-
-
-# cast_id_as_str tests
-def test_cast_id_as_str_integer():
-    """Test casting integer to string."""
-    assert cast_id_as_str(123) == "123"
-    assert cast_id_as_str(0) == "0"
-    assert cast_id_as_str(-456) == "-456"
-
-
-def test_cast_id_as_str_string():
-    """Test casting string (should remain string)."""
-    assert cast_id_as_str("789") == "789"
-    assert cast_id_as_str("abc") == "abc"
-    assert cast_id_as_str("") == ""
-
-
-def test_cast_id_as_str_float():
-    """Test casting float to string."""
-    assert cast_id_as_str(123.45) == "123.45"  # type: ignore
 
 
 # get_recursive_filelist tests
@@ -406,7 +385,7 @@ def test_integration_note_processing():
     assert len(valid_results) == 3
 
     # Convert IDs to strings
-    string_ids = [cast_id_as_str(r["id"]) for r in valid_results]
+    string_ids = [str(r["id"]) for r in valid_results]
     assert all(isinstance(id_str, str) for id_str in string_ids)
 
 

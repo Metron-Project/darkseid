@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__all__ = ["MetronInfo", "XmlError"]
+
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timezone
 from decimal import Decimal
@@ -14,7 +16,6 @@ from xml.etree.ElementTree import ParseError
 from defusedxml.ElementTree import fromstring, parse
 from xmlschema import XMLSchema11, XMLSchemaValidationError
 
-from darkseid.exceptions import XmlError
 from darkseid.issue_string import IssueString
 from darkseid.metadata import (
     GTIN,
@@ -33,7 +34,6 @@ from darkseid.metadata import (
     Series,
     Universe,
 )
-from darkseid.utils import cast_id_as_str
 
 # Constants
 EARLIEST_YEAR = 1900
@@ -147,6 +147,10 @@ FORMAT_MAPPINGS = {
 }
 
 
+class XmlError(Exception):
+    """Class for an XML error."""
+
+
 class MetronInfo:
     """A class to manage comic metadata and its MetronInfo XML representation.
 
@@ -244,12 +248,11 @@ class MetronInfo:
         Returns:
             Root XML element.
         """
-        if xml_bytes:
-            try:
-                return ET.ElementTree(fromstring(xml_bytes)).getroot()
-            except ParseError:
-                return ET.Element("MetronInfo")
-        else:
+        if not xml_bytes:
+            return ET.Element("MetronInfo")
+        try:
+            return ET.ElementTree(fromstring(xml_bytes)).getroot()
+        except ParseError:
             return ET.Element("MetronInfo")
 
     @staticmethod
@@ -406,7 +409,7 @@ class MetronInfo:
             child_node = ET.SubElement(parent_node, child_tag)
             child_node.text = item.name
             if item.id_:
-                child_node.attrib["id"] = cast_id_as_str(item.id_)
+                child_node.attrib["id"] = str(item.id_)
 
     def _add_arcs(self, root: ET.Element, arcs: list[Arc]) -> None:
         """Add story arcs to XML.
@@ -420,7 +423,7 @@ class MetronInfo:
 
         parent_node = self._get_or_create_element(root, "Arcs")
         for arc in arcs:
-            attributes = {"id": cast_id_as_str(arc.id_)} if arc.id_ else {}
+            attributes = {"id": str(arc.id_)} if arc.id_ else {}
             arc_node = ET.SubElement(parent_node, "Arc", attrib=attributes)
             ET.SubElement(arc_node, "Name").text = arc.name
             if arc.number:
@@ -438,14 +441,12 @@ class MetronInfo:
 
         publisher_node = self._get_or_create_element(root, "Publisher")
         if publisher.id_:
-            publisher_node.attrib = {"id": cast_id_as_str(publisher.id_)}
+            publisher_node.attrib = {"id": str(publisher.id_)}
 
         ET.SubElement(publisher_node, "Name").text = publisher.name
 
         if publisher.imprint:
-            imprint_attrib = (
-                {"id": cast_id_as_str(publisher.imprint.id_)} if publisher.imprint.id_ else {}
-            )
+            imprint_attrib = {"id": str(publisher.imprint.id_)} if publisher.imprint.id_ else {}
             imprint_node = ET.SubElement(publisher_node, "Imprint", imprint_attrib)
             imprint_node.text = publisher.imprint.name
 
@@ -465,7 +466,7 @@ class MetronInfo:
         if series.id_ or series.language:
             series_node.attrib = {}
         if series.id_:
-            series_node.attrib["id"] = cast_id_as_str(series.id_)
+            series_node.attrib["id"] = str(series.id_)
         if series.language:
             series_node.attrib["lang"] = series.language
 
@@ -497,7 +498,7 @@ class MetronInfo:
             for alt_name in series.alternative_names:
                 attrib = {}
                 if alt_name.id_:
-                    attrib["id"] = cast_id_as_str(alt_name.id_)
+                    attrib["id"] = str(alt_name.id_)
                 if alt_name.language:
                     attrib["lang"] = alt_name.language
                 ET.SubElement(alt_names_node, "AlternativeName", attrib=attrib).text = alt_name.name
@@ -518,7 +519,7 @@ class MetronInfo:
             if source.primary:
                 attributes["primary"] = "true"
             child_node = ET.SubElement(id_node, "ID", attrib=attributes)
-            child_node.text = cast_id_as_str(source.id_)
+            child_node.text = str(source.id_)
 
     def _add_gtin(self, root: ET.Element, gtin: GTIN | None) -> None:
         """Add GTIN information to XML.
@@ -565,7 +566,7 @@ class MetronInfo:
         for universe in universes:
             universe_node = ET.SubElement(universes_node, "Universe")
             if universe.id_:
-                universe_node.attrib["id"] = cast_id_as_str(universe.id_)
+                universe_node.attrib["id"] = str(universe.id_)
             ET.SubElement(universe_node, "Name").text = universe.name
             if universe.designation:
                 ET.SubElement(universe_node, "Designation").text = universe.designation
@@ -602,14 +603,14 @@ class MetronInfo:
             credit_node = ET.SubElement(parent_node, "Credit")
 
             # Add creator
-            creator_attrib = {"id": cast_id_as_str(credit.id_)} if credit.id_ else {}
+            creator_attrib = {"id": str(credit.id_)} if credit.id_ else {}
             creator_node = ET.SubElement(credit_node, "Creator", attrib=creator_attrib)
             creator_node.text = credit.person
 
             # Add roles
             roles_node = ET.SubElement(credit_node, "Roles")
             for role in credit.role:
-                role_attrib = {"id": cast_id_as_str(role.id_)} if role.id_ else {}
+                role_attrib = {"id": str(role.id_)} if role.id_ else {}
                 role_node = ET.SubElement(roles_node, "Role", attrib=role_attrib)
                 role_node.text = role.name if role.name.lower() in VALID_ROLES else "Other"
 

@@ -119,7 +119,7 @@ def test_meta_data(test_credits: list[Credit]) -> Metadata:
     return md
 
 
-def validate(xml_path: str, xsd_path: str) -> bool:
+def validate(xml_path: Path, xsd_path: Path) -> bool:
     xmlschema_doc = etree.parse(xsd_path)
     xmlschema = etree.XMLSchema(xmlschema_doc)
 
@@ -138,7 +138,7 @@ def test_meta_with_missing_stories(test_meta_data: Metadata, tmp_path: Path) -> 
     """Test of writing the metadata to a file."""
     tmp_file = tmp_path / "test-write.xml"
     old_md = test_meta_data
-    old_md.stories = None
+    old_md.stories = None  # type: ignore
     ComicInfo().write_to_external_file(tmp_file, test_meta_data)
     assert tmp_file.read_text() is not None
     assert validate(tmp_file, CI_XSD) is True

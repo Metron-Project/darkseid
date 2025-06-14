@@ -8,8 +8,7 @@ from zipfile import ZIP_DEFLATED, ZIP_STORED, BadZipfile, ZipFile
 
 import rarfile
 
-from darkseid.archivers.archiver import Archiver
-from darkseid.exceptions import ArchiverReadError
+from darkseid.archivers.archiver import Archiver, ArchiverReadError
 from darkseid.zipfile_remove import ZipFileWithRemove
 
 if TYPE_CHECKING:

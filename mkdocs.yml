@@ -39,14 +39,13 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Archivers:
-      - ArchiverFactory: darkseid/archivers/factory.md
       - Archiver: darkseid/archivers/archiver.md
+      - ArchiverFactory: darkseid/archivers/factory.md
       - Rar: darkseid/archivers/rar.md
       - Zip: darkseid/archivers/zip.md
   - Darkseid:
       - Comic: darkseid/comic.md
       - ComicInfo: darkseid/comicinfo.md
-      - Exceptions: darkseid/exceptions.md
       - IssueString: darkseid/issue_string.md
       - Metadata: darkseid/metadata.md
       - MetronInfo: darkseid/metroninfo.md
