@@ -221,7 +221,7 @@ class Role(Basic):
 
 
 @dataclass
-class AlternativeNames(Basic):
+class AlternativeNames(Basic, Validations):
     """
     A data class representing an alternative name for a series with basic information and validations.
 
@@ -771,11 +771,8 @@ class Metadata:
         for credit in new_credits:
             # Remove credit role if person is blank
             if credit.person == "":
-                for r in reversed(self.credits):
-                    if r.role.casefold() == credit.role.casefold():
-                        self.credits.remove(r)
+                new_credits.remove(credit)
             else:
-                credit.primary = bool("primary" in credit and credit.primary)
                 self.add_credit(credit)
 
     def set_default_page_list(self: Metadata, count: int) -> None:
