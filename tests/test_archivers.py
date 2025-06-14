@@ -12,8 +12,7 @@ import pytest
 import rarfile
 
 from darkseid.archivers import ArchiverFactory, RarArchiver, UnknownArchiver, ZipArchiver
-from darkseid.archivers.archiver import Archiver
-from darkseid.exceptions import ArchiverReadError
+from darkseid.archivers.archiver import Archiver, ArchiverReadError
 
 
 # Fixtures

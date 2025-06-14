@@ -11,8 +11,7 @@ if TYPE_CHECKING:
 
 import rarfile
 
-from darkseid.archivers.archiver import Archiver
-from darkseid.exceptions import ArchiverReadError
+from darkseid.archivers.archiver import Archiver, ArchiverReadError
 
 logger = logging.getLogger(__name__)
 

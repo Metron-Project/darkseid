@@ -13,6 +13,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+class ArchiverError(Exception):
+    """Base exception for archiver operations."""
+
+
+class ArchiverReadError(ArchiverError):
+    """Raised when reading from archive fails."""
+
+
+class ArchiverWriteError(ArchiverError):
+    """Raised when writing to archive fails."""
+
+
 class Archiver(ABC):
     """
     Abstract base class for archive operations.

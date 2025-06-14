@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__all__ = ["MetronInfo", "XmlError"]
+
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timezone
 from decimal import Decimal
@@ -14,7 +16,6 @@ from xml.etree.ElementTree import ParseError
 from defusedxml.ElementTree import fromstring, parse
 from xmlschema import XMLSchema11, XMLSchemaValidationError
 
-from darkseid.exceptions import XmlError
 from darkseid.issue_string import IssueString
 from darkseid.metadata import (
     GTIN,
@@ -145,6 +146,10 @@ FORMAT_MAPPINGS = {
     ),
     "Trade Paperback": frozenset({"trade paperback", "tpb", "trade paper back"}),
 }
+
+
+class XmlError(Exception):
+    """Class for an XML error."""
 
 
 class MetronInfo:
