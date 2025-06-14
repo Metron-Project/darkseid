@@ -211,8 +211,8 @@ def unique_file(file_name: Path) -> Path:
         The unique file name.
 
     Examples:
-        >>> original = Path("document.txt")
-        >>> unique = unique_file(original)  # Returns "document (1).txt" if original exists
+        >>> original = Path("document.cbz")
+        >>> unique = unique_file(original)  # Returns "document (1).cbz" if original exists
         >>> isinstance(unique, Path)
         True
     """
