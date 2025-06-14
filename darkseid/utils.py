@@ -6,6 +6,7 @@ __all__ = [
     "DataSources",
     "get_issue_id_from_note",
     "get_recursive_filelist",
+    "list_to_string",
     "remove_articles",
     "unique_file",
     "xlate",
