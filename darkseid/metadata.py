@@ -526,7 +526,7 @@ class Metadata:
         tag_origin (Optional[str]): The origin of the tag.
         info_source (Optional[list[InfoSources]]): The information source.
         series (Optional[Series]): The series information.
-        issue (Optional[str]): The issue information.
+        issue (Optional[str]): The issue number.
         collection_title (Optional[str]): The title of the collection.
         stories (list[Basic]): The list of stories.
         publisher (Optional[Publisher]): The publisher information.
