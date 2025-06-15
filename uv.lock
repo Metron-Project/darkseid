@@ -240,6 +240,7 @@ dependencies = [
     { name = "pycountry" },
     { name = "rarfile" },
     { name = "xmlschema" },
+    { name = "zipremove" },
 ]
 
 [package.dev-dependencies]
@@ -275,6 +276,7 @@ requires-dist = [
     { name = "pycountry", specifier = ">=24.6.1,<25" },
     { name = "rarfile", specifier = "~=4.0" },
     { name = "xmlschema", specifier = ">=4" },
+    { name = "zipremove", specifier = ">=0.1.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -1305,4 +1307,13 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/dd/cb/dc0236ae209c924c1a7f4d3ae9d3371980beda85d1e0b5bd2d4f07372e48/xmlschema-4.1.0.tar.gz", hash = "sha256:88ac771cf94d5fc6bbd1a763db8c157f3d683ad23120b0d0b8c46fe4537f2adf", size = 633811, upload-time = "2025-06-05T21:17:39.32Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c5/2c/3ba8f8aeb3cb566e88a61ab0b0b767d5398d1e7293a0f7a76df9051e2b08/xmlschema-4.1.0-py3-none-any.whl", hash = "sha256:eabf610f398a58700bc4ac94380ad9ce558297a3f9ca8b7722ed3f7888eb4498", size = 458466, upload-time = "2025-06-05T21:17:35.265Z" },
+]
+
+[[package]]
+name = "zipremove"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f4/45/e6275f44e9f775ec2a7bb68d104e3c773c6fa059022935886afa86574a59/zipremove-0.1.0.tar.gz", hash = "sha256:7a94a70ec2ac29cd06e5f0a0d5a69ef49935bb4889b30beaf470a6948f82e03e", size = 17375, upload-time = "2025-06-14T16:45:16.426Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a6/3f/1a363901646bc6a905acaabe81d43d654b2eb7034c7e609adc7c1761bfea/zipremove-0.1.0-py3-none-any.whl", hash = "sha256:4bca3bd0321926c223386cbb162927404a1adbb1361b623bcd2cd27558717851", size = 9060, upload-time = "2025-06-14T16:43:20.766Z" },
 ]

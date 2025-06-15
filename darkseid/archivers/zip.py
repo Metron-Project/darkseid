@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING
-from zipfile import ZIP_DEFLATED, ZIP_STORED, BadZipfile, ZipFile
 
 import rarfile
+from zipremove import ZIP_DEFLATED, ZIP_STORED, BadZipfile, ZipFile
 
 from darkseid.archivers.archiver import Archiver, ArchiverReadError
-from darkseid.zipfile_remove import ZipFileWithRemove
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -72,10 +71,11 @@ class ZipArchiver(Archiver):
         compress_type = ZIP_STORED if self.IMAGE_EXT_RE.search(archive_file) else ZIP_DEFLATED
 
         try:
-            with ZipFileWithRemove(self.path, "a") as zf:
+            with ZipFile(self.path, "a") as zf:
                 # Remove existing file if present
                 if archive_file in set(zf.namelist()):
-                    zf.remove(archive_file)
+                    zf_infos = [zf.remove(archive_file)]
+                    zf.repack(zf_infos)
                 zf.writestr(archive_file, data, compress_type=compress_type, compresslevel=9)
         except (BadZipfile, OSError) as e:
             self._handle_error("write", archive_file, e)
@@ -94,8 +94,9 @@ class ZipArchiver(Archiver):
             True if successful, False otherwise.
         """
         try:
-            with ZipFileWithRemove(self.path, "a") as zf:
-                zf.remove(archive_file)
+            with ZipFile(self.path, "a") as zf:
+                zf_infos = [zf.remove(archive_file)]
+                zf.repack(zf_infos)
         except KeyError:
             logger.warning("File not found for removal: %s", archive_file)
             return False
@@ -125,9 +126,9 @@ class ZipArchiver(Archiver):
             return True
 
         try:
-            with ZipFileWithRemove(self.path, "a") as zf:
-                for filename in files_to_remove:
-                    zf.remove(filename)
+            with ZipFile(self.path, "a") as zf:
+                zf_infos = [zf.remove(filename) for filename in files_to_remove]
+                zf.repack(zf_infos)
         except (BadZipfile, OSError) as e:
             self._handle_error("remove_multiple", str(files_to_remove), e)
             return False
