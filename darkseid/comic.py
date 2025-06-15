@@ -18,7 +18,7 @@ import rarfile
 from natsort import natsorted, ns
 from PIL import Image
 
-from darkseid.archivers import ArchiverFactory
+from darkseid.archivers import ArchiverFactory, ArchiverReadError
 from darkseid.archivers.zip import ZipArchiver
 from darkseid.comicinfo import ComicInfo
 from darkseid.metadata import ImageMetadata, Metadata
@@ -423,10 +423,11 @@ class Comic:
 
         try:
             raw_bytes = self._archiver.read_file(filename)
-            return raw_bytes.decode("utf-8")
-        except (OSError, UnicodeDecodeError):
+        except ArchiverReadError:
             logger.exception("Error reading raw metadata from %s", self._path)
             return None
+        else:
+            return raw_bytes.decode("utf-8")
 
     def _get_metadata_filename(self, metadata_format: MetadataFormat) -> str | None:
         """Gets the filename for the specified metadata format."""
