@@ -18,11 +18,12 @@ import rarfile
 from natsort import natsorted, ns
 from PIL import Image
 
-from darkseid.archivers import ArchiverFactory
+from darkseid.archivers import ArchiverFactory, ArchiverReadError
 from darkseid.archivers.zip import ZipArchiver
 from darkseid.comicinfo import ComicInfo
 from darkseid.metadata import ImageMetadata, Metadata
 from darkseid.metroninfo import MetronInfo
+from darkseid.validate import SchemaVersion, ValidateMetadata, ValidationError
 
 if TYPE_CHECKING:
     from darkseid.archivers.archiver import Archiver
@@ -423,10 +424,11 @@ class Comic:
 
         try:
             raw_bytes = self._archiver.read_file(filename)
-            return raw_bytes.decode("utf-8")
-        except (OSError, UnicodeDecodeError):
+        except ArchiverReadError:
             logger.exception("Error reading raw metadata from %s", self._path)
             return None
+        else:
+            return raw_bytes.decode("utf-8")
 
     def _get_metadata_filename(self, metadata_format: MetadataFormat) -> str | None:
         """Gets the filename for the specified metadata format."""
@@ -802,6 +804,49 @@ class Comic:
             formats.add(MetadataFormat.METRON_INFO)
 
         return formats
+
+    def validate_metadata(self, metadata_format: MetadataFormat) -> SchemaVersion:  # noqa: PLR0911
+        """
+        Validates the metadata in the archive for the specified format and returns its schema version.
+
+        This method checks if the archive contains metadata in the given format, validates the XML, and returns the
+        detected schema version.
+
+        Args:
+            metadata_format: The format of the metadata to validate.
+
+        Returns:
+            SchemaVersion: The schema version of the validated metadata, or SchemaVersion.Unknown if not found or invalid.
+        """
+        if metadata_format is MetadataFormat.METRON_INFO and self._has_metroninfo():
+            try:
+                xml_bytes = self._archiver.read_file(self._mi_xml_filename)
+            except ArchiverReadError:
+                logger.exception("Error reading XML archive from %s", self._path)
+                return SchemaVersion.Unknown
+
+            try:
+                vm = ValidateMetadata(xml_bytes)
+            except ValidationError:
+                logger.exception("Error validating MetronInfo XML archive from %s", self._path)
+                return SchemaVersion.Unknown
+            return vm.validate()
+
+        if metadata_format is MetadataFormat.COMIC_RACK and self._has_comicinfo():
+            try:
+                xml_bytes = self._archiver.read_file(self._ci_xml_filename)
+            except ArchiverReadError:
+                logger.exception("Error reading XML archive from %s", self._path)
+                return SchemaVersion.Unknown
+
+            try:
+                vm = ValidateMetadata(xml_bytes)
+            except ValidationError:
+                logger.exception("Error validating ComicInfo XML archive from %s", self._path)
+                return SchemaVersion.Unknown
+            return vm.validate()
+
+        return SchemaVersion.Unknown
 
     def is_valid_comic(self) -> bool:
         """
