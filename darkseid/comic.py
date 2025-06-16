@@ -10,9 +10,10 @@ import io
 import logging
 import os
 import zipfile
+from contextlib import suppress
 from enum import Enum, auto
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import rarfile
 from natsort import natsorted, ns
@@ -31,9 +32,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Constants
-SUPPORTED_IMAGE_EXTENSIONS = frozenset([".jpg", ".jpeg", ".png", ".gif", ".webp"])
-COMIC_RACK_FILENAME = "ComicInfo.xml"
-METRON_INFO_FILENAME = "MetronInfo.xml"
+SUPPORTED_IMAGE_EXTENSIONS: Final[frozenset[str]] = frozenset(
+    [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+)
+COMIC_RACK_FILENAME: Final[str] = "ComicInfo.xml"
+METRON_INFO_FILENAME: Final[str] = "MetronInfo.xml"
 
 
 class MetadataFormat(Enum):
@@ -78,8 +81,8 @@ class Comic:
     """
 
     # Class-level constants for better maintainability
-    _RAR_EXTENSIONS = frozenset([".cbr", ".rar"])
-    _ZIP_EXTENSIONS = frozenset([".cbz", ".zip"])
+    _RAR_EXTENSIONS: Final[frozenset[str]] = frozenset([".cbr", ".rar"])
+    _ZIP_EXTENSIONS: Final[frozenset[str]] = frozenset([".cbz", ".zip"])
 
     def __init__(self, path: Path | str) -> None:
         """
@@ -107,7 +110,7 @@ class Comic:
         self._ci_xml_filename: str = COMIC_RACK_FILENAME
         self._mi_xml_filename: str = METRON_INFO_FILENAME
 
-        # Cache attributes
+        # Cache attributes - Initialize as None for lazy loading
         self._has_ci: bool | None = None
         self._has_mi: bool | None = None
         self._page_count: int | None = None
@@ -121,6 +124,16 @@ class Comic:
     def __repr__(self) -> str:
         """Returns a detailed string representation of the Comic object."""
         return f"Comic(path={self._path!r}, pages={self.get_number_of_pages()})"
+
+    def __eq__(self, other: object) -> bool:
+        """Check if two Comic objects are equal based on their paths."""
+        if not isinstance(other, Comic):
+            return NotImplemented
+        return self._path == other._path
+
+    def __hash__(self) -> int:
+        """Make Comic objects hashable based on their path."""
+        return hash(self._path)
 
     @property
     def path(self) -> Path:
@@ -176,10 +189,9 @@ class Comic:
         Returns:
             True if the archive is valid, False otherwise.
         """
-        try:
+        with suppress(Exception):
             return self.rar_test() or self.zip_test()
-        except Exception:
-            return False
+        return False
 
     def rar_test(self) -> bool:
         """
@@ -188,10 +200,9 @@ class Comic:
         Returns:
             True if the path is a rar file, False otherwise.
         """
-        try:
+        with suppress(Exception):
             return rarfile.is_rarfile(self._path)
-        except Exception:
-            return False
+        return False
 
     def zip_test(self) -> bool:
         """
@@ -200,10 +211,9 @@ class Comic:
         Returns:
             True if the path is a zipfile, False otherwise.
         """
-        try:
+        with suppress(Exception):
             return zipfile.is_zipfile(self._path)
-        except Exception:
-            return False
+        return False
 
     def is_rar(self) -> bool:
         """Returns a boolean indicating whether the archive is a rarfile."""
@@ -220,10 +230,7 @@ class Comic:
         Returns:
             True if the archive is writable, False otherwise.
         """
-        if not self._archiver.is_write_operation_expected():
-            return False
-
-        return os.access(self._path, os.W_OK)
+        return self._archiver.is_write_operation_expected() and os.access(self._path, os.W_OK)
 
     def seems_to_be_a_comic_archive(self) -> bool:
         """
@@ -243,9 +250,6 @@ class Comic:
 
         Returns:
             The image data of the page, or None if an error occurs.
-
-        Raises:
-            ValueError: If the index is out of range.
         """
         try:
             self._validate_page_index(index)
@@ -259,7 +263,7 @@ class Comic:
 
         try:
             return self._archiver.read_file(filename)
-        except OSError:
+        except (OSError, ArchiverReadError):
             logger.exception("Error reading '%s' from '%s'", filename, self._path)
             return None
 
@@ -364,6 +368,7 @@ class Comic:
                 self._metadata = Metadata()
         else:
             self._metadata = Metadata()
+
         self._validate_and_fix_page_list()
         return self._metadata
 
@@ -380,6 +385,7 @@ class Comic:
                 self._metadata = Metadata()
         else:
             self._metadata = Metadata()
+
         self._validate_and_fix_page_list()
         return self._metadata
 
@@ -424,11 +430,13 @@ class Comic:
 
         try:
             raw_bytes = self._archiver.read_file(filename)
+            return raw_bytes.decode("utf-8")
         except ArchiverReadError:
             logger.exception("Error reading raw metadata from %s", self._path)
             return None
-        else:
-            return raw_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            logger.exception("Error decoding metadata from %s", self._path)
+            return None
 
     def _get_metadata_filename(self, metadata_format: MetadataFormat) -> str | None:
         """Gets the filename for the specified metadata format."""
@@ -734,7 +742,6 @@ class Comic:
                     logger.exception(
                         "Error calculating page info for page %s", page.get("Image", "unknown")
                     )
-                    continue
 
     @staticmethod
     def _should_calculate_page_info(page: ImageMetadata) -> bool:
@@ -805,48 +812,41 @@ class Comic:
 
         return formats
 
-    def validate_metadata(self, metadata_format: MetadataFormat) -> SchemaVersion:  # noqa: PLR0911
+    def validate_metadata(self, metadata_format: MetadataFormat) -> SchemaVersion:
         """
         Validates the metadata in the archive for the specified format and returns its schema version.
 
-        This method checks if the archive contains metadata in the given format, validates the XML, and returns the
-        detected schema version.
+        This method checks if the archive contains metadata in the given format, validates the XML,
+        and returns the detected schema version.
 
         Args:
             metadata_format: The format of the metadata to validate.
 
         Returns:
-            SchemaVersion: The schema version of the validated metadata, or SchemaVersion.Unknown if not found or invalid.
+            SchemaVersion: The schema version of the validated metadata,
+                          or SchemaVersion.Unknown if not found or invalid.
         """
-        if metadata_format is MetadataFormat.METRON_INFO and self._has_metroninfo():
-            try:
-                xml_bytes = self._archiver.read_file(self._mi_xml_filename)
-            except ArchiverReadError:
-                logger.exception("Error reading XML archive from %s", self._path)
-                return SchemaVersion.Unknown
+        metadata_handlers = {
+            MetadataFormat.METRON_INFO: (self._has_metroninfo, self._mi_xml_filename),
+            MetadataFormat.COMIC_RACK: (self._has_comicinfo, self._ci_xml_filename),
+        }
 
-            try:
-                vm = ValidateMetadata(xml_bytes)
-            except ValidationError:
-                logger.exception("Error validating MetronInfo XML archive from %s", self._path)
-                return SchemaVersion.Unknown
+        if metadata_format not in metadata_handlers:
+            return SchemaVersion.Unknown
+
+        has_metadata_func, filename = metadata_handlers[metadata_format]
+
+        if not has_metadata_func():
+            return SchemaVersion.Unknown
+
+        try:
+            xml_bytes = self._archiver.read_file(filename)
+            vm = ValidateMetadata(xml_bytes)
+        except (ArchiverReadError, ValidationError):
+            logger.exception("Error validating %s XML archive from %s", metadata_format, self._path)
+            return SchemaVersion.Unknown
+        else:
             return vm.validate()
-
-        if metadata_format is MetadataFormat.COMIC_RACK and self._has_comicinfo():
-            try:
-                xml_bytes = self._archiver.read_file(self._ci_xml_filename)
-            except ArchiverReadError:
-                logger.exception("Error reading XML archive from %s", self._path)
-                return SchemaVersion.Unknown
-
-            try:
-                vm = ValidateMetadata(xml_bytes)
-            except ValidationError:
-                logger.exception("Error validating ComicInfo XML archive from %s", self._path)
-                return SchemaVersion.Unknown
-            return vm.validate()
-
-        return SchemaVersion.Unknown
 
     def is_valid_comic(self) -> bool:
         """
