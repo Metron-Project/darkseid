@@ -214,6 +214,18 @@ class IssueString:
             return self == other_issue
         return False
 
+    def __hash__(self) -> int:
+        """
+        Return hash value for the IssueString object.
+
+        This enables IssueString objects to be used in sets and as dictionary keys.
+        The hash is based on both the numeric value and suffix components.
+
+        Returns:
+            Hash value based on the num and suffix attributes.
+        """
+        return hash((self.num, self.suffix))
+
     def __lt__(self, other: IssueString) -> bool:
         """
         Compare IssueString objects for sorting.\n
