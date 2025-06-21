@@ -274,7 +274,7 @@ requires-dist = [
     { name = "natsort", specifier = ">=8.0.0,<9" },
     { name = "pillow", specifier = ">=10.0.1,<11" },
     { name = "pycountry", specifier = ">=24.6.1,<25" },
-    { name = "rarfile", specifier = "~=4.0" },
+    { name = "rarfile", specifier = ">=4.2" },
     { name = "xmlschema", specifier = ">=4" },
     { name = "zipremove", specifier = ">=0.1.0" },
 ]

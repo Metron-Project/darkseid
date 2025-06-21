@@ -27,11 +27,11 @@ classifiers = [
 dependencies = [
   "Pillow>=10.0.1,<11",
   "natsort>=8.0.0,<9",
-  "rarfile~=4.0",
   "pycountry>=24.6.1,<25",
   "defusedxml>=0.7.1,<0.8",
   "xmlschema>=4",
   "zipremove>=0.1.0",
+  "rarfile>=4.2",
 ]
 
 [project.urls]
