@@ -548,7 +548,7 @@ class Comic:
     def _write_metadata_format(
         self,
         metadata: Metadata,
-        formatter,
+        formatter: MetronInfo | ComicInfo,
         filename: str,
         raw_metadata: str | None,
         calc_page_sizes: bool = False,
