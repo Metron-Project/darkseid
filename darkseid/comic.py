@@ -95,17 +95,26 @@ class Comic:
             ComicArchiveError: If the path doesn't exist or isn't a valid archive.
         """
         self._path: Path = Path(path) if isinstance(path, str) else path
+        self._validate_path()
+        self._initialize_archiver()
+        self._initialize_attributes()
 
+    def _validate_path(self) -> None:
+        """Validate that the comic file path exists."""
         if not self._path.exists():
             msg = f"Comic file does not exist: {self._path}"
             raise ComicArchiveError(msg)
 
+    def _initialize_archiver(self) -> None:
+        """Initialize the archiver for the comic file."""
         try:
             self._archiver: Archiver = ArchiverFactory.create_archiver(self._path)
         except Exception as e:
             msg = f"Failed to create archiver for {self._path}: {e}"
             raise ComicArchiveError(msg) from e
 
+    def _initialize_attributes(self) -> None:
+        """Initialize instance attributes."""
         # Use constants for filenames
         self._ci_xml_filename: str = COMIC_RACK_FILENAME
         self._mi_xml_filename: str = METRON_INFO_FILENAME
@@ -258,9 +267,18 @@ class Comic:
             return None
 
         filename = self.get_page_name(index)
-        if filename is None:
-            return None
+        return None if filename is None else self._read_file_safely(filename)
 
+    def _read_file_safely(self, filename: str) -> bytes | None:
+        """
+        Safely read a file from the archive.
+
+        Args:
+            filename: The name of the file to read.
+
+        Returns:
+            The file data, or None if an error occurs.
+        """
         try:
             return self._archiver.read_file(filename)
         except (OSError, ArchiverReadError):
@@ -337,7 +355,7 @@ class Comic:
 
     def read_metadata(self, metadata_format: MetadataFormat) -> Metadata:
         """
-        Reads metadata based on the specified format.
+        Read metadata based on the specified format.
 
         Args:
             metadata_format: The format of the metadata to read.
@@ -346,48 +364,55 @@ class Comic:
             The metadata retrieved from the comic, or an empty Metadata
             instance if the format is not recognized.
         """
-        match metadata_format:
-            case MetadataFormat.COMIC_RACK:
-                return self._read_comicinfo()
-            case MetadataFormat.METRON_INFO:
-                return self._read_metroninfo()
-            case _:
-                logger.warning("Unknown metadata format: %s", metadata_format)
-                return Metadata()
+        metadata_readers = {
+            MetadataFormat.COMIC_RACK: self._read_comicinfo,
+            MetadataFormat.METRON_INFO: self._read_metroninfo,
+        }
+
+        reader = metadata_readers.get(metadata_format)
+        if reader is None:
+            logger.warning("Unknown metadata format: %s", metadata_format)
+            return Metadata()
+
+        return reader()
 
     def _read_comicinfo(self) -> Metadata:
-        """Reads ComicInfo metadata from the archive."""
+        """Read ComicInfo metadata from the archive."""
         if self._metadata is not None:
             return self._metadata
 
-        if raw_metadata := self.read_raw_ci_metadata():
-            try:
-                self._metadata = ComicInfo().metadata_from_string(raw_metadata)
-            except Exception:
-                logger.exception("Error parsing ComicInfo metadata from %s", self._path)
-                self._metadata = Metadata()
-        else:
-            self._metadata = Metadata()
-
+        self._metadata = self._parse_metadata(self.read_raw_ci_metadata(), ComicInfo())
         self._validate_and_fix_page_list()
         return self._metadata
 
     def _read_metroninfo(self) -> Metadata:
-        """Reads MetronInfo metadata from the archive."""
+        """Read MetronInfo metadata from the archive."""
         if self._metadata is not None:
             return self._metadata
 
-        if raw_metadata := self.read_raw_mi_metadata():
-            try:
-                self._metadata = MetronInfo().metadata_from_string(raw_metadata)
-            except Exception:
-                logger.exception("Error parsing MetronInfo metadata from %s", self._path)
-                self._metadata = Metadata()
-        else:
-            self._metadata = Metadata()
-
+        self._metadata = self._parse_metadata(self.read_raw_mi_metadata(), MetronInfo())
         self._validate_and_fix_page_list()
         return self._metadata
+
+    def _parse_metadata(self, raw_metadata: str | None, parser) -> Metadata:
+        """
+        Parse raw metadata using the provided parser.
+
+        Args:
+            raw_metadata: The raw metadata string.
+            parser: The metadata parser instance.
+
+        Returns:
+            Parsed Metadata object or empty Metadata if parsing fails.
+        """
+        if not raw_metadata:
+            return Metadata()
+
+        try:
+            return parser.metadata_from_string(raw_metadata)
+        except Exception:
+            logger.exception("Error parsing metadata from %s", self._path)
+            return Metadata()
 
     def _validate_and_fix_page_list(self) -> None:
         """Validates and fixes the page list in metadata."""
@@ -439,14 +464,12 @@ class Comic:
             return None
 
     def _get_metadata_filename(self, metadata_format: MetadataFormat) -> str | None:
-        """Gets the filename for the specified metadata format."""
-        match metadata_format:
-            case MetadataFormat.COMIC_RACK:
-                return self._ci_xml_filename
-            case MetadataFormat.METRON_INFO:
-                return self._mi_xml_filename
-            case _:
-                return None
+        """Get the filename for the specified metadata format."""
+        filename_map = {
+            MetadataFormat.COMIC_RACK: self._ci_xml_filename,
+            MetadataFormat.METRON_INFO: self._mi_xml_filename,
+        }
+        return filename_map.get(metadata_format)
 
     def read_raw_ci_metadata(self) -> str | None:
         """
@@ -468,7 +491,7 @@ class Comic:
 
     def write_metadata(self, metadata: Metadata, metadata_format: MetadataFormat) -> bool:
         """
-        Writes metadata to a comic based on the specified format.
+        Write metadata to a comic based on the specified format.
 
         Args:
             metadata: The metadata to be written.
@@ -484,66 +507,88 @@ class Comic:
             logger.warning("Cannot write metadata to read-only archive: %s", self._path)
             return False
 
-        match metadata_format:
-            case MetadataFormat.COMIC_RACK:
-                return self._write_ci(metadata)
-            case MetadataFormat.METRON_INFO:
-                return self._write_mi(metadata)
-            case _:
-                msg = f"Unsupported metadata format: {metadata_format}"
-                raise ComicMetadataError(msg)
+        writers = {
+            MetadataFormat.COMIC_RACK: self._write_ci,
+            MetadataFormat.METRON_INFO: self._write_mi,
+        }
+
+        writer = writers.get(metadata_format)
+        if writer is None:
+            msg = f"Unsupported metadata format: {metadata_format}"
+            raise ComicMetadataError(msg)
+
+        return writer(metadata)  # type: ignore
 
     def _write_ci(self, metadata: Metadata | None) -> bool:
-        """Writes ComicInfo metadata to the archive."""
+        """Write ComicInfo metadata to the archive."""
         if metadata is None:
             return False
 
-        try:
-            self.apply_archive_info_to_metadata(metadata, calc_page_sizes=True)
-
-            # Get existing raw metadata if available
-            raw_metadata = self.read_raw_ci_metadata()
-            raw_bytes = raw_metadata.encode("utf-8") if raw_metadata else None
-
-            md_string = ComicInfo().string_from_metadata(metadata, raw_bytes)
-            write_success = self._archiver.write_file(self._ci_xml_filename, md_string)
-
-            if write_success:
-                self._has_ci = True
-
-            return self._successful_write(write_success, metadata)
-
-        except Exception:
-            logger.exception("Error writing ComicInfo metadata to %s", self._path)
-            return False
+        return self._write_metadata_format(
+            metadata,
+            ComicInfo(),
+            self._ci_xml_filename,
+            self.read_raw_ci_metadata(),
+            calc_page_sizes=True,
+        )
 
     def _write_mi(self, metadata: Metadata | None) -> bool:
-        """Writes MetronInfo metadata to the archive."""
+        """Write MetronInfo metadata to the archive."""
         if metadata is None:
             return False
 
+        return self._write_metadata_format(
+            metadata,
+            MetronInfo(),
+            self._mi_xml_filename,
+            self.read_raw_mi_metadata(),
+            calc_page_sizes=False,
+        )
+
+    def _write_metadata_format(
+        self,
+        metadata: Metadata,
+        formatter: MetronInfo | ComicInfo,
+        filename: str,
+        raw_metadata: str | None,
+        calc_page_sizes: bool = False,
+    ) -> bool:
+        """
+        Write metadata in a specific format.
+
+        Args:
+            metadata: The metadata to write.
+            formatter: The metadata formatter instance.
+            filename: The filename to write to.
+            raw_metadata: Existing raw metadata string.
+            calc_page_sizes: Whether to calculate page sizes.
+
+        Returns:
+            True if successful, False otherwise.
+        """
         try:
-            self.apply_archive_info_to_metadata(metadata, calc_page_sizes=False)
+            self.apply_archive_info_to_metadata(metadata, calc_page_sizes=calc_page_sizes)
 
-            # Get existing raw metadata if available
-            raw_metadata = self.read_raw_mi_metadata()
             raw_bytes = raw_metadata.encode("utf-8") if raw_metadata else None
-
-            md_string = MetronInfo().string_from_metadata(metadata, raw_bytes)
-            write_success = self._archiver.write_file(self._mi_xml_filename, md_string)
+            md_string = formatter.string_from_metadata(metadata, raw_bytes)
+            write_success = self._archiver.write_file(filename, md_string)
 
             if write_success:
-                self._has_mi = True
+                # Update appropriate cache flag
+                if filename == self._ci_xml_filename:
+                    self._has_ci = True
+                elif filename == self._mi_xml_filename:
+                    self._has_mi = True
 
             return self._successful_write(write_success, metadata)
 
         except Exception:
-            logger.exception("Error writing MetronInfo metadata to %s", self._path)
+            logger.exception("Error writing metadata to %s", self._path)
             return False
 
     def remove_metadata(self, metadata_format: MetadataFormat) -> bool:
         """
-        Removes metadata from a comic based on the specified format.
+        Remove metadata from a comic based on the specified format.
 
         Args:
             metadata_format: The format of the metadata to remove.
@@ -561,6 +606,18 @@ class Comic:
             logger.info("No %s metadata found in %s", metadata_format, self._path)
             return True  # Already removed, consider it success
 
+        return self._remove_metadata_files(metadata_format)
+
+    def _remove_metadata_files(self, metadata_format: MetadataFormat) -> bool:
+        """
+        Remove metadata files from the archive.
+
+        Args:
+            metadata_format: The format of metadata to remove.
+
+        Returns:
+            True if successful, False otherwise.
+        """
         filename = self._get_metadata_filename(metadata_format)
         if filename is None:
             return False
@@ -610,17 +667,29 @@ class Comic:
             logger.warning("Cannot remove pages from read-only archive: %s", self._path)
             return False
 
+        return self._remove_pages_by_index(pages_index)
+
+    def _remove_pages_by_index(self, pages_index: list[int]) -> bool:
+        """
+        Remove pages by their indices.
+
+        Args:
+            pages_index: List of page indices to remove.
+
+        Returns:
+            True if successful, False otherwise.
+        """
         try:
             # Validate all indices first
             for idx in pages_index:
                 self._validate_page_index(idx)
 
             # Get page names to remove
-            pages_to_remove = []
-            for idx in pages_index:
-                page_name = self.get_page_name(idx)
-                if page_name:
-                    pages_to_remove.append(page_name)
+            pages_to_remove = [
+                page_name
+                for idx in pages_index
+                if (page_name := self.get_page_name(idx)) is not None
+            ]
 
             if not pages_to_remove:
                 logger.warning("No valid pages found for removal")
@@ -660,7 +729,7 @@ class Comic:
 
     def _has_metadata_file(self, has_attr: str, filename_attr: str) -> bool:
         """
-        Checks if a metadata file exists in the archive.
+        Check if a metadata file exists in the archive.
 
         Args:
             has_attr: The attribute name for the cached result.
@@ -677,6 +746,19 @@ class Comic:
             setattr(self, has_attr, False)
             return False
 
+        return self._check_metadata_file_exists(has_attr, filename_attr)
+
+    def _check_metadata_file_exists(self, has_attr: str, filename_attr: str) -> bool:
+        """
+        Check if metadata file exists in archive.
+
+        Args:
+            has_attr: The attribute name for caching the result.
+            filename_attr: The attribute name for the filename.
+
+        Returns:
+            True if file exists, False otherwise.
+        """
         try:
             target_filename = getattr(self, filename_attr).lower()
             filenames = {
@@ -701,7 +783,7 @@ class Comic:
 
     def has_metadata(self, fmt: MetadataFormat) -> bool:
         """
-        Checks if the archive contains metadata based on the specified format.
+        Check if the archive contains metadata based on the specified format.
 
         Args:
             fmt: The format of the metadata to check for.
@@ -709,13 +791,13 @@ class Comic:
         Returns:
             True if the archive has the specified metadata, False otherwise.
         """
-        match fmt:
-            case MetadataFormat.COMIC_RACK:
-                return self._has_comicinfo()
-            case MetadataFormat.METRON_INFO:
-                return self._has_metroninfo()
-            case _:
-                return False
+        metadata_checkers = {
+            MetadataFormat.COMIC_RACK: self._has_comicinfo,
+            MetadataFormat.METRON_INFO: self._has_metroninfo,
+        }
+
+        checker = metadata_checkers.get(fmt)
+        return checker() if checker else False
 
     def apply_archive_info_to_metadata(
         self,
@@ -727,13 +809,20 @@ class Comic:
 
         Args:
             metadata: The metadata object to update.
-            calc_page_sizes: Indicates whether to calculate page sizes. Default is False.
+            calc_page_sizes: Whether to calculate page sizes. Default is False.
         """
         metadata.page_count = self.get_number_of_pages()
 
-        if not calc_page_sizes:
-            return
+        if calc_page_sizes:
+            self._calculate_all_page_info(metadata)
 
+    def _calculate_all_page_info(self, metadata: Metadata) -> None:
+        """
+        Calculate page information for all pages in metadata.
+
+        Args:
+            metadata: The metadata object containing pages.
+        """
         for page in metadata.pages:
             if self._should_calculate_page_info(page):
                 try:
@@ -750,7 +839,12 @@ class Comic:
         return any(key not in page for key in required_keys)
 
     def _calculate_page_info(self, page: ImageMetadata) -> None:
-        """Calculates and sets page information."""
+        """
+        Calculate and set page information.
+
+        Args:
+            page: The page metadata to update.
+        """
         try:
             idx = int(page["Image"])
         except (KeyError, ValueError, TypeError):
@@ -764,8 +858,20 @@ class Comic:
         # Always set the image size
         page["ImageSize"] = str(len(data))
 
+        # Try to get image dimensions
+        self._set_image_dimensions(page, data, idx)
+
+    @staticmethod
+    def _set_image_dimensions(page: ImageMetadata, data: bytes, idx: int) -> None:
+        """
+        Set image dimensions for a page.
+
+        Args:
+            page: The page metadata to update.
+            data: The image data.
+            idx: The page index for logging.
+        """
         try:
-            # Try to get image dimensions
             with Image.open(io.BytesIO(data)) as page_image:
                 width, height = page_image.size
                 page["ImageHeight"] = str(height)
@@ -797,20 +903,17 @@ class Comic:
 
     def get_metadata_formats(self) -> set[MetadataFormat]:
         """
-        Returns the set of metadata formats present in the archive.
+        Return the set of metadata formats present in the archive.
 
         Returns:
             A set of MetadataFormat enums representing the available metadata.
         """
-        formats = set()
+        format_checkers = [
+            (MetadataFormat.COMIC_RACK, self.has_metadata),
+            (MetadataFormat.METRON_INFO, self.has_metadata),
+        ]
 
-        if self.has_metadata(MetadataFormat.COMIC_RACK):
-            formats.add(MetadataFormat.COMIC_RACK)
-
-        if self.has_metadata(MetadataFormat.METRON_INFO):
-            formats.add(MetadataFormat.METRON_INFO)
-
-        return formats
+        return {fmt for fmt, checker in format_checkers if checker(fmt)}
 
     def validate_metadata(self, metadata_format: MetadataFormat) -> SchemaVersion:
         """
@@ -839,14 +942,28 @@ class Comic:
         if not has_metadata_func():
             return SchemaVersion.Unknown
 
+        return self._validate_metadata_xml(metadata_format, filename)
+
+    def _validate_metadata_xml(
+        self, metadata_format: MetadataFormat, filename: str
+    ) -> SchemaVersion:
+        """
+        Validate metadata XML and return schema version.
+
+        Args:
+            metadata_format: The metadata format being validated.
+            filename: The filename of the metadata file.
+
+        Returns:
+            The schema version of the metadata.
+        """
         try:
             xml_bytes = self._archiver.read_file(filename)
             vm = ValidateMetadata(xml_bytes)
+            return vm.validate()
         except (ArchiverReadError, ValidationError):
             logger.exception("Error validating %s XML archive from %s", metadata_format, self._path)
             return SchemaVersion.Unknown
-        else:
-            return vm.validate()
 
     def is_valid_comic(self) -> bool:
         """
