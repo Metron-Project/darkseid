@@ -95,17 +95,26 @@ class Comic:
             ComicArchiveError: If the path doesn't exist or isn't a valid archive.
         """
         self._path: Path = Path(path) if isinstance(path, str) else path
+        self._validate_path()
+        self._initialize_archiver()
+        self._initialize_attributes()
 
+    def _validate_path(self) -> None:
+        """Validate that the comic file path exists."""
         if not self._path.exists():
             msg = f"Comic file does not exist: {self._path}"
             raise ComicArchiveError(msg)
 
+    def _initialize_archiver(self) -> None:
+        """Initialize the archiver for the comic file."""
         try:
             self._archiver: Archiver = ArchiverFactory.create_archiver(self._path)
         except Exception as e:
             msg = f"Failed to create archiver for {self._path}: {e}"
             raise ComicArchiveError(msg) from e
 
+    def _initialize_attributes(self) -> None:
+        """Initialize instance attributes."""
         # Use constants for filenames
         self._ci_xml_filename: str = COMIC_RACK_FILENAME
         self._mi_xml_filename: str = METRON_INFO_FILENAME
