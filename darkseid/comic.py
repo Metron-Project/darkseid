@@ -570,6 +570,8 @@ class Comic:
             self.apply_archive_info_to_metadata(metadata, calc_page_sizes=calc_page_sizes)
 
             raw_bytes = raw_metadata.encode("utf-8") if raw_metadata else None
+            if raw_bytes is None:
+                return False
             md_string = formatter.string_from_metadata(metadata, raw_bytes)
             write_success = self._archiver.write_file(filename, md_string)
 
