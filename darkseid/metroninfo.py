@@ -7,15 +7,15 @@ from __future__ import annotations
 __all__ = ["MetronInfo", "XmlError"]
 
 import xml.etree.ElementTree as ET
-from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 from xml.etree.ElementTree import ParseError
 
 from defusedxml.ElementTree import fromstring, parse
 from xmlschema import XMLSchema11, XMLSchemaValidationError
 
+from darkseid.base_metadata_handler import BaseMetadataHandler
 from darkseid.issue_string import IssueString
 from darkseid.metadata import (
     GTIN,
@@ -34,6 +34,9 @@ from darkseid.metadata import (
     Series,
     Universe,
 )
+
+if TYPE_CHECKING:
+    from datetime import date
 
 # Constants
 EARLIEST_YEAR = 1900
@@ -151,7 +154,7 @@ class XmlError(Exception):
     """Class for an XML error."""
 
 
-class MetronInfo:
+class MetronInfo(BaseMetadataHandler):
     """A class to manage comic metadata and its MetronInfo XML representation.
 
     This class provides methods to convert metadata to and from XML format, validate information sources,
@@ -315,59 +318,6 @@ class MetronInfo:
             (fmt for fmt, synonyms in FORMAT_MAPPINGS.items() if lower_val in synonyms),
             None,
         )
-
-    @staticmethod
-    def _get_or_create_element(parent: ET.Element, tag: str) -> ET.Element:
-        """Get existing element or create new one.
-
-        Args:
-            parent: Parent element.
-            tag: Tag name.
-
-        Returns:
-            Element (existing or new).
-        """
-        element = parent.find(tag)
-        if element is None:
-            return ET.SubElement(parent, tag)
-        element.clear()
-        return element
-
-    @staticmethod
-    def _set_element_text(root: ET.Element, tag: str, value: Any | None = None) -> None:
-        """Set or remove element text value.
-
-        Args:
-            root: Root element.
-            tag: Element tag name.
-            value: Value to set (removes element if None).
-        """
-        element = root.find(tag)
-        if value is None:
-            if element is not None:
-                root.remove(element)
-        else:
-            if element is None:
-                element = ET.SubElement(root, tag)
-            element.text = str(value)
-
-    @staticmethod
-    def _set_datetime_element(root: ET.Element, tag: str, dt: datetime | None = None) -> None:
-        """Set datetime element in ISO format.
-
-        Args:
-            root: Root element.
-            tag: Element tag name.
-            dt: Datetime value.
-        """
-        element = root.find(tag)
-        if dt is None:
-            if element is not None:
-                root.remove(element)
-        else:
-            if element is None:
-                element = ET.SubElement(root, tag)
-            element.text = dt.isoformat(sep="T")
 
     @staticmethod
     def _set_date_element(root: ET.Element, tag: str, date_val: date | None = None) -> None:
@@ -689,8 +639,7 @@ class MetronInfo:
         ET.indent(root)
         return ET.ElementTree(root)
 
-    @staticmethod
-    def _convert_xml_to_metadata(tree: ET.ElementTree) -> Metadata:  # noqa: PLR0915, C901
+    def _convert_xml_to_metadata(self, tree: ET.ElementTree) -> Metadata:  # noqa: PLR0915, C901
         """Convert an XML ElementTree to a Metadata object.
 
         This method parses the provided XML ElementTree and converts it into a Metadata object representation.
@@ -733,39 +682,6 @@ class MetronInfo:
             "Universes": root.find("Universes"),
         }
 
-        def get_id_from_attrib(attrib: dict[str, str]) -> int | str | None:
-            """Extract ID from element attributes, converting to int if possible."""
-            if id_ := attrib.get("id"):
-                return int(id_) if id_.isdigit() else id_
-            return None
-
-        def get_text_content(element_name: str) -> str | None:
-            """Get text content from a cached element."""
-            element = root.find(element_name)
-            return element.text if element is not None else None
-
-        def parse_date(date_str: str | None) -> date | None:
-            """Parse date string into date object."""
-            if not date_str:
-                return None
-            try:
-                return datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc).date()
-            except ValueError:
-                return None
-
-        def parse_datetime(datetime_str: str | None) -> datetime | None:
-            """Parse datetime string into datetime object."""
-            if not datetime_str:
-                return None
-            try:
-                return datetime.fromisoformat(datetime_str)
-            except ValueError:
-                return None
-
-        def parse_int(value: str | None) -> int | None:
-            """Safely parse string to int."""
-            return int(value) if value and value.isdigit() else None
-
         def parse_gtin(gtin_element: ET.Element) -> GTIN | None:
             """Parse GTIN element into GTIN object."""
             if gtin_element is None:
@@ -807,7 +723,9 @@ class MetronInfo:
             if element is None:
                 return []
             return [
-                Basic(item.text, get_id_from_attrib(item.attrib)) for item in element if item.text
+                Basic(item.text, self._get_id_from_attrib(item.attrib))
+                for item in element
+                if item.text
             ]
 
         def parse_prices(prices_element: ET.Element) -> list[Price]:
@@ -840,9 +758,9 @@ class MetronInfo:
 
             imprint_elem = publisher_element.find("Imprint")
             if imprint_elem is not None and imprint_elem.text:
-                imprint = Basic(imprint_elem.text, get_id_from_attrib(imprint_elem.attrib))
+                imprint = Basic(imprint_elem.text, self._get_id_from_attrib(imprint_elem.attrib))
 
-            publisher_id = get_id_from_attrib(publisher_element.attrib)
+            publisher_id = self._get_id_from_attrib(publisher_element.attrib)
             return Publisher(publisher_name, publisher_id, imprint)
 
         def parse_series(series_element: ET.Element) -> Series | None:
@@ -851,7 +769,7 @@ class MetronInfo:
                 return None
 
             series = Series("None")
-            series.id_ = get_id_from_attrib(series_element.attrib)
+            series.id_ = self._get_id_from_attrib(series_element.attrib)
             series.language = series_element.attrib.get("lang")
 
             # Define mapping for simple text elements
@@ -869,7 +787,7 @@ class MetronInfo:
                 if child.tag in text_mappings:
                     setattr(series, text_mappings[child.tag], child.text)
                 elif child.tag in int_mappings:
-                    if parsed_int := parse_int(child.text):
+                    if parsed_int := self._parse_int(child.text):
                         setattr(series, int_mappings[child.tag], parsed_int)
                 elif child.tag == "AlternativeNames":
                     alt_names = []
@@ -877,7 +795,7 @@ class MetronInfo:
                         if name_elem.text:
                             alt_name = AlternativeNames(
                                 name_elem.text,
-                                get_id_from_attrib(name_elem.attrib),
+                                self._get_id_from_attrib(name_elem.attrib),
                                 name_elem.attrib.get("lang"),
                             )
                             alt_names.append(alt_name)
@@ -896,9 +814,9 @@ class MetronInfo:
                 if name_elem is None or not name_elem.text:
                     continue
 
-                arc_id = get_id_from_attrib(arc_elem.attrib)
+                arc_id = self._get_id_from_attrib(arc_elem.attrib)
                 number_elem = arc_elem.find("Number")
-                number = parse_int(number_elem.text) if number_elem is not None else None
+                number = self._parse_int(number_elem.text) if number_elem is not None else None
 
                 arcs.append(Arc(name_elem.text, arc_id, number))
 
@@ -915,7 +833,7 @@ class MetronInfo:
                 if name_elem is None or not name_elem.text:
                     continue
 
-                universe_id = get_id_from_attrib(universe_elem.attrib)
+                universe_id = self._get_id_from_attrib(universe_elem.attrib)
                 designation_elem = universe_elem.find("Designation")
                 designation = designation_elem.text if designation_elem is not None else None
 
@@ -953,10 +871,10 @@ class MetronInfo:
                 if roles_elem is not None:
                     for role_elem in roles_elem.findall("Role"):
                         if role_elem.text:
-                            role_id = get_id_from_attrib(role_elem.attrib)
+                            role_id = self._get_id_from_attrib(role_elem.attrib)
                             roles.append(Role(role_elem.text, role_id))
 
-                creator_id = get_id_from_attrib(creator_elem.attrib)
+                creator_id = self._get_id_from_attrib(creator_elem.attrib)
                 credits_.append(Credit(creator_elem.text, roles, creator_id))
 
             return credits_ or None
@@ -966,18 +884,18 @@ class MetronInfo:
         md.info_source = parse_info_sources(element_cache["IDS"])
         md.publisher = parse_publisher(element_cache["Publisher"])
         md.series = parse_series(element_cache["Series"])
-        md.collection_title = get_text_content("CollectionTitle")
+        md.collection_title = self._get_text_content(root, "CollectionTitle")
 
         # Handle issue number with IssueString
-        issue_number = get_text_content("Number")
+        issue_number = self._get_text_content(root, "Number")
         md.issue = IssueString(issue_number).as_string() if issue_number else None
 
         md.stories = parse_basic_list(element_cache["Stories"])
-        md.comments = get_text_content("Summary")
+        md.comments = self._get_text_content(root, "Summary")
         md.prices = parse_prices(element_cache["Prices"])
-        md.cover_date = parse_date(get_text_content("CoverDate"))
-        md.store_date = parse_date(get_text_content("StoreDate"))
-        md.page_count = parse_int(get_text_content("PageCount"))
+        md.cover_date = self._parse_date(self._get_text_content(root, "CoverDate"))
+        md.store_date = self._parse_date(self._get_text_content(root, "StoreDate"))
+        md.page_count = self._parse_int(self._get_text_content(root, "PageCount"))
 
         # Handle notes
         notes_elem = element_cache["Notes"]
@@ -1005,7 +923,9 @@ class MetronInfo:
 
         # Handle last modified
         modified_elem = element_cache["LastModified"]
-        md.modified = parse_datetime(modified_elem.text) if modified_elem is not None else None
+        md.modified = (
+            self._parse_datetime(modified_elem.text) if modified_elem is not None else None
+        )
 
         md.credits = parse_credits(element_cache["Credits"])
         md.is_empty = False
