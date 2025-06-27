@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-__all__ = ["MetronInfo", "XmlError"]
+__all__ = ["MetronInfo"]
 
 import xml.etree.ElementTree as ET
 from decimal import Decimal
@@ -12,10 +12,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from xml.etree.ElementTree import ParseError
 
-from defusedxml.ElementTree import fromstring, parse
+from defusedxml.ElementTree import fromstring
 from xmlschema import XMLSchema11, XMLSchemaValidationError
 
-from darkseid.base_metadata_handler import BaseMetadataHandler
+from darkseid.base_metadata_handler import BaseMetadataHandler, XmlError
 from darkseid.issue_string import IssueString
 from darkseid.metadata import (
     GTIN,
@@ -150,10 +150,6 @@ FORMAT_MAPPINGS = {
 }
 
 
-class XmlError(Exception):
-    """Class for an XML error."""
-
-
 class MetronInfo(BaseMetadataHandler):
     """A class to manage comic metadata and its MetronInfo XML representation.
 
@@ -209,21 +205,6 @@ class MetronInfo(BaseMetadataHandler):
         # Create parent directories if they don't exist
         Path(filename.parent).mkdir(parents=True, exist_ok=True)
         tree.write(filename, encoding="UTF-8", xml_declaration=True)
-
-    def read_xml(self, filename: Path) -> Metadata:
-        """Read a Metadata object from an XML file.
-
-        Args:
-            filename: The path to the XML file to read.
-
-        Returns:
-            The resulting Metadata object.
-        """
-        try:
-            tree = parse(filename)
-        except ParseError:
-            return Metadata()
-        return self._convert_xml_to_metadata(tree)
 
     def _validate_xml(self, tree: ET.ElementTree) -> None:
         """Validate XML against schema.

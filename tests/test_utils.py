@@ -10,7 +10,6 @@ from darkseid.utils import (
     list_to_string,
     remove_articles,
     unique_file,
-    xlate,
 )
 
 
@@ -293,62 +292,6 @@ def test_unique_file_preserves_extension():
         assert "test (1)" in result.stem
 
 
-# xlate tests
-def test_xlate_none_values():
-    """Test with None values."""
-    assert xlate(None) is None
-    assert xlate(None, is_int=True) is None
-
-
-def test_xlate_empty_string():
-    """Test with empty string."""
-    assert xlate("") is None
-    assert xlate("", is_int=True) is None
-
-
-def test_xlate_string_to_string():
-    """Test string conversion without int flag."""
-    assert xlate("hello") == "hello"
-    assert xlate("123") == "123"
-
-
-def test_xlate_int_to_string():
-    """Test integer conversion without int flag."""
-    assert xlate(123) == "123"
-    assert xlate(0) == "0"
-
-
-def test_xlate_to_int_pure_digits():
-    """Test conversion to int with pure digit strings."""
-    assert xlate("123", is_int=True) == 123
-    assert xlate("0", is_int=True) == 0
-
-
-def test_xlate_to_int_mixed_content():
-    """Test conversion to int with mixed content."""
-    assert xlate("abc123def", is_int=True) == 123
-    assert xlate("12a34b56", is_int=True) == 123456
-
-
-def test_xlate_to_int_no_digits():
-    """Test conversion to int with no digits."""
-    assert xlate("abc", is_int=True) is None
-    assert xlate("!@#$", is_int=True) is None
-
-
-def test_xlate_to_int_zero_special_case():
-    """Test conversion to int with zero."""
-    assert xlate("0", is_int=True) == 0
-    assert xlate("000", is_int=True) == 0
-    assert xlate("a0b0c", is_int=True) == 0
-
-
-def test_xlate_to_int_from_int():
-    """Test conversion to int from integer input."""
-    assert xlate(456, is_int=True) == 456
-    assert xlate(0, is_int=True) == 0
-
-
 # Integration tests
 def test_integration_comic_file_processing():
     """Integration test simulating comic file processing workflow."""
@@ -444,11 +387,3 @@ def test_edge_case_special_characters():
     note_with_special = "metrontagger issue_id:123 (special-chars_here)"
     result = get_issue_id_from_note(note_with_special)
     assert result["id"] == "123"
-
-
-def test_edge_case_very_long_numbers():
-    """Test with very long numbers."""
-    long_number = "1" * 50
-    result = xlate(long_number, is_int=True)
-    assert isinstance(result, int)
-    assert str(result) == long_number
