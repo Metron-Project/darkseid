@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__all__ = ["BaseMetadataHandler"]
+__all__ = ["BaseMetadataHandler", "XmlError"]
 
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
@@ -14,6 +14,10 @@ from xml.etree.ElementTree import ParseError
 from defusedxml.ElementTree import parse
 
 from darkseid.metadata import Metadata
+
+
+class XmlError(Exception):
+    """Class for an XML error."""
 
 
 class BaseMetadataHandler(ABC):
