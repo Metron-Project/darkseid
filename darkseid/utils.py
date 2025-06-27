@@ -9,7 +9,6 @@ __all__ = [
     "list_to_string",
     "remove_articles",
     "unique_file",
-    "xlate",
 ]
 
 import re
@@ -227,41 +226,3 @@ def unique_file(file_name: Path) -> Path:
         if not new_name.exists():
             return new_name
         counter += 1
-
-
-def xlate(data: int | str | None, is_int: bool = False) -> int | str | None:
-    """Translate data to an integer or string based on the provided flag.
-
-    This function handles data conversion with special handling for numeric extraction
-    when converting to integers.
-
-    Args:
-        data: The data to translate.
-        is_int: A flag indicating whether to translate to an integer.
-
-    Returns:
-        The translated data as int, str, or None.
-
-    Examples:
-        >>> xlate("123", is_int=True)
-        123
-
-        >>> xlate("abc123def", is_int=True)
-        123
-
-        >>> xlate("hello", is_int=False)
-        'hello'
-
-        >>> xlate(None)
-        None
-    """
-    if data is None or data == "":
-        return None
-
-    if is_int:
-        if numeric_chars := "".join(char for char in str(data) if char.isdigit()):
-            # Handle special case of "0"
-            return 0 if numeric_chars == "0" else int(numeric_chars)
-        return None
-
-    return str(data)
