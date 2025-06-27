@@ -10,11 +10,11 @@ __all__ = ["ComicInfo"]
 import re
 import xml.etree.ElementTree as ET
 from datetime import date
-from pathlib import Path
 from typing import Any, ClassVar, cast
 
-from defusedxml.ElementTree import fromstring, parse
+from defusedxml.ElementTree import fromstring
 
+from darkseid.base_metadata_handler import BaseMetadataHandler
 from darkseid.issue_string import IssueString
 from darkseid.metadata import (
     AgeRatings,
@@ -33,9 +33,9 @@ from darkseid.metadata import (
 from darkseid.utils import get_issue_id_from_note, list_to_string, xlate
 
 
-class ComicInfo:
+class ComicInfo(BaseMetadataHandler):
     """
-    Handles the conversion between Metadata objects and XML representations.
+    Handles the conversion between Metadata objects and ComicInfo XML representations.
 
     Includes methods for converting Metadata to XML, XML to Metadata, and writing/reading Metadata to/from external files.
     """
@@ -142,104 +142,80 @@ class ComicInfo:
             return None
         return cov_date
 
-    def metadata_from_string(self: ComicInfo, string: str) -> Metadata:
+    def metadata_from_string(self, xml_string: str) -> Metadata:
         """
         Parses an XML string representation into a Metadata object.
 
         Args:
-            string (str): The XML string to parse.
+            xml_string: The XML string to parse.
 
         Returns:
-            Metadata: The parsed Metadata object.
+            The parsed Metadata object.
         """
-        tree = ET.ElementTree(fromstring(string))
-        return self.convert_xml_to_metadata(tree)
+        try:
+            tree = ET.ElementTree(fromstring(xml_string))
+        except ET.ParseError:
+            return Metadata()
+        return self._convert_xml_to_metadata(tree)
 
     def string_from_metadata(
-        self: ComicInfo,
-        md: Metadata,
-        xml: bytes = b"",
+        self,
+        metadata: Metadata,
+        xml_bytes: bytes = b"",
     ) -> str:
         """
         Converts Metadata object to an XML string representation.
 
         Args:
-            md (Metadata): The Metadata object to convert.
-            xml (bytes): Additional XML content, defaults to an empty byte string.
+            metadata: The Metadata object to convert.
+            xml_bytes: Additional XML content, defaults to an empty byte string.
 
         Returns:
-            str: The XML string representation of the Metadata object.
+            The XML string representation of the Metadata object.
         """
-        tree = self.convert_metadata_to_xml(md, xml)
+        tree = self._convert_metadata_to_xml(metadata, xml_bytes)
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
 
-    @classmethod
-    def _split_sting(cls: type[ComicInfo], string: str, delimiters: list[str]) -> list[str]:
-        """
-        Splits a string based on the provided delimiters.
-
-        Args:
-            string (str): The string to split.
-            delimiters (list[str]): List of delimiters to use for splitting.
-
-        Returns:
-            list[str]: The list of substrings after splitting the string.
-        """
-        for delimiter in delimiters:
-            string = string.replace(delimiter, delimiters[0])
-        return string.split(delimiters[0])
-
     @staticmethod
-    def _get_root(xml: any) -> ET.Element:
+    def _get_root(xml_bytes: bytes | None) -> ET.Element:
         """
         Returns the root element of an XML object.
 
         Args:
-            xml (any): The XML object to extract the root element from.
+            xml_bytes: The XML object to extract the root element from.
 
         Returns:
-            ET.Element: The root element of the XML object.
+            The root element of the XML object.
         """
-        root = ET.ElementTree(fromstring(xml)).getroot() if xml else ET.Element("ComicInfo")
+        if xml_bytes:
+            try:
+                root = ET.ElementTree(fromstring(xml_bytes)).getroot()
+            except ET.ParseError:
+                root = ET.Element("ComicInfo")
+        else:
+            root = ET.Element("ComicInfo")
+
         root.attrib["xmlns:xsi"] = "https://www.w3.org/2001/XMLSchema-instance"
         root.attrib["xmlns:xsd"] = "https://www.w3.org/2001/XMLSchema"
 
         return root
 
-    @classmethod
-    def validate_value(
-        cls: type[ComicInfo], val: str | None, valid_set: frozenset[str]
-    ) -> str | None:
-        """
-        Validates a value against a predefined set.
-
-        Args:
-            val (str | None): The value to validate.
-            valid_set (frozenset[str]): The set of valid values.
-
-        Returns:
-            str | None: The validated value, or "Unknown" if the value is not in the set.
-        """
-        if val is not None:
-            return "Unknown" if val not in valid_set else val
-        return None
-
-    def convert_metadata_to_xml(
-        self: ComicInfo,
+    def _convert_metadata_to_xml(
+        self,
         md: Metadata,
-        xml: bytes = b"",
+        xml_bytes: bytes | None = None,
     ) -> ET.ElementTree:
         """
         Converts Metadata object to an XML representation.
 
         Args:
-            md (Metadata): The Metadata object to convert.
-            xml (bytes): Additional XML content, defaults to an empty byte string.
+            md: The Metadata object to convert.
+            xml_bytes: Additional XML content, defaults to None.
 
         Returns:
-            ET.ElementTree: The XML representation of the Metadata object.
+            The XML representation of the Metadata object.
         """
-        root = self._get_root(xml)
+        root = self._get_root(xml_bytes)
 
         def assign(cix_entry: str, md_entry: str | int | None) -> None:
             et_entry = root.find(cix_entry)
@@ -312,14 +288,14 @@ class ComicInfo:
         if md.series is not None:
             assign("Format", md.series.format)
         assign("BlackAndWhite", "Yes" if md.black_and_white else None)
-        assign("Manga", self.validate_value(md.manga, self.ci_manga))
+        assign("Manga", self._validate_value(md.manga, self.ci_manga))
         assign("Characters", get_resource_list(md.characters))
         assign("Teams", get_resource_list(md.teams))
         assign("Locations", get_resource_list(md.locations))
         assign("ScanInformation", md.scan_info)
         assign("StoryArc", get_resource_list(md.story_arcs))
         if md.age_rating is not None and md.age_rating.comic_rack:
-            assign("AgeRating", self.validate_value(md.age_rating.comic_rack, self.ci_age_ratings))
+            assign("AgeRating", self._validate_value(md.age_rating.comic_rack, self.ci_age_ratings))
 
         #  loop and add the page entries under pages node
         pages_node = root.find("Pages")
@@ -336,15 +312,15 @@ class ComicInfo:
         ET.indent(root)
         return ET.ElementTree(root)
 
-    def convert_xml_to_metadata(self: ComicInfo, tree: ET.ElementTree) -> Metadata:
+    def _convert_xml_to_metadata(self, tree: ET.ElementTree) -> Metadata:
         """
         Converts an XML representation to a Metadata object.
 
         Args:
-            tree (ET.ElementTree): The XML tree to convert to Metadata.
+            tree: The XML tree to convert to Metadata.
 
         Returns:
-            Metadata: The Metadata object extracted from the XML tree.
+            The Metadata object extracted from the XML tree.
         """
         root = tree.getroot()
 
@@ -356,19 +332,18 @@ class ComicInfo:
             Finds and returns the text content of a specific tag in an XML tree.
 
             Args:
-                txt (str): The tag to search for.
+                txt: The tag to search for.
 
             Returns:
-                str | int | None: The text content of the tag, or None if the tag is not found.
+                The text content of the tag, or None if the tag is not found.
             """
-            tag = root.find(txt)
-            return None if tag is None else tag.text
+            return self._get_text_content(root, txt)
 
         def get_urls(txt: str) -> list[Links] | None:
             if not txt:
                 return None
             # ComicInfo schema states URL string can be separated by a comma or space
-            urls = self._split_sting(txt, [",", " "])
+            urls = self._split_string(txt, [",", " "])
             # We're assuming the first link is the main source url.
             return [Links(urls[0], primary=True)] + [Links(url) for url in urls[1:]]
 
@@ -429,11 +404,11 @@ class ComicInfo:
                 n.tag in ["Writer", "Penciller", "Inker", "Colorist", "Letterer", "Editor"]
                 and n.text is not None
             ):
-                for name in self._split_sting(n.text, [";", ","]):
+                for name in self._split_string(n.text, [";", ","]):
                     md.add_credit(Credit(name.strip(), [Role(n.tag)]))
 
             if n.tag == "CoverArtist" and n.text is not None:
-                for name in self._split_sting(n.text, [";", ","]):
+                for name in self._split_string(n.text, [";", ","]):
                     md.add_credit(Credit(name.strip(), [Role("Cover")]))
 
         # parse page data now
@@ -449,54 +424,16 @@ class ComicInfo:
 
         return md
 
-    def write_to_external_file(
-        self: ComicInfo,
-        filename: Path,
-        md: Metadata,
-        xml: bytes = b"",
-    ) -> None:
-        """
-        Writes Metadata to an external file in XML format.
-
-        Args:
-            filename (str): The name of the file to write the Metadata to.
-            md (Metadata): The Metadata object to write to the file.
-            xml (bytes): Additional XML content, defaults to an empty byte string.
-
-        Returns:
-            None
-        """
-        tree = self.convert_metadata_to_xml(md, xml)
-        # Create parent directories if they don't exist
-        Path(filename.parent).mkdir(parents=True, exist_ok=True)
-        tree.write(filename, encoding="utf-8", xml_declaration=True)
-
-    def read_from_external_file(self: ComicInfo, filename: Path) -> Metadata:
-        """
-        Reads Metadata from an external file in XML format.
-
-        Args:
-            filename (str): The name of the file to read the Metadata from.
-
-        Returns:
-            Metadata: The Metadata object extracted from the file.
-        """
-        try:
-            tree = parse(filename)
-        except ET.ParseError:
-            return Metadata()
-        return self.convert_xml_to_metadata(tree)
-
     @staticmethod
     def clean_resource_list(string: str) -> list[str]:
         """
         Cleans and filters a string to create a list of non-empty values.
 
         Args:
-            string (str): The string to clean and filter.
+            string: The string to clean and filter.
 
         Returns:
-            list[str]: The list of cleaned and filtered non-empty values.
+            The list of cleaned and filtered non-empty values.
         """
         return [item.strip() for item in re.split(r',|"(.*?)"', string) if item and item.strip()]
 
@@ -506,10 +443,10 @@ class ComicInfo:
         Converts a string to a list of Basic objects.
 
         Args:
-            string (str): The string to convert to Basic objects.
+            string: The string to convert to Basic objects.
 
         Returns:
-            list[Basic] | None: The list of Basic objects created from the string, or None if the string is None.
+            The list of Basic objects created from the string, or None if the string is None.
         """
         if string is not None:
             res: list[str | Basic] = ComicInfo.clean_resource_list(string)
@@ -522,10 +459,10 @@ class ComicInfo:
         Converts a string to a list of Arc objects.
 
         Args:
-            string (str): The string to convert to Arc objects.
+            string: The string to convert to Arc objects.
 
         Returns:
-            list[Arc] | None: The list of Arc objects created from the string, or None if the string is None.
+            The list of Arc objects created from the string, or None if the string is None.
         """
         if string is not None:
             res: list[str | Arc] = ComicInfo.clean_resource_list(string)
