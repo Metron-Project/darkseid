@@ -6,6 +6,7 @@ __all__ = ["BaseMetadataHandler"]
 
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 from xml.etree.ElementTree import ParseError
@@ -75,9 +76,7 @@ class BaseMetadataHandler(ABC):
             The resulting Metadata object.
         """
 
-    def write_to_external_file(
-        self, filename: Path, metadata: Metadata, xml_bytes: bytes = b""
-    ) -> None:
+    def write_xml(self, filename: Path, metadata: Metadata, xml_bytes: bytes = b"") -> None:
         """
         Write Metadata to an external file in XML format.
 
@@ -91,7 +90,7 @@ class BaseMetadataHandler(ABC):
         Path(filename.parent).mkdir(parents=True, exist_ok=True)
         tree.write(filename, encoding="utf-8", xml_declaration=True)
 
-    def read_from_external_file(self, filename: Path) -> Metadata:
+    def read_xml(self, filename: Path) -> Metadata:
         """
         Read Metadata from an external file in XML format.
 
@@ -145,6 +144,24 @@ class BaseMetadataHandler(ABC):
             element.text = str(value)
 
     @staticmethod
+    def _set_datetime_element(root: ET.Element, tag: str, dt: datetime | None = None) -> None:
+        """Set datetime element in ISO format.
+
+        Args:
+            root: Root element.
+            tag: Element tag name.
+            dt: Datetime value.
+        """
+        element = root.find(tag)
+        if dt is None:
+            if element is not None:
+                root.remove(element)
+        else:
+            if element is None:
+                element = ET.SubElement(root, tag)
+            element.text = dt.isoformat(sep="T")
+
+    @staticmethod
     def _get_text_content(root: ET.Element, element_name: str) -> str | None:
         """
         Get text content from an element.
@@ -171,6 +188,42 @@ class BaseMetadataHandler(ABC):
             Integer value or None if parsing fails.
         """
         return int(value) if value and value.isdigit() else None
+
+    @staticmethod
+    def _parse_date(value: str | None) -> date | None:
+        """
+        Safely parse string to a date.
+
+        Args:
+            value: String value to parse.
+
+        Returns:
+            date value or None if parsing fails.
+        """
+        if not value:
+            return None
+        try:
+            return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=timezone.utc).date()
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _parse_datetime(value: str | None) -> datetime | None:
+        """
+        Safely parse string to a datetime.
+
+        Args:
+            value: String value to parse.
+
+        Returns:
+            datetime value or None if parsing fails.
+        """
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            return None
 
     @staticmethod
     def _get_id_from_attrib(attrib: dict[str, str]) -> int | str | None:
