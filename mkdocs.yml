@@ -44,7 +44,7 @@ nav:
       - Rar: darkseid/archivers/rar.md
       - Zip: darkseid/archivers/zip.md
   - Metadata:
-      - BaseMetadataHandler: darkseid/metadata/base_metadata_handler.md
+      - BaseHandler: darkseid/metadata/base_handler.md
       - ComicInfo: darkseid/metadata/comicinfo.md
       - DataClasses: darkseid/metadata/data_classes.md
       - MetronInfo: darkseid/metadata/metroninfo.md
