@@ -9,8 +9,8 @@ from tempfile import NamedTemporaryFile
 import pytest
 from defusedxml.ElementTree import fromstring
 
-from darkseid.base_metadata_handler import BaseMetadataHandler, XmlError
-from darkseid.metadata import Metadata
+from darkseid.metadata.base_metadata_handler import BaseMetadataHandler, XmlError
+from darkseid.metadata.data_classes import Metadata
 
 
 # Concrete implementation for testing

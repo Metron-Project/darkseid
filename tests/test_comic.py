@@ -20,7 +20,7 @@ from darkseid.comic import (
     ComicMetadataError,
     MetadataFormat,
 )
-from darkseid.metadata import ImageMetadata, Metadata
+from darkseid.metadata.data_classes import ImageMetadata, Metadata
 
 
 # Fixtures
@@ -500,7 +500,7 @@ def test_read_metadata_comic_rack(sample_cbz_file):
 
         comic = Comic(sample_cbz_file)
 
-        with patch("darkseid.comicinfo.ComicInfo.metadata_from_string") as mock_parse:
+        with patch("darkseid.metadata.comicinfo.ComicInfo.metadata_from_string") as mock_parse:
             mock_metadata = Metadata()
             mock_metadata.issue = "1"
             mock_parse.return_value = mock_metadata
@@ -519,7 +519,7 @@ def test_read_metadata_metron_info(sample_cbz_file):
 
         comic = Comic(sample_cbz_file)
 
-        with patch("darkseid.metroninfo.MetronInfo.metadata_from_string") as mock_parse:
+        with patch("darkseid.metadata.metroninfo.MetronInfo.metadata_from_string") as mock_parse:
             mock_metadata = Metadata()
             mock_metadata.issue = "2"
             mock_parse.return_value = mock_metadata
@@ -548,7 +548,9 @@ def test_read_metadata_parse_error(sample_cbz_file):
 
         comic = Comic(sample_cbz_file)
 
-        with patch("darkseid.comicinfo.ComicInfo.metadata_from_string", side_effect=Exception()):
+        with patch(
+            "darkseid.metadata.comicinfo.ComicInfo.metadata_from_string", side_effect=Exception()
+        ):
             metadata = comic.read_metadata(MetadataFormat.COMIC_RACK)
             assert isinstance(metadata, Metadata)
 
@@ -616,7 +618,9 @@ def test_write_metadata_comic_rack(sample_cbz_file, sample_metadata):
 
         with (
             patch.object(comic, "is_writable", return_value=True),
-            patch("darkseid.comicinfo.ComicInfo.string_from_metadata", return_value="<xml/>"),
+            patch(
+                "darkseid.metadata.comicinfo.ComicInfo.string_from_metadata", return_value="<xml/>"
+            ),
         ):
             result = comic.write_metadata(sample_metadata, MetadataFormat.COMIC_RACK)
             assert result is True
@@ -1301,7 +1305,7 @@ def test_full_workflow_read_metadata(sample_cbz_file):
         assert raw_data == "<ComicInfo><Number>1.MU</Number></ComicInfo>"
 
         # Read parsed metadata
-        with patch("darkseid.comicinfo.ComicInfo.metadata_from_string") as mock_parse:
+        with patch("darkseid.metadata.comicinfo.ComicInfo.metadata_from_string") as mock_parse:
             mock_metadata = Metadata()
             mock_metadata.issue = "1.MU"
             mock_parse.return_value = mock_metadata
@@ -1324,7 +1328,9 @@ def test_full_workflow_write_and_remove_metadata(sample_cbz_file, sample_metadat
 
         with (
             patch.object(comic, "is_writable", return_value=True),
-            patch("darkseid.comicinfo.ComicInfo.string_from_metadata", return_value="<xml/>"),
+            patch(
+                "darkseid.metadata.comicinfo.ComicInfo.string_from_metadata", return_value="<xml/>"
+            ),
         ):
             # Write metadata
             result = comic.write_metadata(sample_metadata, MetadataFormat.COMIC_RACK)

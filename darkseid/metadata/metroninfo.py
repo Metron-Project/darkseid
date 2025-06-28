@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-__all__ = ["MetronInfo"]
-
 import xml.etree.ElementTree as ET
 from decimal import Decimal
 from pathlib import Path
@@ -15,9 +13,9 @@ from xml.etree.ElementTree import ParseError
 from defusedxml.ElementTree import fromstring
 from xmlschema import XMLSchema11, XMLSchemaValidationError
 
-from darkseid.base_metadata_handler import BaseMetadataHandler, XmlError
 from darkseid.issue_string import IssueString
-from darkseid.metadata import (
+from darkseid.metadata.base_metadata_handler import BaseMetadataHandler, XmlError
+from darkseid.metadata.data_classes import (
     GTIN,
     AgeRatings,
     AlternativeNames,

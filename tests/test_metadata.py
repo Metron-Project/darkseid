@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 
-from darkseid.metadata import (
+from darkseid.metadata.data_classes import (
     GTIN,
     AgeRatings,
     AlternativeNames,

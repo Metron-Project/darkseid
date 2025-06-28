@@ -5,8 +5,6 @@
 # Copyright 2020 Brian Pepple
 from __future__ import annotations
 
-__all__ = ["ComicInfo"]
-
 import re
 import xml.etree.ElementTree as ET
 from datetime import date
@@ -14,9 +12,9 @@ from typing import Any, ClassVar, cast
 
 from defusedxml.ElementTree import fromstring
 
-from darkseid.base_metadata_handler import BaseMetadataHandler
 from darkseid.issue_string import IssueString
-from darkseid.metadata import (
+from darkseid.metadata.base_metadata_handler import BaseMetadataHandler
+from darkseid.metadata.data_classes import (
     AgeRatings,
     Arc,
     Basic,
@@ -339,7 +337,7 @@ class ComicInfo(BaseMetadataHandler):
 
         md = Metadata()
         md.series = Series(name=self._get_text_content(root, "Series"))
-        md.stories = self.string_to_resource(self._get_text_content(root, "Title"))
+        md.stories = self._string_to_resource(self._get_text_content(root, "Title"))
         md.issue = IssueString(self._get_text_content(root, "Number")).as_string()
         md.series.issue_count = self._parse_int(self._get_text_content(root, "Count"))
         md.series.volume = self._parse_int(self._get_text_content(root, "Volume"))
@@ -366,17 +364,17 @@ class ComicInfo(BaseMetadataHandler):
         imprint = self._get_text_content(root, "Imprint")
         md.publisher = Publisher(pub, imprint=Basic(imprint) if imprint else None)
 
-        md.genres = self.string_to_resource(self._get_text_content(root, "Genre"))
+        md.genres = self._string_to_resource(self._get_text_content(root, "Genre"))
         md.web_link = get_urls(self._get_text_content(root, "Web"))
         md.series.language = self._get_text_content(root, "LanguageISO")
         md.series.format = self._get_text_content(root, "Format")
         md.manga = self._get_text_content(root, "Manga")
-        md.characters = self.string_to_resource(self._get_text_content(root, "Characters"))
-        md.teams = self.string_to_resource(self._get_text_content(root, "Teams"))
-        md.locations = self.string_to_resource(self._get_text_content(root, "Locations"))
+        md.characters = self._string_to_resource(self._get_text_content(root, "Characters"))
+        md.teams = self._string_to_resource(self._get_text_content(root, "Teams"))
+        md.locations = self._string_to_resource(self._get_text_content(root, "Locations"))
         md.page_count = self._parse_int(self._get_text_content(root, "PageCount"))
         md.scan_info = self._get_text_content(root, "ScanInformation")
-        md.story_arcs = self.string_to_arc(self._get_text_content(root, "StoryArc"))
+        md.story_arcs = self._string_to_arc(self._get_text_content(root, "StoryArc"))
         md.series_group = self._get_text_content(root, "SeriesGroup")
         md.age_rating = get_age_rating(self._get_text_content(root, "AgeRating"))
 
@@ -411,7 +409,7 @@ class ComicInfo(BaseMetadataHandler):
         return md
 
     @staticmethod
-    def clean_resource_list(string: str) -> list[str]:
+    def _clean_resource_list(string: str) -> list[str]:
         """
         Cleans and filters a string to create a list of non-empty values.
 
@@ -424,7 +422,7 @@ class ComicInfo(BaseMetadataHandler):
         return [item.strip() for item in re.split(r',|"(.*?)"', string) if item and item.strip()]
 
     @staticmethod
-    def string_to_resource(string: str) -> list[Basic] | None:
+    def _string_to_resource(string: str) -> list[Basic] | None:
         """
         Converts a string to a list of Basic objects.
 
@@ -435,12 +433,12 @@ class ComicInfo(BaseMetadataHandler):
             The list of Basic objects created from the string, or None if the string is None.
         """
         if string is not None:
-            res: list[str | Basic] = ComicInfo.clean_resource_list(string)
+            res: list[str | Basic] = ComicInfo._clean_resource_list(string)
             return [Basic(item) for item in res]
         return None
 
     @staticmethod
-    def string_to_arc(string: str) -> list[Arc] | None:
+    def _string_to_arc(string: str) -> list[Arc] | None:
         """
         Converts a string to a list of Arc objects.
 
@@ -451,6 +449,6 @@ class ComicInfo(BaseMetadataHandler):
             The list of Arc objects created from the string, or None if the string is None.
         """
         if string is not None:
-            res: list[str | Arc] = ComicInfo.clean_resource_list(string)
+            res: list[str | Arc] = ComicInfo._clean_resource_list(string)
             return [Arc(item) for item in res]
         return None
