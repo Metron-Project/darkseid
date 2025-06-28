@@ -9,7 +9,6 @@ from abc import ABC, abstractmethod
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
-from xml.etree.ElementTree import ParseError
 
 from defusedxml.ElementTree import parse
 
@@ -106,7 +105,7 @@ class BaseMetadataHandler(ABC):
         """
         try:
             tree = parse(filename)
-        except ParseError:
+        except ET.ParseError:
             return Metadata()
         return self._convert_xml_to_metadata(tree)
 
