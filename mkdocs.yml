@@ -43,12 +43,14 @@ nav:
       - ArchiverFactory: darkseid/archivers/factory.md
       - Rar: darkseid/archivers/rar.md
       - Zip: darkseid/archivers/zip.md
+  - Metadata:
+      - BaseMetadataHandler: darkseid/metadata/base_metadata_handler.md
+      - ComicInfo: darkseid/metadata/comicinfo.md
+      - DataClasses: darkseid/metadata/data_classes.md
+      - MetronInfo: darkseid/metadata/metroninfo.md
   - Darkseid:
       - Comic: darkseid/comic.md
-      - ComicInfo: darkseid/comicinfo.md
       - IssueString: darkseid/issue_string.md
-      - Metadata: darkseid/metadata.md
-      - MetronInfo: darkseid/metroninfo.md
       - Validate: darkseid/validate.md
       - Utils: darkseid/utils.md
 
