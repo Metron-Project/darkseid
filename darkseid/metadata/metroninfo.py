@@ -14,7 +14,7 @@ from defusedxml.ElementTree import fromstring
 from xmlschema import XMLSchema11, XMLSchemaValidationError
 
 from darkseid.issue_string import IssueString
-from darkseid.metadata.base_metadata_handler import BaseMetadataHandler, XmlError
+from darkseid.metadata.base_handler import BaseMetadataHandler, XmlError
 from darkseid.metadata.data_classes import (
     GTIN,
     AgeRatings,

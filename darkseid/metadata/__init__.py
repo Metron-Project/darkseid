@@ -1,4 +1,4 @@
-from darkseid.metadata.base_metadata_handler import BaseMetadataHandler, XmlError
+from darkseid.metadata.base_handler import BaseMetadataHandler, XmlError
 from darkseid.metadata.comicinfo import ComicInfo
 from darkseid.metadata.data_classes import (
     GTIN,

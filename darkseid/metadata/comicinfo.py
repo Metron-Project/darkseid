@@ -13,7 +13,7 @@ from typing import Any, ClassVar, cast
 from defusedxml.ElementTree import fromstring
 
 from darkseid.issue_string import IssueString
-from darkseid.metadata.base_metadata_handler import BaseMetadataHandler
+from darkseid.metadata.base_handler import BaseMetadataHandler
 from darkseid.metadata.data_classes import (
     AgeRatings,
     Arc,
