@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from darkseid.metadata import (
+from darkseid.metadata.data_classes import (
     GTIN,
     AgeRatings,
     AlternativeNames,
@@ -23,7 +23,7 @@ from darkseid.metadata import (
     Series,
     Universe,
 )
-from darkseid.metroninfo import MetronInfo
+from darkseid.metadata.metroninfo import MetronInfo
 
 
 @pytest.fixture

@@ -1,0 +1,12 @@
+:::darkseid.metadata.data_classes.Validations
+:::darkseid.metadata.data_classes.PageType
+:::darkseid.metadata.data_classes.ImageMetadata
+:::darkseid.metadata.data_classes.Price
+:::darkseid.metadata.data_classes.Basic
+:::darkseid.metadata.data_classes.Universe
+:::darkseid.metadata.data_classes.Role
+:::darkseid.metadata.data_classes.Series
+:::darkseid.metadata.data_classes.Arc
+:::darkseid.metadata.data_classes.Credit
+:::darkseid.metadata.data_classes.GTIN
+:::darkseid.metadata.data_classes.Metadata

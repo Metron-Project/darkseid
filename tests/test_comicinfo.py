@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 from lxml import etree
 
-from darkseid.comicinfo import ComicInfo
-from darkseid.metadata import (
+from darkseid.metadata.comicinfo import ComicInfo
+from darkseid.metadata.data_classes import (
     AgeRatings,
     Arc,
     Basic,

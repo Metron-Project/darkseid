@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-__all__ = ["BaseMetadataHandler", "XmlError"]
-
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timezone
@@ -12,7 +10,7 @@ from typing import Any
 
 from defusedxml.ElementTree import parse
 
-from darkseid.metadata import Metadata
+from darkseid.metadata.data_classes import Metadata
 
 
 class XmlError(Exception):

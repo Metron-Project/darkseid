@@ -21,9 +21,9 @@ from PIL import Image
 
 from darkseid.archivers import ArchiverFactory, ArchiverReadError
 from darkseid.archivers.zip import ZipArchiver
-from darkseid.comicinfo import ComicInfo
-from darkseid.metadata import ImageMetadata, Metadata
-from darkseid.metroninfo import MetronInfo
+from darkseid.metadata.comicinfo import ComicInfo
+from darkseid.metadata.data_classes import ImageMetadata, Metadata
+from darkseid.metadata.metroninfo import MetronInfo
 from darkseid.validate import SchemaVersion, ValidateMetadata, ValidationError
 
 if TYPE_CHECKING:

@@ -1,1 +1,0 @@
-:::darkseid.comicinfo.ComicInfo

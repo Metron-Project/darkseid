@@ -9,8 +9,8 @@ from tempfile import NamedTemporaryFile
 import pytest
 from defusedxml.ElementTree import fromstring
 
-from darkseid.base_metadata_handler import BaseMetadataHandler, XmlError
-from darkseid.metadata import Metadata
+from darkseid.metadata.base_metadata_handler import BaseMetadataHandler, XmlError
+from darkseid.metadata.data_classes import Metadata
 
 
 # Concrete implementation for testing
@@ -343,7 +343,7 @@ def test_parse_date_wrong_format():
 
 def test_parse_datetime_valid():
     """Test _parse_datetime with valid datetime string."""
-    result = BaseMetadataHandler._parse_datetime("2023-01-15T12:30:45 -0000")
+    result = BaseMetadataHandler._parse_datetime("2023-01-15T12:30:45+00:00")
     assert result == datetime(2023, 1, 15, 12, 30, 45, tzinfo=timezone.utc)
 
 

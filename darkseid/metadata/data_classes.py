@@ -10,26 +10,6 @@ possible, however lossy it might be
 # Copyright 2020 Brian Pepple
 from __future__ import annotations
 
-__all__ = [
-    "GTIN",
-    "AgeRatings",
-    "AlternativeNames",
-    "Arc",
-    "Basic",
-    "Credit",
-    "ImageMetadata",
-    "InfoSources",
-    "Links",
-    "Metadata",
-    "Notes",
-    "PageType",
-    "Price",
-    "Publisher",
-    "Role",
-    "Series",
-    "Universe",
-]
-
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, TypedDict
 
