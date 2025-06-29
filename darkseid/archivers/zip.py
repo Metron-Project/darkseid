@@ -161,8 +161,8 @@ class ZipArchiver(Archiver):
         """
         try:
             with ZipFile(self.path, mode="w", allowZip64=True) as zout:
-                for filename in other_archive.get_filename_list():
-                    try:
+                try:
+                    for filename in other_archive.get_filename_list():
                         data = other_archive.read_file(filename)
                         if data is not None:
                             compress_type = (
@@ -171,10 +171,10 @@ class ZipArchiver(Archiver):
                             zout.writestr(
                                 filename, data, compress_type=compress_type, compresslevel=9
                             )
-                    except (ArchiverReadError, rarfile.BadRarFile) as e:
-                        logger.warning("Skipping bad file %s: %s", filename, e)
-                        self._cleanup_partial_file()
-                        return False
+                except (ArchiverReadError, rarfile.BadRarFile) as e:
+                    logger.warning("Skipping bad file %s: %s", filename, e)
+                    self._cleanup_partial_file()
+                    return False
         except (BadZipfile, OSError) as e:
             self._cleanup_partial_file()
             self._handle_error("copy", str(other_archive.path), e)
