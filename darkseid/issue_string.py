@@ -13,10 +13,12 @@ __all__ = ["IssueString"]
 
 
 class IssueString:
-    r"""Handles issue number strings by breaking them into numeric and suffix parts,
-    and provides methods to convert to different formats.\n
+    """Handles issue number strings by breaking them into numeric and suffix parts,
+    and provides methods to convert to different formats.
+
     This class parses comic book issue numbers that can contain various formats
-    including decimals, negative numbers, and alphanumeric suffixes.\n
+    including decimals, negative numbers, and alphanumeric suffixes.
+
     Examples:
         >>> issue = IssueString("12.5AU")
         >>> issue.num
@@ -25,6 +27,7 @@ class IssueString:
         'AU'
         >>> issue.as_string(pad=3)
         '012.5AU'.
+
     """  # noqa: D205
 
     # Constants for better maintainability
