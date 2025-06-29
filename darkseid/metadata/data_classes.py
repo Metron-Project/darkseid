@@ -35,12 +35,20 @@ MAX_NUMBER_OF_TAGS = 5
 
 
 class Validations:
-    def __init__(self):
+    """A base class for data validation in dataclasses.
+
+    This class provides initialization and post-initialization hooks for validating dataclass fields.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the Validations class.
+
+        This constructor sets up the initial state for the Validations class, preparing it for use in data validation.
+        """
         self.__dataclass_fields__ = None
 
     def __post_init__(self: Validations) -> None:
-        """
-        Run validation methods if declared.
+        """Run validation methods if declared.
 
         The validation method can be a simple check that raises ValueError or a transformation
         to the field value. The validation is performed by calling a function named:
@@ -57,6 +65,7 @@ class Validations:
             validations = Validations()
             validations.__post_init__()
             ```
+
         """
         for name, field_ in self.__dataclass_fields__.items():
             if method := getattr(self, f"validate_{name}", None):
@@ -64,8 +73,7 @@ class Validations:
 
 
 class PageType:
-    """
-    Defines constants for different types of pages.
+    """Defines constants for different types of pages.
 
     This class provides a set of predefined page types for categorizing pages in a publication.
     """
@@ -84,8 +92,7 @@ class PageType:
 
 
 class ImageMetadata(TypedDict, total=False):
-    """
-    Defines the structure of ImageMetadata using TypedDict.
+    """Defines the structure of ImageMetadata using TypedDict.
 
     This class represents the metadata associated with an image.
     """
@@ -101,12 +108,12 @@ class ImageMetadata(TypedDict, total=False):
 
 @dataclass
 class Price(Validations):
-    """
-    A data class representing a price with validations.
+    """A data class representing a price with validations.
 
     Attributes:
         amount (Decimal): The amount associated with the price.
         country (str): The country associated with the price, defaults to "US".
+
     """
 
     amount: Decimal
@@ -114,8 +121,7 @@ class Price(Validations):
 
     @staticmethod
     def validate_country(value: str, **_: any) -> str:
-        """
-        Validates a country value.
+        """Validate a country value.
 
         If the value is None, it returns the default country code "US". Otherwise, it strips
         any leading or trailing whitespace from the value. If the value is empty after
@@ -134,8 +140,8 @@ class Price(Validations):
 
         Raises:
             ValueError: Raised when the country code cannot be found or when no value is given for the country.
-        """
 
+        """
         if value is None:
             return "US"
         value = value.strip()
@@ -160,12 +166,12 @@ class Price(Validations):
 
 @dataclass
 class Basic:
-    """
-    A data class representing basic information.
+    """A data class representing basic information.
 
     Attributes:
         name (str): The name associated with the basic information.
         id_ (int | None): The ID associated with the basic information, defaults to None.
+
     """
 
     name: str
@@ -174,8 +180,7 @@ class Basic:
 
 @dataclass
 class InfoSources:
-    """
-    Dataclass representing information sources with associated metadata.
+    """Dataclass representing information sources with associated metadata.
 
     This class is used to store the name, identifier, and primary status of an information source. It allows for
     structured representation of sources, facilitating easier management and access to their attributes.
@@ -184,6 +189,7 @@ class InfoSources:
         name (str): The name of the information source.
         id_ (int): The unique identifier for the information source.
         primary (bool): A flag indicating if this source is the primary one. Defaults to False.
+
     """
 
     name: str
@@ -193,13 +199,13 @@ class InfoSources:
 
 @dataclass
 class Universe(Basic):
-    """
-    A data class representing a universe.
+    """A data class representing a universe.
 
     Attributes:
         name (str): The name associated with the basic information.
         id_ (int | None): The ID associated with the basic information, defaults to None.
         designation (str | None): The designation of the universe, defaults to None.
+
     """
 
     designation: str | None = None
@@ -207,13 +213,13 @@ class Universe(Basic):
 
 @dataclass
 class Role(Basic):
-    """
-    A data class representing a role.
+    """A data class representing a role.
 
     Attributes:
         name (str): The name associated with the basic information.
         id_ (int | None): The ID associated with the basic information, defaults to None.
         primary (bool): Indicates if the role is primary, defaults to False.
+
     """
 
     primary: bool = False
@@ -221,8 +227,7 @@ class Role(Basic):
 
 @dataclass
 class AlternativeNames(Basic, Validations):
-    """
-    A data class representing an alternative name for a series with basic information and validations.
+    """A data class representing an alternative name for a series with basic information and validations.
 
     Attributes:
         name (str): The alternative name for a series.
@@ -231,14 +236,14 @@ class AlternativeNames(Basic, Validations):
 
     Static Methods:
         validate_language(value: str, **_: any) -> str | None: Validates a language value.
+
     """
 
     language: str | None = None
 
     @staticmethod
     def validate_language(value: str, **_: any) -> str | None:
-        """
-        Validates a language value.
+        """Validate a language value.
 
         If the value is empty, it returns None. Otherwise, it strips any leading or trailing
         whitespace from the value. If the length of the value is 2, it tries to find the
@@ -254,8 +259,8 @@ class AlternativeNames(Basic, Validations):
 
         Raises:
             ValueError: Raised when the language object cannot be found.
-        """
 
+        """
         if not value:
             return None
         value = value.strip()
@@ -276,8 +281,7 @@ class AlternativeNames(Basic, Validations):
 
 @dataclass
 class Series(Basic, Validations):
-    """
-    A data class representing a series with basic information and validations.
+    """A data class representing a series with basic information and validations.
 
     Attributes:
         name (str): The name associated with the basic information.
@@ -293,6 +297,7 @@ class Series(Basic, Validations):
 
     Static Methods:
         validate_language(value: str, **_: any) -> str | None: Validates a language value.
+
     """
 
     sort_name: str | None = None
@@ -306,6 +311,22 @@ class Series(Basic, Validations):
 
     @staticmethod
     def validate_start_year(value: int, **_: any) -> int | None:
+        """Validate a start year value.
+
+        This method checks if the provided value is a valid four-digit year. If the value is not present,
+        it returns None. If the value is not exactly four digits, it raises a ValueError.
+
+        Args:
+            value (int): The year value to validate.
+            **_ (any): Additional keyword arguments (ignored).
+
+        Returns:
+            Optional[int]: The validated year value, or None if the value is not present.
+
+        Raises:
+            ValueError: Raised when the year is not exactly four digits.
+
+        """
         if not value:
             return None
 
@@ -317,8 +338,7 @@ class Series(Basic, Validations):
 
     @staticmethod
     def validate_language(value: str, **_: any) -> str | None:
-        """
-        Validates a language value.
+        """Validate a language value.
 
         If the value is empty, it returns None. Otherwise, it strips any leading or trailing
         whitespace from the value. If the length of the value is 2, it tries to find the
@@ -334,8 +354,8 @@ class Series(Basic, Validations):
 
         Raises:
             ValueError: Raised when the language object cannot be found.
-        """
 
+        """
         if not value:
             return None
         value = value.strip()
@@ -356,13 +376,13 @@ class Series(Basic, Validations):
 
 @dataclass
 class Publisher(Basic):
-    """
-    A data class representing a Publisher with basic information.
+    """A data class representing a Publisher with basic information.
 
     Attributes:
         name (str): The name associated with the basic information.
         id_ (int | None): The ID associated with the basic information, defaults to None.
         imprint (Basic | None): The Imprint of a Publisher with basic information, defaults to None.
+
     """
 
     imprint: Basic | None = None
@@ -370,13 +390,13 @@ class Publisher(Basic):
 
 @dataclass
 class Arc(Basic):
-    """
-    A data class representing an arc with basic information.
+    """A data class representing an arc with basic information.
 
     Attributes:
         name (str): The name associated with the basic information.
         id_ (int | None): The ID associated with the basic information, defaults to None.
         number (int | None): The number of the arc, defaults to None.
+
     """
 
     number: int | None = None
@@ -384,13 +404,13 @@ class Arc(Basic):
 
 @dataclass
 class Credit:
-    """
-    A data class representing a creator credit.
+    """A data class representing a creator credit.
 
     Attributes:
         person (str): The name of the person associated with the credit.
         role (list[Role]): The list of roles associated with the credit.
         id_ (int | None): The ID associated with the credit, defaults to None.
+
     """
 
     person: str
@@ -400,14 +420,14 @@ class Credit:
 
 @dataclass
 class Links:
-    """
-    Dataclass representing a URL with an optional primary flag.
+    """Dataclass representing a URL with an optional primary flag.
 
     This class is used to store a URL and indicate whether it is the primary URL. It can be extended to include validation for the URL format in the future.
 
     Attributes:
         url (str): The URL string.
         primary (bool): A flag indicating if this URL is the primary one. Defaults to False.
+
     """
 
     # TODO: Probably worthwhile to validate the strings are URLS.
@@ -417,12 +437,12 @@ class Links:
 
 @dataclass
 class Notes:
-    """
-    Notes is a data class designed to hold notes for the different formats.
+    """Notes is a data class designed to hold notes for the different formats.
 
     Attributes:
         metron_info (str): A string containing information about the metronome.
         comic_rack (str): A string representing the comic book collection.
+
     """
 
     metron_info: str = ""
@@ -431,13 +451,14 @@ class Notes:
 
 @dataclass
 class AgeRatings:
-    """
-    Represents age ratings for comics, storing information from different sources.
+    """Represents age ratings for comics, storing information from different sources.
+
     This class holds metadata related to age ratings, allowing for easy access and management.
 
     Attributes:
         metron_info (str): Information related to age ratings from Metron.
         comic_rack (str): Information related to age ratings from Comic Rack.
+
     """
 
     metron_info: str = ""
@@ -446,8 +467,7 @@ class AgeRatings:
 
 @dataclass
 class GTIN(Validations):
-    """
-    A data class representing a GTIN (Global Trade Item Number) with validations.
+    """A data class representing a GTIN (Global Trade Item Number) with validations.
 
     Attributes:
         upc (int | None): The UPC (Universal Product Code) associated with the GTIN, defaults to None.
@@ -456,6 +476,7 @@ class GTIN(Validations):
     Static Methods:
         validate_upc(value: int, **_: any) -> int | None: Validates a UPC (Universal Product Code) value.
         validate_isbn(value: int, **_: any) -> int | None: Validates an ISBN (International Standard Book Number) value.
+
     """
 
     upc: int | None = None
@@ -463,8 +484,7 @@ class GTIN(Validations):
 
     @staticmethod
     def validate_upc(value: int, **_: any) -> int | None:
-        """
-        Validates a UPC (Universal Product Code) value.
+        """Validate a UPC (Universal Product Code) value.
 
         If the value is None or not an instance of int, it returns None. Otherwise, it checks
         if the length of the UPC value is greater than the maximum allowed length. If it is, it
@@ -479,8 +499,8 @@ class GTIN(Validations):
 
         Raises:
             ValueError: Raised when the length of the UPC value is greater than the maximum allowed length.
-        """
 
+        """
         # sourcery skip: class-extract-method
         if value is None or not isinstance(value, int):
             return None
@@ -494,8 +514,7 @@ class GTIN(Validations):
 
     @staticmethod
     def validate_isbn(value: int, **_: any) -> int | None:
-        """
-        Validates an ISBN (International Standard Book Number) value.
+        """Validate an ISBN (International Standard Book Number) value.
 
         If the value is None or not an instance of int, it returns None. Otherwise, it checks
         if the length of the ISBN value is greater than the maximum allowed length. If it is,
@@ -510,8 +529,8 @@ class GTIN(Validations):
 
         Raises:
             ValueError: Raised when the length of the ISBN value is greater than the maximum allowed length.
-        """
 
+        """
         if value is None or not isinstance(value, int):
             return None
 
@@ -525,8 +544,7 @@ class GTIN(Validations):
 
 @dataclass
 class Metadata:
-    """
-    Represents metadata for a comic.
+    """Represents metadata for a comic.
 
     Attributes:
         is_empty (bool): Indicates if the metadata is empty.
@@ -583,6 +601,7 @@ class Metadata:
         metadata.overlay(new_md)
         print(metadata)
         ```
+
     """
 
     is_empty: bool = True
@@ -631,8 +650,7 @@ class Metadata:
     modified: datetime | None = None
 
     def __post_init__(self: Metadata) -> None:
-        """
-        Executes the post-initialization process for a Metadata instance.
+        """Execute the post-initialization process for a Metadata instance.
 
         The method iterates over the attributes of the Metadata object and checks if any
         attribute has a non-empty value, excluding the "is_empty" attribute. If a non-empty
@@ -650,6 +668,7 @@ class Metadata:
             metadata.__post_init__()
             print(metadata.is_empty)  # Output: False
             ```
+
         """
         for key, value in self.__dict__.items():
             if value and key != "is_empty":
@@ -657,8 +676,7 @@ class Metadata:
                 break
 
     def overlay(self: Metadata, new_md: Metadata) -> None:  # noqa: PLR0912
-        """
-        Overlays a metadata object on this one.
+        """Overlays a metadata object on this one.
 
         The method assigns non-None values from the new metadata object to the corresponding
         attributes of the current metadata object. If a value is an empty string, it is
@@ -680,6 +698,7 @@ class Metadata:
             print(metadata.series)  # Output: "Series 1"
             print(metadata.issue)  # Output: "Issue 1"
             ```
+
         """
 
         def assign(cur: str, new: any) -> None:
@@ -744,8 +763,7 @@ class Metadata:
             assign("pages", new_md.pages)
 
     def overlay_credits(self: Metadata, new_credits: list[Credit]) -> None:
-        """
-        Overlays the credits from a new metadata object on the current metadata object.
+        """Overlays the credits from a new metadata object on the current metadata object.
 
         The method iterates over the new credits and removes any credit role if the person is
         blank. If the person is not blank, the "primary" attribute of the credit is set based
@@ -766,6 +784,7 @@ class Metadata:
             metadata.overlay_credits(new_credits)
             print(metadata.credits)  # Output: [Credit(person="John Doe", role="Writer")]
             ```
+
         """
         for credit in new_credits:
             # Remove credit role if person is blank
@@ -775,8 +794,7 @@ class Metadata:
                 self.add_credit(credit)
 
     def set_default_page_list(self: Metadata, count: int) -> None:
-        """
-        Generates a default page list for the Metadata object.
+        """Generate a default page list for the Metadata object.
 
         The method creates a default page list with the specified count. Each page is
         represented by an ImageMetadata object with the "Image" attribute set to the
@@ -800,6 +818,7 @@ class Metadata:
             # ImageMetadata(Image=1), ImageMetadata(Image=2), ImageMetadata(Image=3),
             # ImageMetadata(Image=4)]
             ```
+
         """
         # generate a default page list, with the first page marked as the cover
         for i in range(count):
@@ -809,8 +828,7 @@ class Metadata:
             self.pages.append(page_dict)
 
     def get_archive_page_index(self: Metadata, pagenum: int) -> int:
-        """
-        Converts the displayed page number to the page index of the file in the archive.
+        """Convert the displayed page number to the page index of the file in the archive.
 
         The method takes a displayed page number and returns the corresponding page index in
         the archive. If the displayed page number is within the range of the available pages,
@@ -832,14 +850,13 @@ class Metadata:
             index = metadata.get_archive_page_index(1)
             print(index)  # Output: 1
             ```
-        """
 
+        """
         # convert the displayed page number to the page index of the file in the archive
         return int(self.pages[pagenum]["Image"]) if pagenum < len(self.pages) else 0
 
     def get_cover_page_index_list(self: Metadata) -> list[int]:
-        """
-        Returns a list of archive page indices of cover pages.
+        """Return a list of archive page indices of cover pages.
 
         The method iterates over the pages in the Metadata object and checks if a page is
         marked as a front cover by having a "Type" attribute equal to PageType.FrontCover. If a
@@ -856,6 +873,7 @@ class Metadata:
             cover_indices = metadata.get_cover_page_index_list()
             print(cover_indices)  # Output: [0]
             ```
+
         """
         coverlist = [
             int(p["Image"]) for p in self.pages if "Type" in p and p["Type"] == PageType.FrontCover
@@ -867,16 +885,15 @@ class Metadata:
         return coverlist
 
     def _existing_credit(self: Metadata, creator: str) -> tuple[bool, int | None]:
-        """
-        Checks if a credit with the specified creator already exists in the Metadata.
+        """Check if a credit with the specified creator already exists in the Metadata.
 
         Args:
             creator (str): The creator to check for in the existing credits.
 
         Returns:
             tuple[bool, int | None]: A tuple containing a boolean indicating if the credit exists and the index of the existing credit, or None if not found.
-        """
 
+        """
         return (
             next(
                 (
@@ -892,8 +909,7 @@ class Metadata:
 
     @staticmethod
     def _role_exists(new_role: Role, old_roles: list[Role]) -> bool:
-        """
-        Checks if a role already exists in the list of old roles.
+        """Check if a role already exists in the list of old roles.
 
         Args:
             new_role (Role): The new role to check for in the old roles list.
@@ -901,13 +917,12 @@ class Metadata:
 
         Returns:
             bool: True if the role already exists, False otherwise.
-        """
 
+        """
         return any(role.name.casefold() == new_role.name.casefold() for role in old_roles)
 
     def add_credit(self: Metadata, new_credit: Credit) -> None:
-        """
-        Adds a new credit to the Metadata.
+        """Add a new credit to the Metadata.
 
         If a credit with the same person already exists, the roles from the new credit are added to the existing credit.
         If the person is new, the new credit is appended to the list of credits.
@@ -917,8 +932,8 @@ class Metadata:
 
         Returns:
             None
-        """
 
+        """
         exist, idx = self._existing_credit(new_credit.person)
         if exist:
             existing_credit: Credit = self.credits[idx]
@@ -930,12 +945,11 @@ class Metadata:
 
     # TODO: Let's split this into smaller methods sometime
     def __str__(self: Metadata) -> str:  # noqa: PLR0912
-        """
-        Returns a formatted string representation of the Metadata object.
+        """Returns a formatted string representation of the Metadata object.
 
         This improved version provides a more readable and organized display of the metadata,
         grouping related fields and handling different data types appropriately.
-        """
+        """  # noqa: D401
         if self.is_empty:
             return "Metadata(empty)"
 
@@ -1008,7 +1022,7 @@ class Metadata:
             if self.age_rating.metron_info:
                 rating_parts.append(f"Metron: {self.age_rating.metron_info}")
             if self.age_rating.comic_rack:
-                rating_parts.append(f"ComicRack: {self.age_rating.comic_rack}")
+                rating_parts.append(f"ComicInfo: {self.age_rating.comic_rack}")
             lines.append(f"{indent}Age Rating: {' | '.join(rating_parts)}")
 
         # Story elements

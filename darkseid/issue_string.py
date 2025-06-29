@@ -13,11 +13,12 @@ __all__ = ["IssueString"]
 
 
 class IssueString:
-    """
-    Handles issue number strings by breaking them into numeric and suffix parts,
-    and provides methods to convert to different formats.\n
+    """Handles issue number strings by breaking them into numeric and suffix parts,
+    and provides methods to convert to different formats.
+
     This class parses comic book issue numbers that can contain various formats
-    including decimals, negative numbers, and alphanumeric suffixes.\n
+    including decimals, negative numbers, and alphanumeric suffixes.
+
     Examples:
         >>> issue = IssueString("12.5AU")
         >>> issue.num
@@ -25,8 +26,9 @@ class IssueString:
         >>> issue.suffix
         'AU'
         >>> issue.as_string(pad=3)
-        '012.5AU'
-    """
+        '012.5AU'.
+
+    """  # noqa: D205
 
     # Constants for better maintainability
     NUMERIC_CHARS = frozenset("0123456789.")
@@ -34,14 +36,14 @@ class IssueString:
     HALF_VALUE = 0.5
 
     def __init__(self, text: str | float | None) -> None:
-        """
-        Initialize an IssueString object by parsing the input text.
+        """Initialize an IssueString object by parsing the input text.
 
         Args:
             text: The issue number to parse. Can be string, int, float, or None.
 
         Raises:
             TypeError: If text is not a supported type.
+
         """
         self.num: float | None = None
         self.suffix: str = ""
@@ -130,20 +132,20 @@ class IssueString:
         return 0 if idx == 1 and start_idx == 1 else idx
 
     def as_string(self, pad: int = 0) -> str:
-        """
-        Return a string representation with optional zero padding.\n
+        r"""Return a string representation with optional zero padding.\n
         Examples:
             >>> IssueString("5.2").as_string(pad=3)
             '005.2'
             >>> IssueString("-12AU").as_string(pad=4)
-            '-0012AU'
+            '-0012AU'.
 
         Args:
             pad: Number of digits to pad the integer part with leading zeros.
 
         Returns:
             String representation of the issue number with padding and suffix.
-        """
+
+        """  # noqa: D205
         if self.num is None:
             return self.suffix
 
@@ -164,8 +166,7 @@ class IssueString:
         return f"-{result}" if is_negative else result
 
     def as_float(self) -> float | None:
-        """
-        Return the numeric value as a float.\n
+        r"""Return the numeric value as a float.\n
         Special handling for the half symbol (½) which adds 0.5 to the base number.
 
         Examples:
@@ -176,15 +177,15 @@ class IssueString:
 
         Returns:
             Float value of the issue number, or None if no numeric part exists.
-        """
+
+        """  # noqa: D205
         if self.suffix == self.HALF_SYMBOL:
             base_value = self.num if self.num is not None else 0
             return base_value + self.HALF_VALUE
         return self.num
 
     def as_int(self) -> int | None:
-        """
-        Return the integer portion of the numeric value.
+        """Return the integer portion of the numeric value.
 
         Examples:
             >>> IssueString("12.7").as_int()
@@ -194,6 +195,7 @@ class IssueString:
 
         Returns:
             Integer value (truncated, not rounded) or None if no numeric part.
+
         """
         return None if self.num is None else int(self.num)
 
@@ -215,24 +217,23 @@ class IssueString:
         return False
 
     def __hash__(self) -> int:
-        """
-        Return hash value for the IssueString object.
+        """Return hash value for the IssueString object.
 
         This enables IssueString objects to be used in sets and as dictionary keys.
         The hash is based on both the numeric value and suffix components.
 
         Returns:
             Hash value based on the num and suffix attributes.
+
         """
         return hash((self.num, self.suffix))
 
     def __lt__(self, other: IssueString) -> bool:
-        """
-        Compare IssueString objects for sorting.\n
+        r"""Compare IssueString objects for sorting.\n
         Comparison priority:
         1. Numeric value (None is treated as 0)
-        2. Suffix (alphabetical)
-        """
+        2. Suffix (alphabetical).
+        """  # noqa: D205
         if not isinstance(other, IssueString):
             return NotImplemented
 

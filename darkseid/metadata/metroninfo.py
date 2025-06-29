@@ -167,6 +167,7 @@ class MetronInfo(BaseMetadataHandler):
 
         Returns:
             The resulting Metadata object.
+
         """
         try:
             tree = ET.ElementTree(fromstring(xml_string))
@@ -183,6 +184,7 @@ class MetronInfo(BaseMetadataHandler):
 
         Returns:
             The resulting XML string.
+
         """
         tree = self._convert_metadata_to_xml(metadata, xml_bytes)
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
@@ -197,6 +199,7 @@ class MetronInfo(BaseMetadataHandler):
 
         Raises:
             XmlError: If XML validation fails.
+
         """
         tree = self._convert_metadata_to_xml(metadata, xml_bytes)
         self._validate_xml(tree)
@@ -212,6 +215,7 @@ class MetronInfo(BaseMetadataHandler):
 
         Raises:
             XmlError: If validation fails.
+
         """
         try:
             schema = XMLSchema11(self._schema_path)
@@ -229,6 +233,7 @@ class MetronInfo(BaseMetadataHandler):
 
         Returns:
             Root XML element.
+
         """
         if not xml_bytes:
             return ET.Element("MetronInfo")
@@ -246,6 +251,7 @@ class MetronInfo(BaseMetadataHandler):
 
         Returns:
             True if valid, False otherwise.
+
         """
         if not isinstance(source, str):
             return False
@@ -260,6 +266,7 @@ class MetronInfo(BaseMetadataHandler):
 
         Returns:
             Normalized age rating or None.
+
         """
         if not age_rating:
             return None
@@ -288,6 +295,7 @@ class MetronInfo(BaseMetadataHandler):
 
         Returns:
             Normalized format or None.
+
         """
         if not format_str:
             return None
@@ -306,6 +314,7 @@ class MetronInfo(BaseMetadataHandler):
             root: Root element.
             tag: Element tag name.
             date_val: Date value.
+
         """
         element = root.find(tag)
         if date_val is None:
@@ -329,6 +338,7 @@ class MetronInfo(BaseMetadataHandler):
             parent_tag: Parent container tag.
             child_tag: Child element tag.
             items: List of basic items to add.
+
         """
         if not items:
             return
@@ -346,6 +356,7 @@ class MetronInfo(BaseMetadataHandler):
         Args:
             root: Root element.
             arcs: List of story arcs.
+
         """
         if not arcs:
             return
@@ -364,6 +375,7 @@ class MetronInfo(BaseMetadataHandler):
         Args:
             root: Root element.
             publisher: Publisher information.
+
         """
         if not publisher:
             return
@@ -385,6 +397,7 @@ class MetronInfo(BaseMetadataHandler):
         Args:
             root: Root element.
             series: Series information.
+
         """
         if not series:
             return
@@ -438,6 +451,7 @@ class MetronInfo(BaseMetadataHandler):
         Args:
             root: Root element.
             info_sources: List of information sources.
+
         """
         if not info_sources:
             return
@@ -456,6 +470,7 @@ class MetronInfo(BaseMetadataHandler):
         Args:
             root: Root element.
             gtin: GTIN information.
+
         """
         if not gtin:
             return
@@ -472,6 +487,7 @@ class MetronInfo(BaseMetadataHandler):
         Args:
             root: Root element.
             prices: List of prices.
+
         """
         if not prices:
             return
@@ -487,6 +503,7 @@ class MetronInfo(BaseMetadataHandler):
         Args:
             root: Root element.
             universes: List of universes.
+
         """
         if not universes:
             return
@@ -506,6 +523,7 @@ class MetronInfo(BaseMetadataHandler):
         Args:
             root: Root element.
             links: List of links.
+
         """
         if not links:
             return
@@ -523,6 +541,7 @@ class MetronInfo(BaseMetadataHandler):
         Args:
             root: Root element.
             credits_: List of credits.
+
         """
         if not credits_:
             return
@@ -554,6 +573,7 @@ class MetronInfo(BaseMetadataHandler):
 
         Returns:
             The resulting XML ElementTree.
+
         """
         root = self._get_root(xml_bytes)
 
@@ -631,6 +651,7 @@ class MetronInfo(BaseMetadataHandler):
 
         Raises:
             ValueError: If the XML does not conform to the MetronInfo schema.
+
         """
         root = tree.getroot()
 

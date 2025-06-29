@@ -7,9 +7,10 @@ requires-python = ">=3.10"
 readme = "README.md"
 license = "GPL-3.0-or-later"
 maintainers = [{ name = "Brian Pepple", email = "bpepple@metron.cloud" }]
-keywords = ["comics", "comic", "metadata", "tagging", "tagger"]
+keywords = ["comic", "cbz", "cbr", "metadata", "comicinfo", "metroninfo"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
   "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
   "Natural Language :: English",
   "Programming Language :: Python :: 3.10",
@@ -149,25 +150,12 @@ line-length = 100
 
 [tool.ruff.lint]
 extend-ignore = [
-  "S101",
-  "D203",
-  "D213",
-  # Format ignores
-  "W191",
-  "E501",
-  "E111",
-  "E114",
-  "E117",
-  "D206",
-  "D300",
-  "Q000",
-  "Q001",
-  "Q002",
-  "Q003",
-  "COM812",
-  "COM819",
-  "ISC001",
-  "ISC002",
+  "ANN401", # Checks that function arguments are annotated with a more specific type than Any.
+  "E501",   # Checks for lines that exceed the specified maximum character length.
+  "COM812", # Checks for the absence of trailing commas.
+  "D203",   # Checks for docstrings on class definitions that are not preceded by a blank line.
+  "D211",   # Checks for docstrings on class definitions that are preceded by a blank line.
+  "D213",   # Checks for docstring summary lines that are not positioned on the second physical line of the docstring.
 ]
 extend-select = [
   "A",
@@ -177,16 +165,21 @@ extend-select = [
   "C",
   "C4",
   "C90",
-  #  "D",
+  "D",
   "DTZ",
   "E",
   "EM",
   "EXE",
   "F",
+  "FBT",
+  "FLY",
+  "FURB",
   "I",
   "ICN",
   "INP",
   "ISC",
+  "LOG",
+  "PERF",
   "PIE",
   "PL",
   "PT",
@@ -208,14 +201,23 @@ extend-select = [
   "UP",
   "W",
   "YTT",
-  # "ANN", "ERA", "COM"
+  "ANN",
+  #  "ERA",
+  "COM",
 ]
 external = ["V101"]
 task-tags = ["TODO", "FIXME", "XXX", "http", "HACK"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["PLR2004", "S320"]
-"docs/*" = ["A001"]
+"tests/*" = [
+  "ANN",
+  "D",
+  "S101",    # Checks for uses of the assert keyword.
+  "PLR2004", # Checks for the use of unnamed numerical constants ("magic") values in comparisons
+]
+"docs/*" = [
+  "A001", # Checks for variable (and function) assignments that use the same names as builtins.
+]
 
 [tool.ruff.lint.pycodestyle]
 ignore-overlong-task-comments = true

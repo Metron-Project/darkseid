@@ -42,10 +42,10 @@ def sample_xml_bytes():
 
 @pytest.fixture
 def complex_metadata():
-    """More comprehensive metadata for testing edge cases"""
+    """More comprehensive metadata for testing edge cases."""
     metadata = Metadata()
     metadata.info_source = [
-        InfoSources("Metron", 12345, True),
+        InfoSources("Metron", 12345, primary=True),
         InfoSources("Comic Vine", 67890),
         InfoSources("Grand Comics Database", 999),
     ]
@@ -109,7 +109,7 @@ def complex_metadata():
 
     # Web links
     metadata.web_link = [
-        Links("https://example.com/primary", True),
+        Links("https://example.com/primary", primary=True),
         Links("https://example.com/secondary"),
     ]
 
@@ -140,13 +140,13 @@ def complex_metadata():
     ],
 )
 def test_get_root_comprehensive(metron_info, xml_input, expected_root_tag, description):
-    """Test _get_root with various input scenarios"""
+    """Test _get_root with various input scenarios."""
     result = metron_info._get_root(xml_input)
     assert result.tag == expected_root_tag
 
 
 def test_get_root_malformed_xml(metron_info):
-    """Test _get_root with malformed XML"""
+    """Test _get_root with malformed XML."""
     malformed_xml = b"<MetronInfo><Unclosed>"
     result = metron_info._get_root(malformed_xml)
     # Should still return a MetronInfo root even with malformed input
@@ -173,14 +173,14 @@ def test_get_root_malformed_xml(metron_info):
     ],
 )
 def test_valid_info_source_comprehensive(metron_info, source, expected, description):
-    """Comprehensive test for info source validation"""
+    """Comprehensive test for info source validation."""
     result = metron_info._is_valid_info_source(source)
     assert result == expected
 
 
 # Enhanced series format tests
 def test_series_format_edge_cases(metron_info):
-    """Test series format normalization edge cases"""
+    """Test series format normalization edge cases."""
     test_cases = [
         ("TRADE PAPERBACK", "Trade Paperback"),  # All caps
         ("trade paperback", "Trade Paperback"),  # All lowercase
@@ -212,14 +212,14 @@ def test_series_format_edge_cases(metron_info):
     ],
 )
 def test_age_rating_comprehensive(metron_info, rating_input, expected, description):
-    """Comprehensive age rating normalization tests"""
+    """Comprehensive age rating normalization tests."""
     result = metron_info._normalize_age_rating(rating_input)
     assert result == expected
 
 
 # XML Conversion Tests
 def test_convert_complex_metadata_to_xml(metron_info, complex_metadata):
-    """Test XML conversion with complex metadata"""
+    """Test XML conversion with complex metadata."""
     result = metron_info._convert_metadata_to_xml(complex_metadata)
 
     assert isinstance(result, ET.ElementTree)
@@ -241,7 +241,7 @@ def test_convert_complex_metadata_to_xml(metron_info, complex_metadata):
 
 
 def test_convert_minimal_metadata_to_xml(metron_info):
-    """Test XML conversion with minimal metadata"""
+    """Test XML conversion with minimal metadata."""
     minimal_metadata = Metadata()
     minimal_metadata.series = Series(name="Test Series")
 
@@ -251,7 +251,7 @@ def test_convert_minimal_metadata_to_xml(metron_info):
 
 
 def test_convert_empty_metadata_to_xml(metron_info):
-    """Test XML conversion with completely empty metadata"""
+    """Test XML conversion with completely empty metadata."""
     empty_metadata = Metadata()
 
     result = metron_info._convert_metadata_to_xml(empty_metadata)
@@ -261,7 +261,7 @@ def test_convert_empty_metadata_to_xml(metron_info):
 
 # String parsing tests
 def test_metadata_from_string_with_unicode(metron_info):
-    """Test parsing XML with unicode characters"""
+    """Test parsing XML with unicode characters."""
     xml_string = """
     <MetronInfo>
         <Series>
@@ -285,7 +285,7 @@ def test_metadata_from_string_with_unicode(metron_info):
 
 
 def test_metadata_from_string_malformed_xml(metron_info):
-    """Test parsing malformed XML"""
+    """Test parsing malformed XML."""
     malformed_xml = """
     <MetronInfo>
         <Series>
@@ -300,7 +300,7 @@ def test_metadata_from_string_malformed_xml(metron_info):
 
 
 def test_metadata_from_string_empty_elements(metron_info):
-    """Test parsing XML with empty elements"""
+    """Test parsing XML with empty elements."""
     xml_string = """
     <MetronInfo>
         <Series>
@@ -322,7 +322,7 @@ def test_metadata_from_string_empty_elements(metron_info):
 
 # File I/O tests
 def test_write_xml_with_special_characters(metron_info, tmp_path):
-    """Test writing XML with special characters and unicode"""
+    """Test writing XML with special characters and unicode."""
     metadata = Metadata()
     metadata.series = Series(name="Test & Special <Characters>")
     metadata.publisher = Publisher("Marvel Comics™")
@@ -340,7 +340,7 @@ def test_write_xml_with_special_characters(metron_info, tmp_path):
 
 
 def test_write_xml_creates_directory(metron_info, tmp_path):
-    """Test that write_xml creates directories if they don't exist"""
+    """Test that write_xml creates directories if they don't exist."""
     nested_path = tmp_path / "nested" / "dir" / "test.xml"
 
     metadata = Metadata()
@@ -351,7 +351,7 @@ def test_write_xml_creates_directory(metron_info, tmp_path):
 
 
 def test_read_xml_file_not_found(metron_info, tmp_path):
-    """Test reading non-existent XML file"""
+    """Test reading non-existent XML file."""
     non_existent = tmp_path / "does_not_exist.xml"
 
     with pytest.raises(FileNotFoundError):
@@ -359,7 +359,7 @@ def test_read_xml_file_not_found(metron_info, tmp_path):
 
 
 def test_read_xml_invalid_xml_file(metron_info, tmp_path):
-    """Test reading file with invalid XML"""
+    """Test reading file with invalid XML."""
     invalid_xml_file = tmp_path / "invalid.xml"
     with Path.open(invalid_xml_file, "w") as f:
         f.write("This is not XML content")
@@ -370,7 +370,7 @@ def test_read_xml_invalid_xml_file(metron_info, tmp_path):
 
 
 def test_round_trip_xml_conversion(metron_info, complex_metadata, tmp_path):
-    """Test writing and reading back complex metadata"""
+    """Test writing and reading back complex metadata."""
     filename = tmp_path / "roundtrip_test.xml"
 
     # Write metadata to file
@@ -389,7 +389,7 @@ def test_round_trip_xml_conversion(metron_info, complex_metadata, tmp_path):
 
 # Performance and edge case tests
 def test_large_metadata_performance(metron_info, tmp_path):
-    """Test performance with large metadata sets"""
+    """Test performance with large metadata sets."""
     large_metadata = Metadata()
     large_metadata.series = Series(name="Large Test Series")
 
@@ -411,7 +411,7 @@ def test_large_metadata_performance(metron_info, tmp_path):
 
 
 def test_xml_with_mixed_content(metron_info):
-    """Test parsing XML with mixed content patterns"""
+    """Test parsing XML with mixed content patterns."""
     xml_string = """
     <MetronInfo>
         <Series id="123">
@@ -444,7 +444,7 @@ def test_xml_with_mixed_content(metron_info):
 
 # Validation and error handling tests
 def test_metadata_validation_edge_cases(metron_info):
-    """Test various validation scenarios"""
+    """Test various validation scenarios."""
     # Test with None values
     result = metron_info._is_valid_info_source(None)
     assert result is False
@@ -460,7 +460,7 @@ def test_metadata_validation_edge_cases(metron_info):
 
 # Property-based testing helpers
 def generate_valid_series_formats():
-    """Generate valid series format test cases"""
+    """Generate valid series format test cases."""
     valid_formats = [
         "Annual",
         "Digital Chapter",
@@ -489,14 +489,14 @@ def generate_valid_series_formats():
 
 @pytest.mark.parametrize(("input_format", "expected"), generate_valid_series_formats())
 def test_all_valid_series_formats(metron_info, input_format, expected):
-    """Test all valid series formats with various casings"""
+    """Test all valid series formats with various casings."""
     result = metron_info._normalize_series_format(input_format)
     assert result == expected
 
 
 # Integration test
 def test_full_workflow_integration(metron_info, tmp_path):
-    """Test complete workflow from creation to file I/O"""
+    """Test complete workflow from creation to file I/O."""
     # Create metadata
     metadata = Metadata()
     metadata.series = Series(name="Integration Test", volume=1)
