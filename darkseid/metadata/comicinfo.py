@@ -350,7 +350,7 @@ class ComicInfo(BaseMetadataHandler):
         if md.notes is not None and md.notes.comic_rack is not None:
             src = get_issue_id_from_note(md.notes.comic_rack)
             if src is not None:
-                md.info_source = [InfoSources(src["source"], src["id"], True)]
+                md.info_source = [InfoSources(src["source"], src["id"], primary=True)]
         # Cover Year
         tmp_year = self._parse_int(self._get_text_content(root, "Year"))
         tmp_month = self._parse_int(self._get_text_content(root, "Month"))

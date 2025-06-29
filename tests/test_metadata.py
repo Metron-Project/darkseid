@@ -48,7 +48,7 @@ def test_universe_creation():
 
 def test_role_creation():
     """Test Role class with primary flag."""
-    role = Role("Writer", 1, True)
+    role = Role("Writer", 1, primary=True)
     assert role.name == "Writer"
     assert role.id_ == 1
     assert role.primary is True
@@ -109,7 +109,7 @@ def test_credit_creation():
 
 def test_info_sources():
     """Test InfoSources class."""
-    source = InfoSources("Metron", 1, True)
+    source = InfoSources("Metron", 1, primary=True)
     assert source.name == "Metron"
     assert source.id_ == 1
     assert source.primary is True
@@ -117,7 +117,7 @@ def test_info_sources():
 
 def test_links():
     """Test Links class."""
-    link = Links("https://example.com", True)
+    link = Links("https://example.com", primary=True)
     assert link.url == "https://example.com"
     assert link.primary is True
 
@@ -528,8 +528,11 @@ def test_metadata_comprehensive_str():
     universes = [Universe(f"Universe {i}", i, designation=f"Earth {i}") for i in range(10)]
     stories = [Basic(f"Story {i}") for i in range(10)]
     tags = [Basic(f"Tag {i}") for i in range(10)]
-    weblink = [Links("https://foo.com/", True)]
-    info_source = [InfoSources("Metron", 1, True), InfoSources("Comic Vine", 2, False)]
+    weblink = [Links("https://foo.com/", primary=True)]
+    info_source = [
+        InfoSources("Metron", 1, primary=True),
+        InfoSources("Comic Vine", 2, primary=False),
+    ]
     modified = datetime.now(tz=timezone.utc)
 
     md = Metadata(

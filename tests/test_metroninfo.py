@@ -45,7 +45,7 @@ def complex_metadata():
     """More comprehensive metadata for testing edge cases."""
     metadata = Metadata()
     metadata.info_source = [
-        InfoSources("Metron", 12345, True),
+        InfoSources("Metron", 12345, primary=True),
         InfoSources("Comic Vine", 67890),
         InfoSources("Grand Comics Database", 999),
     ]
@@ -109,7 +109,7 @@ def complex_metadata():
 
     # Web links
     metadata.web_link = [
-        Links("https://example.com/primary", True),
+        Links("https://example.com/primary", primary=True),
         Links("https://example.com/secondary"),
     ]
 

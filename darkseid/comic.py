@@ -314,7 +314,7 @@ class Comic:
             and not name_path.name.startswith(".")
         )
 
-    def get_page_name_list(self, sort_list: bool = True) -> list[str]:
+    def get_page_name_list(self, sort_list: bool = True) -> list[str]:  # noqa: FBT001, FBT002
         """Return a list of page names from an archive.
 
         Args:
@@ -548,7 +548,7 @@ class Comic:
         formatter: MetronInfo | ComicInfo,
         filename: str,
         raw_metadata: str | None,
-        calc_page_sizes: bool = False,
+        calc_page_sizes: bool = False,  # noqa: FBT002, FBT001
     ) -> bool:
         """Write metadata in a specific format.
 
@@ -708,7 +708,7 @@ class Comic:
             logger.exception("Error removing pages from %s", self._path)
             return False
 
-    def _successful_write(self, write_success: bool, metadata: Metadata | None) -> bool:
+    def _successful_write(self, write_success: bool, metadata: Metadata | None) -> bool:  # noqa: FBT001
         """Update the state based on the success of a write operation.
 
         Args:
@@ -799,7 +799,7 @@ class Comic:
     def apply_archive_info_to_metadata(
         self,
         metadata: Metadata,
-        calc_page_sizes: bool = False,
+        calc_page_sizes: bool = False,  # noqa: FBT002, FBT001
     ) -> None:
         """Apply page information from the archive to the metadata.
 

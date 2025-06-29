@@ -109,7 +109,7 @@ def test_meta_data(test_credits: list[Credit]) -> Metadata:
     md.age_rating = AgeRatings(comic_rack="MA15+")
     md.manga = "YesAndRightToLeft"
     md.web_link = [
-        Links("https://metron.cloud/issue/ultramega-2021-5/", True),
+        Links("https://metron.cloud/issue/ultramega-2021-5/", primary=True),
         Links("https://metron.cloud/issue/the-body-trade-2024-1/"),
         Links("https://metron.cloud/issue/the-body-trade-2024-2/"),
     ]
