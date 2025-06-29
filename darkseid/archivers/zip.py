@@ -25,8 +25,7 @@ class ZipArchiver(Archiver):
         self._temp_files: list[Path] = []
 
     def read_file(self, archive_file: str) -> bytes:
-        """
-        Read the contents of a file from the ZIP archive.
+        """Read the contents of a file from the ZIP archive.
 
         Args:
             archive_file: Path of the file within the archive.
@@ -36,6 +35,7 @@ class ZipArchiver(Archiver):
 
         Raises:
             ArchiverReadError: If the file cannot be read.
+
         """
         try:
             with ZipFile(self.path, mode="r") as zf:
@@ -53,8 +53,7 @@ class ZipArchiver(Archiver):
             raise ArchiverReadError(msg) from e
 
     def write_file(self, archive_file: str, data: str | bytes) -> bool:
-        """
-        Write data to a file in the ZIP archive.
+        """Write data to a file in the ZIP archive.
 
         Args:
             archive_file: Path of the file within the archive.
@@ -62,6 +61,7 @@ class ZipArchiver(Archiver):
 
         Returns:
             True if successful, False otherwise.
+
         """
         # Convert data to bytes if it's a string
         if isinstance(data, str):
@@ -84,14 +84,14 @@ class ZipArchiver(Archiver):
             return True
 
     def remove_file(self, archive_file: str) -> bool:
-        """
-        Remove a file from the ZIP archive.
+        """Remove a file from the ZIP archive.
 
         Args:
             archive_file: Path of the file to remove.
 
         Returns:
             True if successful, False otherwise.
+
         """
         try:
             with ZipFile(self.path, "a") as zf:
@@ -107,14 +107,14 @@ class ZipArchiver(Archiver):
             return True
 
     def remove_files(self, filename_list: list[str]) -> bool:
-        """
-        Remove multiple files from the ZIP archive.
+        """Remove multiple files from the ZIP archive.
 
         Args:
             filename_list: List of file paths to remove.
 
         Returns:
             True if all files were successfully removed, False otherwise.
+
         """
         if not filename_list:
             return True
@@ -136,11 +136,11 @@ class ZipArchiver(Archiver):
             return True
 
     def get_filename_list(self) -> list[str]:
-        """
-        Get a list of all files in the ZIP archive.
+        """Get a list of all files in the ZIP archive.
 
         Returns:
             List of file paths within the archive.
+
         """
         try:
             with ZipFile(self.path, mode="r") as zf:
@@ -150,14 +150,14 @@ class ZipArchiver(Archiver):
             return []
 
     def copy_from_archive(self, other_archive: Archiver) -> bool:
-        """
-        Copy files from another archive to the ZIP archive.
+        """Copy files from another archive to the ZIP archive.
 
         Args:
             other_archive: Source archive to copy from.
 
         Returns:
             True if successful, False otherwise.
+
         """
         try:
             with ZipFile(self.path, mode="w", allowZip64=True) as zout:

@@ -30,6 +30,7 @@ class DataSources(str, Enum):
         KITSU: Represents the Kitsu data source.
         MANGADEX: Represents the MangaDex data source.
         MANGAUPDATES: Represents the MangaUpdates data source.
+
     """
 
     COMIC_VINE = "Comic Vine"
@@ -57,6 +58,7 @@ def get_issue_id_from_note(note_txt: str) -> dict[str, str] | None:
 
         >>> get_issue_id_from_note("comictagger comic vine issue id 67890")
         {'source': 'Comic Vine', 'id': '67890'}
+
     """
     if not note_txt:
         return None
@@ -100,6 +102,7 @@ def get_recursive_filelist(path_list: list[Path]) -> list[Path]:
         >>> files = get_recursive_filelist(paths)
         >>> len(files) > 0  # Returns True if comic files are found
         True
+
     """
     comic_extensions = ["*.cbz", "*.cbr"]
     filelist: list[Path] = []
@@ -132,6 +135,7 @@ def list_to_string(list_of_strings: list[str]) -> str:
 
         >>> list_to_string(["item, with comma", "normal item"])
         '"item, with comma", normal item'
+
     """
     if not list_of_strings:
         return ""
@@ -161,6 +165,7 @@ def remove_articles(text: str) -> str:
 
         >>> remove_articles("A tale of two cities")
         'tale two cities'
+
     """
     if not text:
         return ""
@@ -214,6 +219,7 @@ def unique_file(file_name: Path) -> Path:
         >>> unique = unique_file(original)  # Returns "document (1).cbz" if original exists
         >>> isinstance(unique, Path)
         True
+
     """
     if not file_name.exists():
         return file_name

@@ -170,7 +170,7 @@ def test_meta_write_to_file(test_meta_data: Metadata, tmp_path: Path) -> None:
 
 def test_meta_write_to_existing_file(test_meta_data: Metadata, tmp_path: Path) -> None:
     # sourcery skip: extract-duplicate-method
-    """Test of writing the metadata to a file and then modifying comicinfo.xml"""
+    """Test of writing the metadata to a file and then modifying comicinfo.xml."""
     # Write test metadata to file
     tmp_file = tmp_path / "test-write.xml"
     ci = ComicInfo()

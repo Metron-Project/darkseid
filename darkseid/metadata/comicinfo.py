@@ -32,8 +32,7 @@ from darkseid.utils import get_issue_id_from_note, list_to_string
 
 
 class ComicInfo(BaseMetadataHandler):
-    """
-    Handles the conversion between Metadata objects and ComicInfo XML representations.
+    """Handles the conversion between Metadata objects and ComicInfo XML representations.
 
     Includes methods for converting Metadata to XML, XML to Metadata, and writing/reading Metadata to/from external files.
     """
@@ -141,14 +140,14 @@ class ComicInfo(BaseMetadataHandler):
         return cov_date
 
     def metadata_from_string(self, xml_string: str) -> Metadata:
-        """
-        Parses an XML string representation into a Metadata object.
+        """Parse an XML string representation into a Metadata object.
 
         Args:
             xml_string: The XML string to parse.
 
         Returns:
             The parsed Metadata object.
+
         """
         try:
             tree = ET.ElementTree(fromstring(xml_string))
@@ -161,8 +160,7 @@ class ComicInfo(BaseMetadataHandler):
         metadata: Metadata,
         xml_bytes: bytes = b"",
     ) -> str:
-        """
-        Converts Metadata object to an XML string representation.
+        """Convert Metadata object to an XML string representation.
 
         Args:
             metadata: The Metadata object to convert.
@@ -170,20 +168,21 @@ class ComicInfo(BaseMetadataHandler):
 
         Returns:
             The XML string representation of the Metadata object.
+
         """
         tree = self._convert_metadata_to_xml(metadata, xml_bytes)
         return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
 
     @staticmethod
     def _get_root(xml_bytes: bytes | None) -> ET.Element:
-        """
-        Returns the root element of an XML object.
+        """Return the root element of an XML object.
 
         Args:
             xml_bytes: The XML object to extract the root element from.
 
         Returns:
             The root element of the XML object.
+
         """
         if xml_bytes:
             try:
@@ -203,8 +202,7 @@ class ComicInfo(BaseMetadataHandler):
         md: Metadata,
         xml_bytes: bytes | None = None,
     ) -> ET.ElementTree:
-        """
-        Converts Metadata object to an XML representation.
+        """Convert Metadata object to an XML representation.
 
         Args:
             md: The Metadata object to convert.
@@ -212,6 +210,7 @@ class ComicInfo(BaseMetadataHandler):
 
         Returns:
             The XML representation of the Metadata object.
+
         """
         root = self._get_root(xml_bytes)
 
@@ -307,14 +306,14 @@ class ComicInfo(BaseMetadataHandler):
         return ET.ElementTree(root)
 
     def _convert_xml_to_metadata(self, tree: ET.ElementTree) -> Metadata:
-        """
-        Converts an XML representation to a Metadata object.
+        """Convert an XML representation to a Metadata object.
 
         Args:
             tree: The XML tree to convert to Metadata.
 
         Returns:
             The Metadata object extracted from the XML tree.
+
         """
         root = tree.getroot()
 
@@ -410,27 +409,27 @@ class ComicInfo(BaseMetadataHandler):
 
     @staticmethod
     def _clean_resource_list(string: str) -> list[str]:
-        """
-        Cleans and filters a string to create a list of non-empty values.
+        """Clean and filter a string to create a list of non-empty values.
 
         Args:
             string: The string to clean and filter.
 
         Returns:
             The list of cleaned and filtered non-empty values.
+
         """
         return [item.strip() for item in re.split(r',|"(.*?)"', string) if item and item.strip()]
 
     @staticmethod
     def _string_to_resource(string: str) -> list[Basic] | None:
-        """
-        Converts a string to a list of Basic objects.
+        """Convert a string to a list of Basic objects.
 
         Args:
             string: The string to convert to Basic objects.
 
         Returns:
             The list of Basic objects created from the string, or None if the string is None.
+
         """
         if string is not None:
             res: list[str | Basic] = ComicInfo._clean_resource_list(string)
@@ -439,14 +438,14 @@ class ComicInfo(BaseMetadataHandler):
 
     @staticmethod
     def _string_to_arc(string: str) -> list[Arc] | None:
-        """
-        Converts a string to a list of Arc objects.
+        """Convert a string to a list of Arc objects.
 
         Args:
             string: The string to convert to Arc objects.
 
         Returns:
             The list of Arc objects created from the string, or None if the string is None.
+
         """
         if string is not None:
             res: list[str | Arc] = ComicInfo._clean_resource_list(string)

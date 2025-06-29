@@ -23,17 +23,26 @@ logger = logging.getLogger(__name__)
 
 
 class ValidationError(Exception):
-    """Custom exception for validation errors."""
+    """Exception raised for errors encountered during XML metadata validation.
+
+    This exception is used to signal validation failures, optionally including the schema version involved.
+    """
 
     def __init__(self, message: str, schema_version: SchemaVersion | None = None) -> None:
+        """Initialize ValidationError with a message and optional schema version.
+
+        Args:
+            message: The error message describing the validation failure.
+            schema_version: The schema version related to the validation error, if applicable.
+
+        """
         super().__init__(message)
         self.schema_version = schema_version
 
 
 @unique
 class SchemaVersion(Enum):
-    """
-    Enum representing supported schema versions for comic metadata.
+    """Enum representing supported schema versions for comic metadata.
 
     This enumeration defines the possible schema versions that can be detected
     or validated for comic archive metadata, ordered from newest to oldest
@@ -51,8 +60,7 @@ class SchemaVersion(Enum):
 
 
 class ValidateMetadata:
-    """
-    Validates XML metadata against comic archive schemas.
+    """Validates XML metadata against comic archive schemas.
 
     This class provides functionality to validate XML data against various
     comic metadata schemas and determine the appropriate schema version.
@@ -87,14 +95,14 @@ class ValidateMetadata:
     ]
 
     def __init__(self, xml: bytes) -> None:
-        """
-        Initialize the ValidateMetadata instance with XML data.
+        """Initialize the ValidateMetadata instance with XML data.
 
         Args:
             xml: The XML data as bytes to be validated.
 
         Raises:
             ValidationError: If the XML data is empty or None.
+
         """
         if not xml:
             msg = "XML data cannot be empty or None"
@@ -105,14 +113,14 @@ class ValidateMetadata:
 
     @classmethod
     def _get_schema_path(cls, schema_version: SchemaVersion) -> Path | None:
-        """
-        Get the path of the schema file for the given schema version.
+        """Get the path of the schema file for the given schema version.
 
         Args:
             schema_version: The version of the schema to retrieve.
 
         Returns:
             The path of the schema file or None if the schema version is unknown.
+
         """
         if schema_version == SchemaVersion.UNKNOWN:
             logger.warning("Cannot get schema path for unknown schema version")
@@ -136,14 +144,14 @@ class ValidateMetadata:
 
     @contextmanager
     def _get_schema(self, schema_version: SchemaVersion) -> Iterator[XMLSchemaBase | None]:
-        """
-        Context manager to get and cache schema instances.
+        """Context manager to get and cache schema instances.
 
         Args:
             schema_version: The schema version to retrieve.
 
         Yields:
             The schema instance or None if unavailable.
+
         """
         if schema_version in self._schema_cache:
             yield self._schema_cache[schema_version]
@@ -173,14 +181,14 @@ class ValidateMetadata:
             yield None
 
     def _is_valid(self, schema_version: SchemaVersion) -> bool:
-        """
-        Validate the XML against a specific schema version.
+        """Validate the XML against a specific schema version.
 
         Args:
             schema_version: The version of the schema to validate against.
 
         Returns:
             True if the XML is valid according to the schema, False otherwise.
+
         """
         with self._get_schema(schema_version) as schema:
             if schema is None:
@@ -200,8 +208,7 @@ class ValidateMetadata:
                 return True
 
     def validate(self) -> SchemaVersion:
-        """
-        Determine and return the highest valid schema version for the XML metadata.
+        """Determine and return the highest valid schema version for the XML metadata.
 
         This method checks the XML against all supported schema versions in order
         of preference (newest first) and returns the first valid match.
@@ -209,6 +216,7 @@ class ValidateMetadata:
         Returns:
             The highest valid schema version found, or SchemaVersion.UNKNOWN
             if no valid schema is found.
+
         """
         logger.info("Starting XML validation process")
 
@@ -223,14 +231,14 @@ class ValidateMetadata:
         return SchemaVersion.UNKNOWN
 
     def validate_all(self) -> dict[SchemaVersion, bool]:
-        """
-        Validate the XML against all available schema versions.
+        """Validate the XML against all available schema versions.
 
         This method is useful for debugging or when you need to know
         which schemas the XML is compatible with.
 
         Returns:
             A dictionary mapping each schema version to its validation result.
+
         """
         return {
             schema_version: self._is_valid(schema_version)
@@ -238,14 +246,14 @@ class ValidateMetadata:
         }
 
     def get_validation_errors(self, schema_version: SchemaVersion) -> list[str]:
-        """
-        Get detailed validation errors for a specific schema version.
+        """Get detailed validation errors for a specific schema version.
 
         Args:
             schema_version: The schema version to validate against.
 
         Returns:
             A list of validation error messages.
+
         """
         errors = []
 

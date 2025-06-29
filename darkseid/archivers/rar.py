@@ -17,8 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class RarArchiver(Archiver):
-    """
-    Handles archiving operations specific to RAR files.
+    """Handles archiving operations specific to RAR files.
 
     Note: RAR files are read-only due to format limitations.
     """
@@ -32,8 +31,7 @@ class RarArchiver(Archiver):
         return False
 
     def read_file(self, archive_file: str) -> bytes:
-        """
-        Read the contents of a file from the RAR archive.
+        """Read the contents of a file from the RAR archive.
 
         Args:
             archive_file: Path of the file within the archive.
@@ -43,6 +41,7 @@ class RarArchiver(Archiver):
 
         Raises:
             ArchiverReadError: If the file cannot be read.
+
         """
         try:
             with rarfile.RarFile(self.path) as rf:
@@ -63,8 +62,7 @@ class RarArchiver(Archiver):
             return b""
 
     def write_file(self, archive_file: str, data: str | bytes) -> bool:  # noqa: ARG002
-        """
-        Write data to a file in the RAR archive.
+        """Write data to a file in the RAR archive.
 
         Args:
             archive_file: Path of the file within the archive.
@@ -72,45 +70,46 @@ class RarArchiver(Archiver):
 
         Returns:
             False, as RAR files are read-only.
+
         """
         logger.warning("Cannot write to RAR archive: %s", archive_file)
         return False
 
     def remove_file(self, archive_file: str) -> bool:
-        """
-        Remove a file from the RAR archive.
+        """Remove a file from the RAR archive.
 
         Args:
             archive_file: Path of the file to remove.
 
         Returns:
             False, as RAR files are read-only.
+
         """
         logger.warning("Cannot remove file from RAR archive: %s", archive_file)
         return False
 
     def remove_files(self, filename_list: list[str]) -> bool:
-        """
-        Remove multiple files from the RAR archive.
+        """Remove multiple files from the RAR archive.
 
         Args:
             filename_list: List of files to remove.
 
         Returns:
             False, as RAR files are read-only.
+
         """
         logger.warning("Cannot remove files from RAR archive: %s", filename_list)
         return False
 
     def get_filename_list(self) -> list[str]:
-        """
-        Get a list of all files in the RAR archive.
+        """Get a list of all files in the RAR archive.
 
         Returns:
             Sorted list of file paths within the archive.
 
         Raises:
             ArchiverReadError: If the archive cannot be read.
+
         """
         try:
             with rarfile.RarFile(self.path) as rf:
@@ -121,14 +120,14 @@ class RarArchiver(Archiver):
             raise ArchiverReadError(msg) from e
 
     def copy_from_archive(self, other_archive: Archiver) -> bool:
-        """
-        Copy files from another archive to the RAR archive.
+        """Copy files from another archive to the RAR archive.
 
         Args:
             other_archive: Source archive to copy from.
 
         Returns:
             False, as RAR files are read-only.
+
         """
         logger.warning("Cannot copy to RAR archive from: %s", other_archive.path)
         return False

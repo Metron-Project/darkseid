@@ -153,6 +153,9 @@ extend-ignore = [
   "ANN401", # Checks that function arguments are annotated with a more specific type than Any.
   "E501",   # Checks for lines that exceed the specified maximum character length.
   "COM812", # Checks for the absence of trailing commas.
+  "D203",   # Checks for docstrings on class definitions that are not preceded by a blank line.
+  "D211",   # Checks for docstrings on class definitions that are preceded by a blank line.
+  "D213",   # Checks for docstring summary lines that are not positioned on the second physical line of the docstring.
 ]
 extend-select = [
   "A",
@@ -162,7 +165,7 @@ extend-select = [
   "C",
   "C4",
   "C90",
-  #  "D",
+  "D",
   "DTZ",
   "E",
   "EM",
@@ -194,7 +197,8 @@ extend-select = [
   "W",
   "YTT",
   "ANN",
-  # "ERA", "COM"
+  #  "ERA",
+  "COM",
 ]
 external = ["V101"]
 task-tags = ["TODO", "FIXME", "XXX", "http", "HACK"]
@@ -202,6 +206,7 @@ task-tags = ["TODO", "FIXME", "XXX", "http", "HACK"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
   "ANN",
+  "D",
   "S101",    # Checks for uses of the assert keyword.
   "PLR2004", # Checks for the use of unnamed numerical constants ("magic") values in comparisons
 ]

@@ -1,3 +1,5 @@
+"""Metadata modules for different XML formats."""
+
 from darkseid.metadata.base_handler import BaseMetadataHandler, XmlError
 from darkseid.metadata.comicinfo import ComicInfo
 from darkseid.metadata.data_classes import (
