@@ -35,7 +35,7 @@ MAX_NUMBER_OF_TAGS = 5
 
 
 class Validations:
-    def __init__(self):
+    def __init__(self) -> None:
         self.__dataclass_fields__ = None
 
     def __post_init__(self: Validations) -> None:

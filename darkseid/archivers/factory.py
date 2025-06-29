@@ -15,7 +15,7 @@ class UnknownArchiver(Archiver):
         msg = "Unknown archive format"
         raise NotImplementedError(msg)
 
-    def write_file(self, archive_file: str, data) -> bool:  # noqa: ARG002
+    def write_file(self, archive_file: str, data: str | bytes) -> bool:  # noqa: ARG002
         return False
 
     def remove_file(self, archive_file: str) -> bool:  # noqa: ARG002

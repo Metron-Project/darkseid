@@ -138,11 +138,11 @@ class Archiver(ABC):
             True if successful, False otherwise.
         """
 
-    def __enter__(self):
+    def __enter__(self):  # noqa: ANN204
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # noqa: B027
+    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:  # noqa: B027
         """Context manager exit."""
 
     def _handle_error(self, operation: str, filename: str, error: Exception) -> None:  # noqa: ARG002

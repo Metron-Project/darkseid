@@ -394,7 +394,7 @@ class Comic:
         self._validate_and_fix_page_list()
         return self._metadata
 
-    def _parse_metadata(self, raw_metadata: str | None, parser) -> Metadata:
+    def _parse_metadata(self, raw_metadata: str | None, parser: MetronInfo | ComicInfo) -> Metadata:
         """
         Parse raw metadata using the provided parser.
 
