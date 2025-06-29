@@ -76,7 +76,7 @@ def mock_archiver():
 # Test MetadataFormat enum
 def test_metadata_format_string_representation():
     """Test MetadataFormat string representation."""
-    assert str(MetadataFormat.COMIC_RACK) == "ComicRack"
+    assert str(MetadataFormat.COMIC_INFO) == "ComicInfo"
     assert str(MetadataFormat.METRON_INFO) == "MetronInfo"
     assert str(MetadataFormat.UNKNOWN) == "Unknown"
 
@@ -505,7 +505,7 @@ def test_read_metadata_comic_rack(sample_cbz_file):
             mock_metadata.issue = "1"
             mock_parse.return_value = mock_metadata
 
-            metadata = comic.read_metadata(MetadataFormat.COMIC_RACK)
+            metadata = comic.read_metadata(MetadataFormat.COMIC_INFO)
             assert metadata.issue == "1"
 
 
@@ -551,7 +551,7 @@ def test_read_metadata_parse_error(sample_cbz_file):
         with patch(
             "darkseid.metadata.comicinfo.ComicInfo.metadata_from_string", side_effect=Exception()
         ):
-            metadata = comic.read_metadata(MetadataFormat.COMIC_RACK)
+            metadata = comic.read_metadata(MetadataFormat.COMIC_INFO)
             assert isinstance(metadata, Metadata)
 
 
@@ -622,7 +622,7 @@ def test_write_metadata_comic_rack(sample_cbz_file, sample_metadata):
                 "darkseid.metadata.comicinfo.ComicInfo.string_from_metadata", return_value="<xml/>"
             ),
         ):
-            result = comic.write_metadata(sample_metadata, MetadataFormat.COMIC_RACK)
+            result = comic.write_metadata(sample_metadata, MetadataFormat.COMIC_INFO)
             assert result is True
 
 
@@ -633,7 +633,7 @@ def test_write_metadata_not_writable(sample_cbz_file, sample_metadata):
         comic = Comic(sample_cbz_file)
 
         with patch.object(comic, "is_writable", return_value=False):
-            result = comic.write_metadata(sample_metadata, MetadataFormat.COMIC_RACK)
+            result = comic.write_metadata(sample_metadata, MetadataFormat.COMIC_INFO)
             assert result is False
 
 
@@ -653,7 +653,7 @@ def test_write_metadata_none_metadata(sample_cbz_file):
         mock_factory.return_value = Mock()
         comic = Comic(sample_cbz_file)
 
-        result = comic.write_metadata(None, MetadataFormat.COMIC_RACK)  # type: ignore
+        result = comic.write_metadata(None, MetadataFormat.COMIC_INFO)  # type: ignore
         assert result is False
 
 
@@ -670,7 +670,7 @@ def test_write_metadata_exception(sample_cbz_file, sample_metadata):
             patch.object(comic, "is_writable", return_value=True),
             patch.object(comic, "apply_archive_info_to_metadata", side_effect=Exception()),
         ):
-            result = comic.write_metadata(sample_metadata, MetadataFormat.COMIC_RACK)
+            result = comic.write_metadata(sample_metadata, MetadataFormat.COMIC_INFO)
             assert result is False
 
 
@@ -686,7 +686,7 @@ def test_remove_metadata_comic_rack(sample_cbz_file):
         comic = Comic(sample_cbz_file)
 
         with patch.object(comic, "has_metadata", return_value=True):
-            result = comic.remove_metadata(MetadataFormat.COMIC_RACK)
+            result = comic.remove_metadata(MetadataFormat.COMIC_INFO)
             assert result is True
 
 
@@ -697,7 +697,7 @@ def test_remove_metadata_not_found(sample_cbz_file):
         comic = Comic(sample_cbz_file)
 
         with patch.object(comic, "has_metadata", return_value=False):
-            result = comic.remove_metadata(MetadataFormat.COMIC_RACK)
+            result = comic.remove_metadata(MetadataFormat.COMIC_INFO)
             assert result is True  # No metadata to remove is considered success
 
 
@@ -722,7 +722,7 @@ def test_remove_metadata_case_insensitive(sample_cbz_file):
         comic = Comic(sample_cbz_file)
 
         with patch.object(comic, "has_metadata", return_value=True):
-            result = comic.remove_metadata(MetadataFormat.COMIC_RACK)
+            result = comic.remove_metadata(MetadataFormat.COMIC_INFO)
             assert result is True
             mock_archiver.remove_files.assert_called_once_with(["COMICINFO.XML"])
 
@@ -737,7 +737,7 @@ def test_remove_metadata_exception(sample_cbz_file):
         comic = Comic(sample_cbz_file)
 
         with patch.object(comic, "has_metadata", return_value=True):
-            result = comic.remove_metadata(MetadataFormat.COMIC_RACK)
+            result = comic.remove_metadata(MetadataFormat.COMIC_INFO)
             assert result is False
 
 
@@ -819,7 +819,7 @@ def test_has_metadata_comic_rack(sample_cbz_file):
         comic = Comic(sample_cbz_file)
 
         with patch.object(comic, "seems_to_be_a_comic_archive", return_value=True):
-            assert comic.has_metadata(MetadataFormat.COMIC_RACK) is True
+            assert comic.has_metadata(MetadataFormat.COMIC_INFO) is True
 
 
 def test_has_metadata_metron_info(sample_cbz_file):
@@ -842,7 +842,7 @@ def test_has_metadata_not_comic_archive(sample_cbz_file):
         comic = Comic(sample_cbz_file)
 
         with patch.object(comic, "seems_to_be_a_comic_archive", return_value=False):
-            assert comic.has_metadata(MetadataFormat.COMIC_RACK) is False
+            assert comic.has_metadata(MetadataFormat.COMIC_INFO) is False
 
 
 def test_has_metadata_case_insensitive(sample_cbz_file):
@@ -855,7 +855,7 @@ def test_has_metadata_case_insensitive(sample_cbz_file):
         comic = Comic(sample_cbz_file)
 
         with patch.object(comic, "seems_to_be_a_comic_archive", return_value=True):
-            assert comic.has_metadata(MetadataFormat.COMIC_RACK) is True
+            assert comic.has_metadata(MetadataFormat.COMIC_INFO) is True
 
 
 def test_has_metadata_cached(sample_cbz_file):
@@ -869,8 +869,8 @@ def test_has_metadata_cached(sample_cbz_file):
 
         with patch.object(comic, "seems_to_be_a_comic_archive", return_value=True):
             # Multiple calls should use cache
-            result1 = comic.has_metadata(MetadataFormat.COMIC_RACK)
-            result2 = comic.has_metadata(MetadataFormat.COMIC_RACK)
+            result1 = comic.has_metadata(MetadataFormat.COMIC_INFO)
+            result2 = comic.has_metadata(MetadataFormat.COMIC_INFO)
 
             assert result1 == result2 is True
             mock_archiver.get_filename_list.assert_called_once()
@@ -886,7 +886,7 @@ def test_has_metadata_exception(sample_cbz_file):
         comic = Comic(sample_cbz_file)
 
         with patch.object(comic, "seems_to_be_a_comic_archive", return_value=True):
-            assert comic.has_metadata(MetadataFormat.COMIC_RACK) is False
+            assert comic.has_metadata(MetadataFormat.COMIC_INFO) is False
 
 
 def test_has_metadata_unknown_format(sample_cbz_file):
@@ -1059,12 +1059,12 @@ def test_get_metadata_formats(sample_cbz_file):
         with patch.object(comic, "has_metadata") as mock_has:
 
             def has_metadata_side_effect(fmt):
-                return fmt in [MetadataFormat.COMIC_RACK, MetadataFormat.METRON_INFO]
+                return fmt in [MetadataFormat.COMIC_INFO, MetadataFormat.METRON_INFO]
 
             mock_has.side_effect = has_metadata_side_effect
 
             formats = comic.get_metadata_formats()
-            expected = {MetadataFormat.COMIC_RACK, MetadataFormat.METRON_INFO}
+            expected = {MetadataFormat.COMIC_INFO, MetadataFormat.METRON_INFO}
             assert formats == expected
 
 
@@ -1298,7 +1298,7 @@ def test_full_workflow_read_metadata(sample_cbz_file):
 
         # Check if has metadata
         with patch.object(comic, "seems_to_be_a_comic_archive", return_value=True):
-            assert comic.has_metadata(MetadataFormat.COMIC_RACK) is True
+            assert comic.has_metadata(MetadataFormat.COMIC_INFO) is True
 
         # Read raw metadata
         raw_data = comic.read_raw_ci_metadata()
@@ -1310,7 +1310,7 @@ def test_full_workflow_read_metadata(sample_cbz_file):
             mock_metadata.issue = "1.MU"
             mock_parse.return_value = mock_metadata
 
-            metadata = comic.read_metadata(MetadataFormat.COMIC_RACK)
+            metadata = comic.read_metadata(MetadataFormat.COMIC_INFO)
             assert metadata.issue == "1.MU"
 
 
@@ -1333,10 +1333,10 @@ def test_full_workflow_write_and_remove_metadata(sample_cbz_file, sample_metadat
             ),
         ):
             # Write metadata
-            result = comic.write_metadata(sample_metadata, MetadataFormat.COMIC_RACK)
+            result = comic.write_metadata(sample_metadata, MetadataFormat.COMIC_INFO)
             assert result is True
 
             # Now remove it
             with patch.object(comic, "has_metadata", return_value=True):
-                result = comic.remove_metadata(MetadataFormat.COMIC_RACK)
+                result = comic.remove_metadata(MetadataFormat.COMIC_INFO)
                 assert result is True

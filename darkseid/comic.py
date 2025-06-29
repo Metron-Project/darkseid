@@ -42,11 +42,17 @@ METRON_INFO_FILENAME: Final[str] = "MetronInfo.xml"
 class MetadataFormat(Enum):
     """An enumeration of metadata formats for comic books.
 
-    This enum defines different metadata formats for comic books, including METRON_INFO and COMIC_RACK.
+    This enum defines different metadata formats for comic books.
+
+    Attributes:
+        METRON_INFO: An enumeration for the MetronInfo metadata format.
+        COMIC_INFO: An enumeration for the ComicInfo metadata format.
+        UNKNOWN: An enumeration for an unknown metadata format.
+
     """
 
     METRON_INFO = auto()
-    COMIC_RACK = auto()
+    COMIC_INFO = auto()
     UNKNOWN = auto()
 
     def __str__(self) -> str:
@@ -362,7 +368,7 @@ class Comic:
 
         """
         metadata_readers = {
-            MetadataFormat.COMIC_RACK: self._read_comicinfo,
+            MetadataFormat.COMIC_INFO: self._read_comicinfo,
             MetadataFormat.METRON_INFO: self._read_metroninfo,
         }
 
@@ -463,7 +469,7 @@ class Comic:
     def _get_metadata_filename(self, metadata_format: MetadataFormat) -> str | None:
         """Get the filename for the specified metadata format."""
         filename_map = {
-            MetadataFormat.COMIC_RACK: self._ci_xml_filename,
+            MetadataFormat.COMIC_INFO: self._ci_xml_filename,
             MetadataFormat.METRON_INFO: self._mi_xml_filename,
         }
         return filename_map.get(metadata_format)
@@ -475,7 +481,7 @@ class Comic:
             The raw Comic Rack metadata as a string, or None if no metadata is found.
 
         """
-        return self._read_raw_metadata(MetadataFormat.COMIC_RACK)
+        return self._read_raw_metadata(MetadataFormat.COMIC_INFO)
 
     def read_raw_mi_metadata(self) -> str | None:
         """Retrieve raw Metron Info metadata.
@@ -505,7 +511,7 @@ class Comic:
             return False
 
         writers = {
-            MetadataFormat.COMIC_RACK: self._write_ci,
+            MetadataFormat.COMIC_INFO: self._write_ci,
             MetadataFormat.METRON_INFO: self._write_mi,
         }
 
@@ -593,7 +599,7 @@ class Comic:
             True if the metadata was successfully removed, False otherwise.
 
         """
-        supported_formats = {MetadataFormat.COMIC_RACK, MetadataFormat.METRON_INFO}
+        supported_formats = {MetadataFormat.COMIC_INFO, MetadataFormat.METRON_INFO}
 
         if metadata_format not in supported_formats:
             logger.warning("Unsupported metadata format for removal: %s", metadata_format)
@@ -637,7 +643,7 @@ class Comic:
                 # Update cache flags
                 if metadata_format == MetadataFormat.METRON_INFO:
                     self._has_mi = False
-                elif metadata_format == MetadataFormat.COMIC_RACK:
+                elif metadata_format == MetadataFormat.COMIC_INFO:
                     self._has_ci = False
 
             return self._successful_write(write_success, None)
@@ -789,7 +795,7 @@ class Comic:
 
         """
         metadata_checkers = {
-            MetadataFormat.COMIC_RACK: self._has_comicinfo,
+            MetadataFormat.COMIC_INFO: self._has_comicinfo,
             MetadataFormat.METRON_INFO: self._has_metroninfo,
         }
 
@@ -906,7 +912,7 @@ class Comic:
 
         """
         format_checkers = [
-            (MetadataFormat.COMIC_RACK, self.has_metadata),
+            (MetadataFormat.COMIC_INFO, self.has_metadata),
             (MetadataFormat.METRON_INFO, self.has_metadata),
         ]
 
@@ -928,7 +934,7 @@ class Comic:
         """
         metadata_handlers = {
             MetadataFormat.METRON_INFO: (self._has_metroninfo, self._mi_xml_filename),
-            MetadataFormat.COMIC_RACK: (self._has_comicinfo, self._ci_xml_filename),
+            MetadataFormat.COMIC_INFO: (self._has_comicinfo, self._ci_xml_filename),
         }
 
         if metadata_format not in metadata_handlers:
