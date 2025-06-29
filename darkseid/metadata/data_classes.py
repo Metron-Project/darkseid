@@ -1022,7 +1022,7 @@ class Metadata:
             if self.age_rating.metron_info:
                 rating_parts.append(f"Metron: {self.age_rating.metron_info}")
             if self.age_rating.comic_rack:
-                rating_parts.append(f"ComicRack: {self.age_rating.comic_rack}")
+                rating_parts.append(f"ComicInfo: {self.age_rating.comic_rack}")
             lines.append(f"{indent}Age Rating: {' | '.join(rating_parts)}")
 
         # Story elements

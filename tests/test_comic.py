@@ -491,7 +491,7 @@ def test_get_number_of_pages_cached(sample_cbz_file):
 
 # Test metadata operations
 def test_read_metadata_comic_rack(sample_cbz_file):
-    """Test reading ComicRack metadata."""
+    """Test reading ComicInfo metadata."""
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_archiver = Mock()
         mock_archiver.get_filename_list.return_value = ["page1.jpg", "ComicInfo.xml"]
@@ -607,7 +607,7 @@ def test_read_raw_metadata_decode_error(sample_cbz_file):
 
 # Test metadata writing
 def test_write_metadata_comic_rack(sample_cbz_file, sample_metadata):
-    """Test writing ComicRack metadata."""
+    """Test writing ComicInfo metadata."""
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_archiver = Mock()
         mock_archiver.is_write_operation_expected.return_value = True
@@ -676,7 +676,7 @@ def test_write_metadata_exception(sample_cbz_file, sample_metadata):
 
 # Test metadata removal
 def test_remove_metadata_comic_rack(sample_cbz_file):
-    """Test removing ComicRack metadata."""
+    """Test removing ComicInfo metadata."""
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_archiver = Mock()
         mock_archiver.get_filename_list.return_value = ["ComicInfo.xml", "page1.jpg"]
@@ -810,7 +810,7 @@ def test_remove_pages_exception(sample_cbz_file):
 
 # Test metadata detection
 def test_has_metadata_comic_rack(sample_cbz_file):
-    """Test ComicRack metadata detection."""
+    """Test ComicInfo metadata detection."""
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_archiver = Mock()
         mock_archiver.get_filename_list.return_value = ["page1.jpg", "ComicInfo.xml"]
