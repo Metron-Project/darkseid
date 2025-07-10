@@ -668,7 +668,7 @@ def test_write_metadata_exception(sample_cbz_file, sample_metadata):
 
         with (
             patch.object(comic, "is_writable", return_value=True),
-            patch.object(comic, "apply_archive_info_to_metadata", side_effect=Exception()),
+            patch.object(comic, "_apply_archive_info_to_metadata", side_effect=Exception()),
         ):
             result = comic.write_metadata(sample_metadata, MetadataFormat.COMIC_INFO)
             assert result is False
