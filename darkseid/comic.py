@@ -802,7 +802,7 @@ class Comic:
         checker = metadata_checkers.get(fmt)
         return checker() if checker else False
 
-    def apply_archive_info_to_metadata(
+    def _apply_archive_info_to_metadata(
         self,
         metadata: Metadata,
         calc_page_sizes: bool = False,  # noqa: FBT002, FBT001

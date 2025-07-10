@@ -907,7 +907,7 @@ def test_apply_archive_info_to_metadata_basic(sample_cbz_file, sample_metadata):
         mock_factory.return_value = mock_archiver
 
         comic = Comic(sample_cbz_file)
-        comic.apply_archive_info_to_metadata(sample_metadata)
+        comic._apply_archive_info_to_metadata(sample_metadata)
 
         assert sample_metadata.page_count == 2
 
@@ -934,7 +934,7 @@ def test_apply_archive_info_to_metadata_with_page_sizes(sample_cbz_file, sample_
         mock_image.__exit__ = Mock(return_value=None)
 
         with patch("PIL.Image.open", return_value=mock_image):
-            comic.apply_archive_info_to_metadata(sample_metadata, calc_page_sizes=True)
+            comic._apply_archive_info_to_metadata(sample_metadata, calc_page_sizes=True)
 
         assert page["ImageSize"] == "15"  # len(b"fake image data")
         assert page["ImageWidth"] == "100"
@@ -958,7 +958,7 @@ def test_apply_archive_info_to_metadata_skip_complete_pages(sample_cbz_file, sam
         page["ImageHeight"] = "150"
         sample_metadata.pages = [page]
 
-        comic.apply_archive_info_to_metadata(sample_metadata, calc_page_sizes=True)
+        comic._apply_archive_info_to_metadata(sample_metadata, calc_page_sizes=True)
 
         # Page info should remain unchanged
         assert page["ImageSize"] == "1000"
@@ -980,7 +980,7 @@ def test_apply_archive_info_to_metadata_invalid_page_index(sample_cbz_file, samp
         sample_metadata.pages = [page]
 
         # Should not raise exception
-        comic.apply_archive_info_to_metadata(sample_metadata, calc_page_sizes=True)
+        comic._apply_archive_info_to_metadata(sample_metadata, calc_page_sizes=True)
 
 
 def test_apply_archive_info_to_metadata_image_error(sample_cbz_file, sample_metadata):
@@ -999,7 +999,7 @@ def test_apply_archive_info_to_metadata_image_error(sample_cbz_file, sample_meta
 
         with patch("PIL.Image.open", side_effect=OSError("Cannot identify image")):
             # Should not raise exception
-            comic.apply_archive_info_to_metadata(sample_metadata, calc_page_sizes=True)
+            comic._apply_archive_info_to_metadata(sample_metadata, calc_page_sizes=True)
 
             # Should still set image size
             assert page["ImageSize"] == "15"
