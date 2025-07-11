@@ -13,7 +13,7 @@ A [Python](https://www.python.org/) library to interact with comic archives.
 pip install darkseid
 ```
 
-# Example
+## Example
 
 ```python
 from pathlib import Path
