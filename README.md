@@ -13,6 +13,30 @@ A [Python](https://www.python.org/) library to interact with comic archives.
 pip install darkseid
 ```
 
+# Example
+
+```python
+from pathlib import Path
+from darkseid.comic import Comic, MetadataFormat
+
+comic = Comic(Path("my_comic.cbz"))
+
+# Check if it's a valid comic
+if comic.is_valid_comic():
+    print(f"Comic '{comic.name}' has {comic.get_number_of_pages()} pages")
+
+# Read metadata
+if comic.has_metadata(MetadataFormat.COMIC_INFO):
+    metadata = comic.read_metadata(MetadataFormat.COMIC_INFO)
+    print(f"Series: {metadata.series.name}")
+
+# Get a page
+page_data = comic.get_page(0)  # First page
+if page_data:
+    with open("cover.jpg", "wb") as f:
+        f.write(page_data)
+```
+
 ## Documentation
 
 [Read the project documentation](https://darkseid.readthedocs.io/en/stable/?badge=latest)
