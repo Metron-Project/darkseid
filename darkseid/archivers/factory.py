@@ -170,6 +170,15 @@ class UnknownArchiver(Archiver):
         """
         return []
 
+    def file_test(self) -> bool:
+        """Check if the file has a valid structure.
+
+        Returns:
+            bool: Always False, indicating that file is not valid.
+
+        """
+        return False
+
     def copy_from_archive(self, other_archive: Archiver) -> bool:  # noqa: ARG002
         """Copy files from another archive.
 

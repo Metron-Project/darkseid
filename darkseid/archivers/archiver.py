@@ -466,6 +466,15 @@ class Archiver(ABC):
 
         """
 
+    @abstractmethod
+    def file_test(self) -> bool:
+        """Test the file to validate the archive structure.
+
+        Returns:
+            True if the was successfully tested, False if it failed
+
+        """
+
     def __enter__(self):  # noqa: ANN204
         """Context manager entry.
 
