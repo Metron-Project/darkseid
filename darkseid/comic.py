@@ -23,22 +23,24 @@ __all__ = ["Comic", "ComicArchiveError", "ComicError", "ComicMetadataError", "Me
 import io
 import logging
 import os
-import zipfile
 from contextlib import suppress
 from enum import Enum, auto
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
-import rarfile
 from natsort import natsorted, ns
 from PIL import Image
 
 from darkseid.archivers import ArchiverFactory, ArchiverReadError
+from darkseid.archivers.sevenzip import PY7ZR_AVAILABLE
 from darkseid.archivers.zip import ZipArchiver
 from darkseid.metadata.comicinfo import ComicInfo
 from darkseid.metadata.data_classes import ImageMetadata, Metadata
 from darkseid.metadata.metroninfo import MetronInfo
 from darkseid.validate import SchemaVersion, ValidateMetadata, ValidationError
+
+if PY7ZR_AVAILABLE:
+    from darkseid.archivers.sevenzip import SevenZipArchiver
 
 if TYPE_CHECKING:
     from darkseid.archivers.archiver import Archiver
@@ -178,6 +180,7 @@ class Comic:
     # Class-level constants for better maintainability
     _RAR_EXTENSIONS: Final[frozenset[str]] = frozenset([".cbr", ".rar"])
     _ZIP_EXTENSIONS: Final[frozenset[str]] = frozenset([".cbz", ".zip"])
+    _SEVEN_ZIP_EXTENSIONS: Final[frozenset[str]] = frozenset([".cb7", ".7zip"])
 
     def __init__(self, path: Path | str) -> None:
         """Initialize a Comic object with the provided path.
@@ -220,6 +223,9 @@ class Comic:
             ComicArchiveError: If no suitable archiver can be created for the file.
 
         """
+        if PY7ZR_AVAILABLE:
+            ArchiverFactory.register_archiver(".cb7", SevenZipArchiver)
+            ArchiverFactory.register_archiver(".7zip", SevenZipArchiver)
         try:
             self._archiver: Archiver = ArchiverFactory.create_archiver(self._path)
         except Exception as e:
@@ -370,38 +376,24 @@ class Comic:
 
         """
         with suppress(Exception):
-            return self.rar_test() or self.zip_test()
+            return self._archiver.file_test()
         return False
 
-    def rar_test(self) -> bool:
-        """Test whether the file is a valid RAR archive.
+    def is_seven_zip(self) -> bool:
+        """Check if the archive is a CB7 file based on its extension.
 
         Returns:
-            bool: True if the file is a valid RAR archive, False otherwise.
+            bool: True if the file has a CB7 extension (.cb7).
 
         Note:
-            This method uses the rarfile library to validate the archive structure,
-            not just the file extension.
+            If 7zip support is available, his method only checks the file extension,
+             not the actual file format.
+            Use seven_zip_test() for a more thorough validation.
 
         """
-        with suppress(Exception):
-            return rarfile.is_rarfile(self._path)
-        return False
-
-    def zip_test(self) -> bool:
-        """Test whether the file is a valid ZIP archive.
-
-        Returns:
-            bool: True if the file is a valid ZIP archive, False otherwise.
-
-        Note:
-            This method uses the zipfile library to validate the archive structure,
-            not just the file extension.
-
-        """
-        with suppress(Exception):
-            return zipfile.is_zipfile(self._path)
-        return False
+        if not PY7ZR_AVAILABLE:
+            return False
+        return self._path.suffix.lower() in self._SEVEN_ZIP_EXTENSIONS
 
     def is_rar(self) -> bool:
         """Check if the archive is a RAR file based on its extension.
@@ -458,7 +450,9 @@ class Comic:
             Use is_valid_comic() for a more comprehensive validation.
 
         """
-        return (self.is_zip() or self.is_rar()) and (self.get_number_of_pages() > 0)
+        return (self.is_zip() or self.is_rar() or self.is_seven_zip()) and (
+            self.get_number_of_pages() > 0
+        )
 
     def get_page(self, index: int) -> bytes | None:
         """Retrieve the raw image data for a specific page.
@@ -835,7 +829,7 @@ class Comic:
             >>>
             >>> # Basic metadata writing
             >>> metadata = Metadata()
-            >>> metadata.series = "Amazing Spider-Man"
+            >>> metadata.series.name = "Amazing Spider-Man"
             >>> metadata.issue = "1"
             >>> success = comic.write_metadata(metadata, MetadataFormat.COMIC_INFO)
             >>> if success:
@@ -851,7 +845,7 @@ class Comic:
 
             >>> # Write metadata in multiple formats
             >>> metadata = Metadata()
-            >>> metadata.series = "Batman"
+            >>> metadata.series.name = "Batman"
             >>> metadata.issue = "42"
             >>>
             >>> # Write as ComicInfo (with detailed page information)
@@ -1557,6 +1551,19 @@ class Comic:
             return zip_archiver.copy_from_archive(self._archiver)
         except Exception:
             logger.exception("Error exporting %s to ZIP format", self._path)
+            return False
+
+    def export_as_seven_zip(self, seven_zip_filename: Path) -> bool:
+        """Export the comic archive to CB7 (7ZIP) format."""
+        if self.is_seven_zip():
+            logger.info("Archive %s is already in 7ZIP format", self._path)
+            return True
+
+        try:
+            seven_zip_archiver = SevenZipArchiver(seven_zip_filename)
+            return seven_zip_archiver.copy_from_archive(self._archiver)
+        except Exception:
+            logger.exception("Error exporting %s to 7ZIP format", self._path)
             return False
 
     def get_metadata_formats(self) -> set[MetadataFormat]:
