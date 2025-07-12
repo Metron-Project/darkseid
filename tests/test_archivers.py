@@ -533,6 +533,9 @@ def test_factory_register_new_archiver(temp_dir):
         def copy_from_archive(self, other_archive: Archiver) -> bool:
             return True
 
+        def file_test(self) -> bool:
+            return True
+
     # Register new archiver
     ArchiverFactory.register_archiver(".mock", MockArchiver)
 
