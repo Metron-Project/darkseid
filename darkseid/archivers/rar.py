@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import io
 import logging
+from contextlib import suppress
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -229,6 +230,21 @@ class RarArchiver(Archiver):
             self._handle_error("list", "", e)
             msg = f"Cannot read RAR archive: {e}"
             raise ArchiverReadError(msg) from e
+
+    def test(self) -> bool:
+        """Test whether the file is a valid RAR archive.
+
+        Returns:
+            bool: True if the file is a valid RAR archive, False otherwise.
+
+        Note:
+            This method uses the rarfile library to validate the archive structure,
+            not just the file extension.
+
+        """
+        with suppress(Exception):
+            return rarfile.is_rarfile(self._path)
+        return False
 
     def copy_from_archive(self, other_archive: Archiver) -> bool:
         """Attempt to copy files from another archive to the RAR archive.

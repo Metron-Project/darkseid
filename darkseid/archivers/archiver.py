@@ -432,6 +432,15 @@ class Archiver(ABC):
         """
 
     @abstractmethod
+    def test(self) -> bool:
+        """Test whether the archive is valid.
+
+        Returns:
+            bool: True if the file is a valid archive, False otherwise.
+
+        """
+
+    @abstractmethod
     def copy_from_archive(self, other_archive: Archiver) -> bool:
         """Copy files from another archive to this archive.
 

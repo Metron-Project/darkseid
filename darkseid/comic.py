@@ -23,13 +23,11 @@ __all__ = ["Comic", "ComicArchiveError", "ComicError", "ComicMetadataError", "Me
 import io
 import logging
 import os
-import zipfile
 from contextlib import suppress
 from enum import Enum, auto
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
-import rarfile
 from natsort import natsorted, ns
 from PIL import Image
 
@@ -370,37 +368,7 @@ class Comic:
 
         """
         with suppress(Exception):
-            return self.rar_test() or self.zip_test()
-        return False
-
-    def rar_test(self) -> bool:
-        """Test whether the file is a valid RAR archive.
-
-        Returns:
-            bool: True if the file is a valid RAR archive, False otherwise.
-
-        Note:
-            This method uses the rarfile library to validate the archive structure,
-            not just the file extension.
-
-        """
-        with suppress(Exception):
-            return rarfile.is_rarfile(self._path)
-        return False
-
-    def zip_test(self) -> bool:
-        """Test whether the file is a valid ZIP archive.
-
-        Returns:
-            bool: True if the file is a valid ZIP archive, False otherwise.
-
-        Note:
-            This method uses the zipfile library to validate the archive structure,
-            not just the file extension.
-
-        """
-        with suppress(Exception):
-            return zipfile.is_zipfile(self._path)
+            return self._archiver.test()
         return False
 
     def is_rar(self) -> bool:
@@ -411,7 +379,7 @@ class Comic:
 
         Note:
             This method only checks the file extension, not the actual file format.
-            Use rar_test() for a more thorough validation.
+            Use archiver.test() for a more thorough validation.
 
         """
         return self._path.suffix.lower() in self._RAR_EXTENSIONS
@@ -424,7 +392,7 @@ class Comic:
 
         Note:
             This method only checks the file extension, not the actual file format.
-            Use zip_test() for a more thorough validation.
+            Use archiver.test() for a more thorough validation.
 
         """
         return self._path.suffix.lower() in self._ZIP_EXTENSIONS
