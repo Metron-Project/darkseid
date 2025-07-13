@@ -35,6 +35,7 @@ from typing import ClassVar, Protocol, runtime_checkable
 
 from darkseid.archivers.archiver import Archiver
 from darkseid.archivers.rar import RarArchiver
+from darkseid.archivers.tar import TarArchiver
 from darkseid.archivers.zip import ZipArchiver
 
 
@@ -254,6 +255,7 @@ class ArchiverFactory:
         ".cbz": ZipArchiver,  # Comic book ZIP format
         ".rar": RarArchiver,
         ".cbr": RarArchiver,  # Comic book RAR format
+        ".cbt": TarArchiver,  # Comic book TAR format
     }
 
     @classmethod

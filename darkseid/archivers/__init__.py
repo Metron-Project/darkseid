@@ -8,6 +8,7 @@ from darkseid.archivers.archiver import (
 )
 from darkseid.archivers.factory import ArchiverFactory, UnknownArchiver
 from darkseid.archivers.rar import RarArchiver
+from darkseid.archivers.tar import TarArchiver
 from darkseid.archivers.zip import ZipArchiver
 
 __all__ = [
@@ -17,6 +18,7 @@ __all__ = [
     "ArchiverReadError",
     "ArchiverWriteError",
     "RarArchiver",
+    "TarArchiver",
     "UnknownArchiver",
     "ZipArchiver",
 ]
