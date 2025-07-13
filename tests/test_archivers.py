@@ -530,6 +530,9 @@ def test_factory_register_new_archiver(temp_dir):
         def get_filename_list(self) -> list[str]:
             return []
 
+        def test(self) -> bool:
+            return True
+
         def copy_from_archive(self, other_archive: Archiver) -> bool:
             return True
 
