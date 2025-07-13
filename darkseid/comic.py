@@ -130,12 +130,12 @@ class Comic:
     ComicInfo and MetronInfo formats, page manipulation, and archive validation.
 
     Key Features:
-        - Support for CBZ/ZIP and CBR/RAR comic archives
+        - Support for CBZ/ZIP, CBR/RAR, and CBT/TAR comic archives
         - Read/write ComicInfo and MetronInfo metadata
         - Page extraction and manipulation
         - Archive validation and format detection
         - Metadata validation with schema version detection
-        - Export capabilities (e.g., CBR to CBZ conversion)
+        - Export capabilities (e.g., CBR to CBZ conversion / CBT to CBZ conversion)
 
     Thread Safety:
         This class is not thread-safe. Each thread should use its own Comic instance.
@@ -176,6 +176,7 @@ class Comic:
     # Class-level constants for better maintainability
     _RAR_EXTENSIONS: Final[frozenset[str]] = frozenset([".cbr", ".rar"])
     _ZIP_EXTENSIONS: Final[frozenset[str]] = frozenset([".cbz", ".zip"])
+    _TAR_EXTENSIONS: Final[frozenset[str]] = frozenset([".cbt"])
 
     def __init__(self, path: Path | str) -> None:
         """Initialize a Comic object with the provided path.
@@ -371,6 +372,19 @@ class Comic:
             return self._archiver.test()
         return False
 
+    def is_tar(self) -> bool:
+        """Check if the archive is a TAR file based on its extension.
+
+        Returns:
+            bool: True if the file has a TAR extension (.cbt).
+
+        Note:
+            This method only checks the file extension, not the actual file format.
+            Use archiver.test() for a more thorough validation.
+
+        """
+        return self._path.suffix.lower() in self._TAR_EXTENSIONS
+
     def is_rar(self) -> bool:
         """Check if the archive is a RAR file based on its extension.
 
@@ -415,7 +429,7 @@ class Comic:
 
         A file is considered a comic archive if it meets the following criteria:
 
-        1. It's either a ZIP or RAR archive
+        1. It's either a ZIP, RAR, or TAR archive
         2. It contains at least one image file
 
         Returns:
@@ -426,7 +440,9 @@ class Comic:
             Use is_valid_comic() for a more comprehensive validation.
 
         """
-        return (self.is_zip() or self.is_rar()) and (self.get_number_of_pages() > 0)
+        return (self.is_zip() or self.is_rar() or self.is_tar()) and (
+            self.get_number_of_pages() > 0
+        )
 
     def get_page(self, index: int) -> bytes | None:
         """Retrieve the raw image data for a specific page.
@@ -1425,6 +1441,7 @@ class Comic:
 
         Format Conversion:
             - RAR/CBR → ZIP/CBZ: Full conversion with file extraction and re-compression
+            - CBT -> ZIP/CBZ: Full conversion with file extraction and re-compression
             - ZIP/CBZ → ZIP/CBZ: Returns True immediately (no-op)
             - Maintains compatibility with all comic reading applications
             - Preserves metadata across format conversion
@@ -1467,7 +1484,7 @@ class Comic:
             ...     print(f"Unexpected error during export: {e}")
 
         Performance Considerations:
-            - RAR to ZIP conversion requires extracting and re-compressing all files
+            - RAR/TAR to ZIP conversion requires extracting and re-compressing all files
             - Processing time depends on archive size and compression settings
             - Memory usage scales with the size of individual files being processed
             - Large archives (>1GB) may require significant time and disk space
@@ -1489,7 +1506,7 @@ class Comic:
             - Ensure adequate free space before starting large conversions
 
         Use Cases:
-            - Converting RAR/CBR archives to more widely supported ZIP/CBZ format
+            - Converting RAR/CBR/CBT archives to more widely supported ZIP/CBZ format
             - Creating backup copies in standardized format
             - Preparing archives for systems that don't support RAR format
             - Batch processing comic collections for format standardization

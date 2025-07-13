@@ -3,6 +3,7 @@
 """Comprehensive tests for archiver modules using function-based approach."""
 
 import io
+import tarfile
 import tempfile
 import zipfile
 from pathlib import Path
@@ -11,7 +12,13 @@ from unittest.mock import Mock, patch
 import pytest
 import rarfile
 
-from darkseid.archivers import ArchiverFactory, RarArchiver, UnknownArchiver, ZipArchiver
+from darkseid.archivers import (
+    ArchiverFactory,
+    RarArchiver,
+    TarArchiver,
+    UnknownArchiver,
+    ZipArchiver,
+)
 from darkseid.archivers.archiver import Archiver, ArchiverReadError
 
 
@@ -21,6 +28,28 @@ def temp_dir():
     """Create a temporary directory for test files."""
     with tempfile.TemporaryDirectory() as tmp_dir:
         yield Path(tmp_dir)
+
+
+@pytest.fixture
+def sample_tar_path(temp_dir):
+    tar_path = temp_dir / "test.cbt"
+    with tarfile.open(tar_path, "w") as tf:
+        # File 1
+        tarinfo_1 = tarfile.TarInfo(name="file1.txt")
+        content = b"content1"
+        tarinfo_1.size = len(content)
+        tf.addfile(tarinfo_1, io.BytesIO(content))
+        # File 2
+        tarinfo_2 = tarfile.TarInfo(name="file2.jpg")
+        content2 = b"fake_image_data"
+        tarinfo_2.size = len(content2)
+        tf.addfile(tarinfo_2, io.BytesIO(content2))
+        # File 3
+        tarinfo_3 = tarfile.TarInfo(name="dir/file3.txt")
+        content3 = b"content3"
+        tarinfo_3.size = len(content3)
+        tf.addfile(tarinfo_3, io.BytesIO(content3))
+    return tar_path
 
 
 @pytest.fixture
@@ -285,6 +314,193 @@ def test_zip_copy_from_zip_archive(temp_dir, sample_zip_path):
         source_content = source_archiver.read_file(filename)
         dest_content = dest_archiver.read_file(filename)
         assert source_content == dest_content
+
+
+# TarArchiver Tests
+def test_tar_archiver_init(sample_tar_path):
+    """Test TarArchiver initialization."""
+    archiver = TarArchiver(sample_tar_path)
+    assert archiver.path == sample_tar_path
+
+
+def test_tar_archiver_init_nonexistent_file(nonexistent_path):
+    """Test TarArchiver initialization with nonexistent file."""
+    # Should not raise exception - file might be created later
+    archiver = TarArchiver(nonexistent_path)
+    assert archiver.path == nonexistent_path
+
+
+def test_tar_read_file_success(sample_tar_path):
+    """Test reading existing file from TAR archive."""
+    archiver = TarArchiver(sample_tar_path)
+    content = archiver.read_file("file1.txt")
+    assert content == b"content1"
+
+
+def test_tar_read_file_binary(sample_tar_path):
+    """Test reading binary file from TAR archive."""
+    archiver = TarArchiver(sample_tar_path)
+    content = archiver.read_file("file2.jpg")
+    assert content == b"fake_image_data"
+
+
+def test_tar_read_file_in_directory(sample_tar_path):
+    """Test reading file from subdirectory in TAR archive."""
+    archiver = TarArchiver(sample_tar_path)
+    content = archiver.read_file("dir/file3.txt")
+    assert content == b"content3"
+
+
+def test_tar_read_nonexistent_file(sample_tar_path):
+    """Test reading nonexistent file raises ArchiverReadError."""
+    archiver = TarArchiver(sample_tar_path)
+    with pytest.raises(ArchiverReadError, match="File not found in archive"):
+        archiver.read_file("nonexistent.txt")
+
+
+def test_tar_write_file_string_data(temp_dir):
+    """Test writing string data to TAR archive."""
+    tar_path = temp_dir / "write_test.cbt"
+    archiver = TarArchiver(tar_path)
+
+    result = archiver.write_file("test.txt", "hello world")
+    assert result is True
+
+    # Verify file was written
+    content = archiver.read_file("test.txt")
+    assert content == b"hello world"
+
+
+def test_tar_write_file_bytes_data(temp_dir):
+    """Test writing bytes data to TAR archive."""
+    tar_path = temp_dir / "write_test.cbt"
+    archiver = TarArchiver(tar_path)
+
+    data = b"binary data"
+    result = archiver.write_file("test.bin", data)
+    assert result is True
+
+    # Verify file was written
+    content = archiver.read_file("test.bin")
+    assert content == data
+
+
+def test_tar_write_file_overwrite_existing(sample_tar_path):
+    """Test overwriting existing file in TAR archive."""
+    archiver = TarArchiver(sample_tar_path)
+
+    # Overwrite existing file
+    result = archiver.write_file("file1.txt", "new content")
+    assert result is True
+
+    # Verify content was updated
+    content = archiver.read_file("file1.txt")
+    assert content == b"new content"
+
+
+def test_tar_remove_file_success(sample_tar_path):
+    """Test removing existing file from TAR archive."""
+    archiver = TarArchiver(sample_tar_path)
+
+    # Verify file exists first
+    assert "file1.txt" in archiver.get_filename_list()
+
+    # Remove file
+    result = archiver.remove_file("file1.txt")
+    assert result is True
+
+    # Verify file is gone
+    assert "file1.txt" not in archiver.get_filename_list()
+
+
+def test_tar_remove_nonexistent_file(sample_tar_path):
+    """Test removing nonexistent file returns False."""
+    archiver = TarArchiver(sample_tar_path)
+    result = archiver.remove_file("nonexistent.txt")
+    assert result is False
+
+
+def test_tar_remove_multiple_files(sample_tar_path):
+    """Test removing multiple files from TAR archive."""
+    archiver = TarArchiver(sample_tar_path)
+
+    files_to_remove = ["file1.txt", "file2.jpg"]
+    result = archiver.remove_files(files_to_remove)
+    assert result is True
+
+    # Verify files are gone
+    remaining_files = archiver.get_filename_list()
+    assert "file1.txt" not in remaining_files
+    assert "file2.jpg" not in remaining_files
+    assert "dir/file3.txt" in remaining_files  # Should still exist
+
+
+def test_tar_remove_files_empty_list(sample_tar_path):
+    """Test removing empty list of files returns True."""
+    archiver = TarArchiver(sample_tar_path)
+    result = archiver.remove_files([])
+    assert result is True
+
+
+def test_tar_remove_files_nonexistent(sample_tar_path):
+    """Test removing nonexistent files returns True."""
+    archiver = TarArchiver(sample_tar_path)
+    result = archiver.remove_files(["nonexistent1.txt", "nonexistent2.txt"])
+    assert result is True
+
+
+def test_tar_get_filename_list(sample_tar_path):
+    """Test getting list of files in TAR archive."""
+    archiver = TarArchiver(sample_tar_path)
+    files = archiver.get_filename_list()
+
+    expected_files = ["file1.txt", "file2.jpg", "dir/file3.txt"]
+    assert set(files) == set(expected_files)
+
+
+def test_tar_get_filename_list_corrupted(temp_dir):
+    """Test getting filename list from corrupted TAR returns empty list."""
+    corrupted_path = temp_dir / "corrupted.cbt"
+    corrupted_path.write_text("not a cbt file")
+
+    archiver = TarArchiver(corrupted_path)
+    files = archiver.get_filename_list()
+    assert files == []
+
+
+def test_tar_exists_file(sample_tar_path):
+    """Test checking if file exists in TAR archive."""
+    archiver = TarArchiver(sample_tar_path)
+
+    assert archiver.exists("file1.txt") is True
+    assert archiver.exists("nonexistent.txt") is False
+
+
+def test_tar_copy_from_tar_archive(temp_dir, sample_tar_path):
+    """Test copying from one TAR archive to another."""
+    dest_path = temp_dir / "destination.cbt"
+    source_archiver = TarArchiver(sample_tar_path)
+    dest_archiver = TarArchiver(dest_path)
+
+    result = dest_archiver.copy_from_archive(source_archiver)
+    assert result is True
+
+    # Verify all files were copied
+    dest_files = dest_archiver.get_filename_list()
+    source_files = source_archiver.get_filename_list()
+    assert set(dest_files) == set(source_files)
+
+    # Verify content is the same
+    for filename in source_files:
+        source_content = source_archiver.read_file(filename)
+        dest_content = dest_archiver.read_file(filename)
+        assert source_content == dest_content
+
+
+def test_tar_test(sample_tar_path):
+    """Test TarArchive .test() method."""
+    archive = TarArchiver(sample_tar_path)
+    assert archive.test() is True
 
 
 # RarArchiver Tests
