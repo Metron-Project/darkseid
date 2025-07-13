@@ -170,6 +170,15 @@ class UnknownArchiver(Archiver):
         """
         return []
 
+    def test(self) -> bool:
+        """Test whether the file is a RAR archive.
+
+        Returns:
+            bool: Returns False, as validity test for archive is unavailable.
+
+        """
+        return False
+
     def copy_from_archive(self, other_archive: Archiver) -> bool:  # noqa: ARG002
         """Copy files from another archive.
 

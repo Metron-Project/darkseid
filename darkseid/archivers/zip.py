@@ -20,6 +20,7 @@ Examples:
 from __future__ import annotations
 
 import logging
+from contextlib import suppress
 from typing import TYPE_CHECKING
 
 import rarfile
@@ -301,6 +302,21 @@ class ZipArchiver(Archiver):
         except (BadZipfile, OSError) as e:
             self._handle_error("list", "", e)
             return []
+
+    def test(self) -> bool:
+        """Test whether the file is a valid ZIP archive.
+
+        Returns:
+            bool: True if the file is a valid ZIP archive, False otherwise.
+
+        Note:
+            This method uses the zipfile library to validate the archive structure,
+            not just the file extension.
+
+        """
+        with suppress(Exception):
+            return ZipFile.is_zipfile(self._path)
+        return False
 
     def copy_from_archive(self, other_archive: Archiver) -> bool:
         """Copy files from another archive to the ZIP archive.
