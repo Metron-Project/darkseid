@@ -336,7 +336,7 @@ class TarArchiver(Archiver):
                 # Only return regular files, not directories
                 filenames = [member.name for member in tar.getmembers() if member.isfile()]
                 return sorted(filenames)
-        except (tarfile.TarError, OSError) as e:
+        except (tarfile.TarError, OSError, ArchiverReadError) as e:
             self._handle_error("get_filename_list", str(self._path), e)
             return []
 
