@@ -247,8 +247,8 @@ class TarArchiver(Archiver):
             archive_file: Path of the file to remove from the archive.
 
         Returns:
-            True if the file was successfully removed or didn't exist,
-            False if the removal failed.
+            True if the file was successfully removed,
+            False if the removal failed or didn't exist
 
         """
         try:
@@ -257,16 +257,20 @@ class TarArchiver(Archiver):
 
             # Read all files except the one to remove
             remaining_files = {}
+            file_to_remove = set()
 
             with self._open_for_reading() as tar:
                 for member in tar.getmembers():
                     if member.isfile():
                         if member.name == archive_file:
-                            pass
+                            file_to_remove.add(member.name)
                         else:
                             file_obj = tar.extractfile(member)
                             if file_obj:
                                 remaining_files[member.name] = file_obj.read()
+
+            if not file_to_remove:
+                return False
 
             # Recreate archive without the removed file
             with self._open_for_writing() as tar:
