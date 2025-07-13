@@ -61,12 +61,15 @@ class TarArchiver(Archiver):
     and handles the appropriate compression/decompression transparently.
 
     Supported formats:
+
+    - .cbt: Uncompressed TAR
     - .tar: Uncompressed TAR
     - .tar.gz, .tgz: Gzip compressed TAR
     - .tar.bz2, .tbz2: Bzip2 compressed TAR
     - .tar.xz, .txz: XZ compressed TAR
 
     Features:
+
     - Thread-safe for reading operations (multiple readers)
     - Write operations should be performed by a single thread
     - Automatic compression format detection
@@ -247,8 +250,7 @@ class TarArchiver(Archiver):
             archive_file: Path of the file to remove from the archive.
 
         Returns:
-            True if the file was successfully removed,
-            False if the removal failed or didn't exist
+            True if the file was successfully removed, False if the removal failed or didn't exist
 
         """
         try:

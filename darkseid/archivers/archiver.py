@@ -114,7 +114,7 @@ class Archiver(ABC):
     all concrete archive implementations must follow.
 
     The class is designed to work with various archive formats including
-    but not limited to ZIP, RAR, 7Z, TAR, etc. Each concrete implementation
+    but not limited to ZIP, RAR, TAR, etc. Each concrete implementation
     should handle the specifics of its archive format while maintaining
     the same public interface.
 
