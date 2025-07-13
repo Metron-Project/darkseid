@@ -476,6 +476,33 @@ def test_tar_exists_file(sample_tar_path):
     assert archiver.exists("nonexistent.txt") is False
 
 
+def test_tar_copy_from_tar_archive(temp_dir, sample_tar_path):
+    """Test copying from one TAR archive to another."""
+    dest_path = temp_dir / "destination.cbt"
+    source_archiver = TarArchiver(sample_tar_path)
+    dest_archiver = TarArchiver(dest_path)
+
+    result = dest_archiver.copy_from_archive(source_archiver)
+    assert result is True
+
+    # Verify all files were copied
+    dest_files = dest_archiver.get_filename_list()
+    source_files = source_archiver.get_filename_list()
+    assert set(dest_files) == set(source_files)
+
+    # Verify content is the same
+    for filename in source_files:
+        source_content = source_archiver.read_file(filename)
+        dest_content = dest_archiver.read_file(filename)
+        assert source_content == dest_content
+
+
+def test_tar_test(sample_tar_path):
+    """Test TarArchive .test() method."""
+    archive = TarArchiver(sample_tar_path)
+    assert archive.test() is True
+
+
 # RarArchiver Tests
 @patch("rarfile.RarFile")
 def test_rar_archiver_init(mock_rar_file, sample_rar_path):
