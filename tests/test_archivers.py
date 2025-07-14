@@ -1,6 +1,6 @@
 # test_archivers.py
-# ruff: noqa: ARG001, ARG002
-"""Comprehensive tests for archiver modules using function-based approach."""
+# ruff: noqa: ARG001, ARG002, PLR0913
+"""Comprehensive tests for archiver modules using pytest parametrization."""
 
 import io
 import tarfile
@@ -22,7 +22,7 @@ from darkseid.archivers import (
 from darkseid.archivers.archiver import Archiver, ArchiverReadError
 
 
-# Fixtures
+# Test data and fixtures
 @pytest.fixture
 def temp_dir():
     """Create a temporary directory for test files."""
@@ -32,6 +32,7 @@ def temp_dir():
 
 @pytest.fixture
 def sample_tar_path(temp_dir):
+    """Create a sample TAR file for testing."""
     tar_path = temp_dir / "test.cbt"
     with tarfile.open(tar_path, "w") as tf:
         # File 1
@@ -74,7 +75,7 @@ def empty_zip_path(temp_dir):
 
 @pytest.fixture
 def sample_rar_path(temp_dir):
-    """Create a mock RAR file path (actual RAR creation requires external tools)."""
+    """Create a mock RAR file path."""
     return temp_dir / "test.rar"
 
 
@@ -84,6 +85,34 @@ def nonexistent_path(temp_dir):
     return temp_dir / "nonexistent.zip"
 
 
+# Test data for parametrized tests
+ARCHIVE_TEST_DATA = [
+    ("zip", ZipArchiver, "test.zip"),
+    ("tar", TarArchiver, "test.cbt"),
+]
+
+FACTORY_EXTENSION_DATA = [
+    (".zip", ZipArchiver),
+    (".cbz", ZipArchiver),
+    (".rar", RarArchiver),
+    (".cbr", RarArchiver),
+    (".cbt", TarArchiver),
+    # (".tar", TarArchiver),
+    (".xyz", UnknownArchiver),
+]
+
+READ_WRITE_ARCHIVE_DATA = [
+    ("zip", ZipArchiver, "test.zip"),
+    ("tar", TarArchiver, "test.cbt"),
+]
+
+FILE_TEST_DATA = [
+    ("file1.txt", b"content1"),
+    ("file2.jpg", b"fake_image_data"),
+    ("dir/file3.txt", b"content3"),
+]
+
+
 # Base Archiver Tests
 def test_archiver_is_abstract():
     """Test that Archiver cannot be instantiated directly."""
@@ -91,101 +120,99 @@ def test_archiver_is_abstract():
         Archiver(Path("test.zip"))
 
 
-def test_archiver_path_property(sample_zip_path):
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), ARCHIVE_TEST_DATA)
+def test_archiver_path_property(temp_dir, archive_type, archiver_class, filename):
     """Test that archiver path property works correctly."""
-    archiver = ZipArchiver(sample_zip_path)
-    assert archiver.path == sample_zip_path
+    path = temp_dir / filename
+    archiver = archiver_class(path)
+    assert archiver.path == path
 
 
-def test_archiver_context_manager(sample_zip_path):
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), ARCHIVE_TEST_DATA)
+def test_archiver_context_manager(temp_dir, archive_type, archiver_class, filename):
     """Test that archiver works as context manager."""
-    with ZipArchiver(sample_zip_path) as archiver:
-        assert isinstance(archiver, ZipArchiver)
-        assert archiver.path == sample_zip_path
+    path = temp_dir / filename
+    with archiver_class(path) as archiver:
+        assert isinstance(archiver, archiver_class)
+        assert archiver.path == path
 
 
-# ZipArchiver Tests
-def test_zip_archiver_init(sample_zip_path):
-    """Test ZipArchiver initialization."""
+# Parametrized tests for common archive operations
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), ARCHIVE_TEST_DATA)
+def test_archiver_init(temp_dir, archive_type, archiver_class, filename):
+    """Test archiver initialization."""
+    path = temp_dir / filename
+    archiver = archiver_class(path)
+    assert archiver.path == path
+
+
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), ARCHIVE_TEST_DATA)
+def test_archiver_init_nonexistent_file(temp_dir, archive_type, archiver_class, filename):
+    """Test archiver initialization with nonexistent file."""
+    path = temp_dir / f"nonexistent_{filename}"
+    archiver = archiver_class(path)
+    assert archiver.path == path
+
+
+@pytest.mark.parametrize(("test_file", "expected_content"), FILE_TEST_DATA)
+def test_zip_read_file_success(sample_zip_path, test_file, expected_content):
+    """Test reading existing files from ZIP archive."""
     archiver = ZipArchiver(sample_zip_path)
-    assert archiver.path == sample_zip_path
+    content = archiver.read_file(test_file)
+    assert content == expected_content
 
 
-def test_zip_archiver_init_nonexistent_file(nonexistent_path):
-    """Test ZipArchiver initialization with nonexistent file."""
-    # Should not raise exception - file might be created later
-    archiver = ZipArchiver(nonexistent_path)
-    assert archiver.path == nonexistent_path
+@pytest.mark.parametrize(("test_file", "expected_content"), FILE_TEST_DATA)
+def test_tar_read_file_success(sample_tar_path, test_file, expected_content):
+    """Test reading existing files from TAR archive."""
+    archiver = TarArchiver(sample_tar_path)
+    content = archiver.read_file(test_file)
+    assert content == expected_content
 
 
-def test_zip_read_file_success(sample_zip_path):
-    """Test reading existing file from ZIP archive."""
-    archiver = ZipArchiver(sample_zip_path)
-    content = archiver.read_file("file1.txt")
-    assert content == b"content1"
-
-
-def test_zip_read_file_binary(sample_zip_path):
-    """Test reading binary file from ZIP archive."""
-    archiver = ZipArchiver(sample_zip_path)
-    content = archiver.read_file("file2.jpg")
-    assert content == b"fake_image_data"
-
-
-def test_zip_read_file_in_directory(sample_zip_path):
-    """Test reading file from subdirectory in ZIP archive."""
-    archiver = ZipArchiver(sample_zip_path)
-    content = archiver.read_file("dir/file3.txt")
-    assert content == b"content3"
-
-
-def test_zip_read_nonexistent_file(sample_zip_path):
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), ARCHIVE_TEST_DATA)
+def test_read_nonexistent_file(temp_dir, archive_type, archiver_class, filename, request):
     """Test reading nonexistent file raises ArchiverReadError."""
-    archiver = ZipArchiver(sample_zip_path)
+    if archive_type == "zip":
+        archive_path = request.getfixturevalue("sample_zip_path")
+    else:
+        archive_path = request.getfixturevalue("sample_tar_path")
+
+    archiver = archiver_class(archive_path)
     with pytest.raises(ArchiverReadError, match="File not found in archive"):
         archiver.read_file("nonexistent.txt")
 
 
-def test_zip_read_corrupted_archive(temp_dir):
-    """Test reading from corrupted ZIP file raises ArchiverReadError."""
-    corrupted_path = temp_dir / "corrupted.zip"
-    corrupted_path.write_text("not a zip file")
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), READ_WRITE_ARCHIVE_DATA)
+@pytest.mark.parametrize(
+    ("test_data", "expected_content"),
+    [
+        ("hello world", b"hello world"),
+        (b"binary data", b"binary data"),
+    ],
+)
+def test_write_file(temp_dir, archive_type, archiver_class, filename, test_data, expected_content):
+    """Test writing data to archives."""
+    path = temp_dir / f"write_test_{filename}"
+    archiver = archiver_class(path)
 
-    archiver = ZipArchiver(corrupted_path)
-    with pytest.raises(ArchiverReadError, match="Corrupt ZIP file"):
-        archiver.read_file("any_file.txt")
-
-
-def test_zip_write_file_string_data(temp_dir):
-    """Test writing string data to ZIP archive."""
-    zip_path = temp_dir / "write_test.zip"
-    archiver = ZipArchiver(zip_path)
-
-    result = archiver.write_file("test.txt", "hello world")
+    result = archiver.write_file("test.txt", test_data)
     assert result is True
 
     # Verify file was written
     content = archiver.read_file("test.txt")
-    assert content == b"hello world"
+    assert content == expected_content
 
 
-def test_zip_write_file_bytes_data(temp_dir):
-    """Test writing bytes data to ZIP archive."""
-    zip_path = temp_dir / "write_test.zip"
-    archiver = ZipArchiver(zip_path)
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), READ_WRITE_ARCHIVE_DATA)
+def test_write_file_overwrite_existing(temp_dir, archive_type, archiver_class, filename, request):
+    """Test overwriting existing file in archives."""
+    if archive_type == "zip":
+        archive_path = request.getfixturevalue("sample_zip_path")
+    else:
+        archive_path = request.getfixturevalue("sample_tar_path")
 
-    data = b"binary data"
-    result = archiver.write_file("test.bin", data)
-    assert result is True
-
-    # Verify file was written
-    content = archiver.read_file("test.bin")
-    assert content == data
-
-
-def test_zip_write_file_overwrite_existing(sample_zip_path):
-    """Test overwriting existing file in ZIP archive."""
-    archiver = ZipArchiver(sample_zip_path)
+    archiver = archiver_class(archive_path)
 
     # Overwrite existing file
     result = archiver.write_file("file1.txt", "new content")
@@ -194,6 +221,157 @@ def test_zip_write_file_overwrite_existing(sample_zip_path):
     # Verify content was updated
     content = archiver.read_file("file1.txt")
     assert content == b"new content"
+
+
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), READ_WRITE_ARCHIVE_DATA)
+def test_remove_file_success(temp_dir, archive_type, archiver_class, filename, request):
+    """Test removing existing file from archives."""
+    if archive_type == "zip":
+        archive_path = request.getfixturevalue("sample_zip_path")
+    else:
+        archive_path = request.getfixturevalue("sample_tar_path")
+
+    archiver = archiver_class(archive_path)
+
+    # Verify file exists first
+    assert "file1.txt" in archiver.get_filename_list()
+
+    # Remove file
+    result = archiver.remove_file("file1.txt")
+    assert result is True
+
+    # Verify file is gone
+    assert "file1.txt" not in archiver.get_filename_list()
+
+
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), READ_WRITE_ARCHIVE_DATA)
+def test_remove_nonexistent_file(temp_dir, archive_type, archiver_class, filename, request):
+    """Test removing nonexistent file returns False."""
+    if archive_type == "zip":
+        archive_path = request.getfixturevalue("sample_zip_path")
+    else:
+        archive_path = request.getfixturevalue("sample_tar_path")
+
+    archiver = archiver_class(archive_path)
+    result = archiver.remove_file("nonexistent.txt")
+    assert result is False
+
+
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), READ_WRITE_ARCHIVE_DATA)
+def test_remove_multiple_files(temp_dir, archive_type, archiver_class, filename, request):
+    """Test removing multiple files from archives."""
+    if archive_type == "zip":
+        archive_path = request.getfixturevalue("sample_zip_path")
+    else:
+        archive_path = request.getfixturevalue("sample_tar_path")
+
+    archiver = archiver_class(archive_path)
+
+    files_to_remove = ["file1.txt", "file2.jpg"]
+    result = archiver.remove_files(files_to_remove)
+    assert result is True
+
+    # Verify files are gone
+    remaining_files = archiver.get_filename_list()
+    assert "file1.txt" not in remaining_files
+    assert "file2.jpg" not in remaining_files
+    assert "dir/file3.txt" in remaining_files  # Should still exist
+
+
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), READ_WRITE_ARCHIVE_DATA)
+@pytest.mark.parametrize(
+    "files_to_remove",
+    [
+        [],
+        ["nonexistent1.txt", "nonexistent2.txt"],
+    ],
+)
+def test_remove_files_edge_cases(
+    temp_dir, archive_type, archiver_class, filename, files_to_remove, request
+):
+    """Test removing files edge cases."""
+    if archive_type == "zip":
+        archive_path = request.getfixturevalue("sample_zip_path")
+    else:
+        archive_path = request.getfixturevalue("sample_tar_path")
+
+    archiver = archiver_class(archive_path)
+    result = archiver.remove_files(files_to_remove)
+    assert result is True
+
+
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), ARCHIVE_TEST_DATA)
+def test_get_filename_list(temp_dir, archive_type, archiver_class, filename, request):
+    """Test getting list of files in archives."""
+    if archive_type == "zip":
+        archive_path = request.getfixturevalue("sample_zip_path")
+    else:
+        archive_path = request.getfixturevalue("sample_tar_path")
+
+    archiver = archiver_class(archive_path)
+    files = archiver.get_filename_list()
+
+    expected_files = ["file1.txt", "file2.jpg", "dir/file3.txt"]
+    assert set(files) == set(expected_files)
+
+
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), ARCHIVE_TEST_DATA)
+@pytest.mark.parametrize(
+    ("test_file", "expected_exists"),
+    [
+        ("file1.txt", True),
+        ("nonexistent.txt", False),
+    ],
+)
+def test_exists_file(
+    temp_dir, archive_type, archiver_class, filename, test_file, expected_exists, request
+):
+    """Test checking if file exists in archives."""
+    if archive_type == "zip":
+        archive_path = request.getfixturevalue("sample_zip_path")
+    else:
+        archive_path = request.getfixturevalue("sample_tar_path")
+
+    archiver = archiver_class(archive_path)
+    assert archiver.exists(test_file) is expected_exists
+
+
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), READ_WRITE_ARCHIVE_DATA)
+def test_copy_from_archive(temp_dir, archive_type, archiver_class, filename, request):
+    """Test copying from one archive to another."""
+    if archive_type == "zip":
+        source_path = request.getfixturevalue("sample_zip_path")
+    else:
+        source_path = request.getfixturevalue("sample_tar_path")
+
+    dest_path = temp_dir / f"destination_{filename}"
+    source_archiver = archiver_class(source_path)
+    dest_archiver = archiver_class(dest_path)
+
+    result = dest_archiver.copy_from_archive(source_archiver)
+    assert result is True
+
+    # Verify all files were copied
+    dest_files = dest_archiver.get_filename_list()
+    source_files = source_archiver.get_filename_list()
+    assert set(dest_files) == set(source_files)
+
+    # Verify content is the same
+    for file in source_files:
+        source_content = source_archiver.read_file(file)
+        dest_content = dest_archiver.read_file(file)
+        assert source_content == dest_content
+
+
+# Specific ZIP tests
+def test_zip_read_corrupted_archive(temp_dir):
+    """Test reading from corrupted ZIP file raises ArchiverReadError."""
+    corrupted_path = temp_dir / "corrupted.zip"
+    corrupted_path.write_text("not a zip file")
+
+    archiver = ZipArchiver(corrupted_path)
+    with pytest.raises(ArchiverReadError, match="Corrupt ZIP file"):
+        archiver.read_file("any_file.txt")
 
 
 def test_zip_write_file_image_compression(temp_dir):
@@ -208,66 +386,6 @@ def test_zip_write_file_image_compression(temp_dir):
     # Write text file (should use ZIP_DEFLATED)
     result = archiver.write_file("text.txt", "text content")
     assert result is True
-
-
-def test_zip_remove_file_success(sample_zip_path):
-    """Test removing existing file from ZIP archive."""
-    archiver = ZipArchiver(sample_zip_path)
-
-    # Verify file exists first
-    assert "file1.txt" in archiver.get_filename_list()
-
-    # Remove file
-    result = archiver.remove_file("file1.txt")
-    assert result is True
-
-    # Verify file is gone
-    assert "file1.txt" not in archiver.get_filename_list()
-
-
-def test_zip_remove_nonexistent_file(sample_zip_path):
-    """Test removing nonexistent file returns False."""
-    archiver = ZipArchiver(sample_zip_path)
-    result = archiver.remove_file("nonexistent.txt")
-    assert result is False
-
-
-def test_zip_remove_multiple_files(sample_zip_path):
-    """Test removing multiple files from ZIP archive."""
-    archiver = ZipArchiver(sample_zip_path)
-
-    files_to_remove = ["file1.txt", "file2.jpg"]
-    result = archiver.remove_files(files_to_remove)
-    assert result is True
-
-    # Verify files are gone
-    remaining_files = archiver.get_filename_list()
-    assert "file1.txt" not in remaining_files
-    assert "file2.jpg" not in remaining_files
-    assert "dir/file3.txt" in remaining_files  # Should still exist
-
-
-def test_zip_remove_files_empty_list(sample_zip_path):
-    """Test removing empty list of files returns True."""
-    archiver = ZipArchiver(sample_zip_path)
-    result = archiver.remove_files([])
-    assert result is True
-
-
-def test_zip_remove_files_nonexistent(sample_zip_path):
-    """Test removing nonexistent files returns True."""
-    archiver = ZipArchiver(sample_zip_path)
-    result = archiver.remove_files(["nonexistent1.txt", "nonexistent2.txt"])
-    assert result is True
-
-
-def test_zip_get_filename_list(sample_zip_path):
-    """Test getting list of files in ZIP archive."""
-    archiver = ZipArchiver(sample_zip_path)
-    files = archiver.get_filename_list()
-
-    expected_files = ["file1.txt", "file2.jpg", "dir/file3.txt"]
-    assert set(files) == set(expected_files)
 
 
 def test_zip_get_filename_list_empty(empty_zip_path):
@@ -287,177 +405,7 @@ def test_zip_get_filename_list_corrupted(temp_dir):
     assert files == []
 
 
-def test_zip_exists_file(sample_zip_path):
-    """Test checking if file exists in ZIP archive."""
-    archiver = ZipArchiver(sample_zip_path)
-
-    assert archiver.exists("file1.txt") is True
-    assert archiver.exists("nonexistent.txt") is False
-
-
-def test_zip_copy_from_zip_archive(temp_dir, sample_zip_path):
-    """Test copying from one ZIP archive to another."""
-    dest_path = temp_dir / "destination.zip"
-    source_archiver = ZipArchiver(sample_zip_path)
-    dest_archiver = ZipArchiver(dest_path)
-
-    result = dest_archiver.copy_from_archive(source_archiver)
-    assert result is True
-
-    # Verify all files were copied
-    dest_files = dest_archiver.get_filename_list()
-    source_files = source_archiver.get_filename_list()
-    assert set(dest_files) == set(source_files)
-
-    # Verify content is the same
-    for filename in source_files:
-        source_content = source_archiver.read_file(filename)
-        dest_content = dest_archiver.read_file(filename)
-        assert source_content == dest_content
-
-
-# TarArchiver Tests
-def test_tar_archiver_init(sample_tar_path):
-    """Test TarArchiver initialization."""
-    archiver = TarArchiver(sample_tar_path)
-    assert archiver.path == sample_tar_path
-
-
-def test_tar_archiver_init_nonexistent_file(nonexistent_path):
-    """Test TarArchiver initialization with nonexistent file."""
-    # Should not raise exception - file might be created later
-    archiver = TarArchiver(nonexistent_path)
-    assert archiver.path == nonexistent_path
-
-
-def test_tar_read_file_success(sample_tar_path):
-    """Test reading existing file from TAR archive."""
-    archiver = TarArchiver(sample_tar_path)
-    content = archiver.read_file("file1.txt")
-    assert content == b"content1"
-
-
-def test_tar_read_file_binary(sample_tar_path):
-    """Test reading binary file from TAR archive."""
-    archiver = TarArchiver(sample_tar_path)
-    content = archiver.read_file("file2.jpg")
-    assert content == b"fake_image_data"
-
-
-def test_tar_read_file_in_directory(sample_tar_path):
-    """Test reading file from subdirectory in TAR archive."""
-    archiver = TarArchiver(sample_tar_path)
-    content = archiver.read_file("dir/file3.txt")
-    assert content == b"content3"
-
-
-def test_tar_read_nonexistent_file(sample_tar_path):
-    """Test reading nonexistent file raises ArchiverReadError."""
-    archiver = TarArchiver(sample_tar_path)
-    with pytest.raises(ArchiverReadError, match="File not found in archive"):
-        archiver.read_file("nonexistent.txt")
-
-
-def test_tar_write_file_string_data(temp_dir):
-    """Test writing string data to TAR archive."""
-    tar_path = temp_dir / "write_test.cbt"
-    archiver = TarArchiver(tar_path)
-
-    result = archiver.write_file("test.txt", "hello world")
-    assert result is True
-
-    # Verify file was written
-    content = archiver.read_file("test.txt")
-    assert content == b"hello world"
-
-
-def test_tar_write_file_bytes_data(temp_dir):
-    """Test writing bytes data to TAR archive."""
-    tar_path = temp_dir / "write_test.cbt"
-    archiver = TarArchiver(tar_path)
-
-    data = b"binary data"
-    result = archiver.write_file("test.bin", data)
-    assert result is True
-
-    # Verify file was written
-    content = archiver.read_file("test.bin")
-    assert content == data
-
-
-def test_tar_write_file_overwrite_existing(sample_tar_path):
-    """Test overwriting existing file in TAR archive."""
-    archiver = TarArchiver(sample_tar_path)
-
-    # Overwrite existing file
-    result = archiver.write_file("file1.txt", "new content")
-    assert result is True
-
-    # Verify content was updated
-    content = archiver.read_file("file1.txt")
-    assert content == b"new content"
-
-
-def test_tar_remove_file_success(sample_tar_path):
-    """Test removing existing file from TAR archive."""
-    archiver = TarArchiver(sample_tar_path)
-
-    # Verify file exists first
-    assert "file1.txt" in archiver.get_filename_list()
-
-    # Remove file
-    result = archiver.remove_file("file1.txt")
-    assert result is True
-
-    # Verify file is gone
-    assert "file1.txt" not in archiver.get_filename_list()
-
-
-def test_tar_remove_nonexistent_file(sample_tar_path):
-    """Test removing nonexistent file returns False."""
-    archiver = TarArchiver(sample_tar_path)
-    result = archiver.remove_file("nonexistent.txt")
-    assert result is False
-
-
-def test_tar_remove_multiple_files(sample_tar_path):
-    """Test removing multiple files from TAR archive."""
-    archiver = TarArchiver(sample_tar_path)
-
-    files_to_remove = ["file1.txt", "file2.jpg"]
-    result = archiver.remove_files(files_to_remove)
-    assert result is True
-
-    # Verify files are gone
-    remaining_files = archiver.get_filename_list()
-    assert "file1.txt" not in remaining_files
-    assert "file2.jpg" not in remaining_files
-    assert "dir/file3.txt" in remaining_files  # Should still exist
-
-
-def test_tar_remove_files_empty_list(sample_tar_path):
-    """Test removing empty list of files returns True."""
-    archiver = TarArchiver(sample_tar_path)
-    result = archiver.remove_files([])
-    assert result is True
-
-
-def test_tar_remove_files_nonexistent(sample_tar_path):
-    """Test removing nonexistent files returns True."""
-    archiver = TarArchiver(sample_tar_path)
-    result = archiver.remove_files(["nonexistent1.txt", "nonexistent2.txt"])
-    assert result is True
-
-
-def test_tar_get_filename_list(sample_tar_path):
-    """Test getting list of files in TAR archive."""
-    archiver = TarArchiver(sample_tar_path)
-    files = archiver.get_filename_list()
-
-    expected_files = ["file1.txt", "file2.jpg", "dir/file3.txt"]
-    assert set(files) == set(expected_files)
-
-
+# Specific TAR tests
 def test_tar_get_filename_list_corrupted(temp_dir):
     """Test getting filename list from corrupted TAR returns empty list."""
     corrupted_path = temp_dir / "corrupted.cbt"
@@ -468,81 +416,50 @@ def test_tar_get_filename_list_corrupted(temp_dir):
     assert files == []
 
 
-def test_tar_exists_file(sample_tar_path):
-    """Test checking if file exists in TAR archive."""
-    archiver = TarArchiver(sample_tar_path)
-
-    assert archiver.exists("file1.txt") is True
-    assert archiver.exists("nonexistent.txt") is False
-
-
-def test_tar_copy_from_tar_archive(temp_dir, sample_tar_path):
-    """Test copying from one TAR archive to another."""
-    dest_path = temp_dir / "destination.cbt"
-    source_archiver = TarArchiver(sample_tar_path)
-    dest_archiver = TarArchiver(dest_path)
-
-    result = dest_archiver.copy_from_archive(source_archiver)
-    assert result is True
-
-    # Verify all files were copied
-    dest_files = dest_archiver.get_filename_list()
-    source_files = source_archiver.get_filename_list()
-    assert set(dest_files) == set(source_files)
-
-    # Verify content is the same
-    for filename in source_files:
-        source_content = source_archiver.read_file(filename)
-        dest_content = dest_archiver.read_file(filename)
-        assert source_content == dest_content
-
-
 def test_tar_test(sample_tar_path):
     """Test TarArchive .test() method."""
     archive = TarArchiver(sample_tar_path)
     assert archive.test() is True
 
 
-# RarArchiver Tests
+# RAR Archiver Tests (with mocking)
+@pytest.mark.parametrize(
+    ("test_file", "expected_content"),
+    [
+        ("test.txt", b"rar content"),
+        ("file1.txt", b"rar file1"),
+    ],
+)
 @patch("rarfile.RarFile")
-def test_rar_archiver_init(mock_rar_file, sample_rar_path):
-    """Test RarArchiver initialization."""
-    archiver = RarArchiver(sample_rar_path)
-    assert archiver.path == sample_rar_path
-
-
-@patch("rarfile.RarFile")
-def test_rar_read_file_success(mock_rar_file, sample_rar_path):
-    """Test reading file from RAR archive."""
-    # Mock the RAR file behavior
+def test_rar_read_file_success(mock_rar_file, sample_rar_path, test_file, expected_content):
+    """Test reading files from RAR archive."""
     mock_rf = Mock()
-    mock_rf.read.return_value = b"rar content"
+    mock_rf.read.return_value = expected_content
     mock_rar_file.return_value.__enter__.return_value = mock_rf
 
     archiver = RarArchiver(sample_rar_path)
-    content = archiver.read_file("test.txt")
+    content = archiver.read_file(test_file)
 
-    assert content == b"rar content"
-    mock_rf.read.assert_called_once_with("test.txt")
+    assert content == expected_content
+    mock_rf.read.assert_called_once_with(test_file)
 
 
+@pytest.mark.parametrize(
+    ("exception_class", "exception_msg", "expected_error"),
+    [
+        (rarfile.RarCannotExec, "Cannot execute", "Cannot execute RAR command"),
+        (rarfile.BadRarFile, "Bad RAR file", "Corrupt RAR file"),
+    ],
+)
 @patch("rarfile.RarFile")
-def test_rar_read_file_cannot_exec(mock_rar_file, sample_rar_path):
-    """Test RAR read error when cannot execute."""
-    mock_rar_file.side_effect = rarfile.RarCannotExec("Cannot execute")
+def test_rar_read_file_errors(
+    mock_rar_file, sample_rar_path, exception_class, exception_msg, expected_error
+):
+    """Test RAR read errors."""
+    mock_rar_file.side_effect = exception_class(exception_msg)
 
     archiver = RarArchiver(sample_rar_path)
-    with pytest.raises(ArchiverReadError, match="Cannot execute RAR command"):
-        archiver.read_file("test.txt")
-
-
-@patch("rarfile.RarFile")
-def test_rar_read_file_bad_rar(mock_rar_file, sample_rar_path):
-    """Test RAR read error with corrupted file."""
-    mock_rar_file.side_effect = rarfile.BadRarFile("Bad RAR file")
-
-    archiver = RarArchiver(sample_rar_path)
-    with pytest.raises(ArchiverReadError, match="Corrupt RAR file"):
+    with pytest.raises(ArchiverReadError, match=expected_error):
         archiver.read_file("test.txt")
 
 
@@ -571,24 +488,31 @@ def test_rar_read_file_unsupported_operation(mock_rar_file, sample_rar_path):
     assert content == b""
 
 
-def test_rar_write_file_readonly(sample_rar_path):
-    """Test that RAR write operations return False (read-only)."""
+@pytest.mark.parametrize(
+    "operation",
+    [
+        "write_file",
+        "remove_file",
+        "remove_files",
+        "copy_from_archive",
+    ],
+)
+def test_rar_readonly_operations(sample_rar_path, operation):
+    """Test that RAR operations return False (read-only)."""
     archiver = RarArchiver(sample_rar_path)
-    result = archiver.write_file("test.txt", "data")
-    assert result is False
 
+    # init value
+    result = True
 
-def test_rar_remove_file_readonly(sample_rar_path):
-    """Test that RAR remove operations return False (read-only)."""
-    archiver = RarArchiver(sample_rar_path)
-    result = archiver.remove_file("test.txt")
-    assert result is False
+    if operation == "write_file":
+        result = archiver.write_file("test.txt", "data")
+    elif operation == "remove_file":
+        result = archiver.remove_file("test.txt")
+    elif operation == "remove_files":
+        result = archiver.remove_files(["file1.txt", "file2.txt"])
+    elif operation == "copy_from_archive":
+        result = archiver.copy_from_archive(Mock())
 
-
-def test_rar_remove_files_readonly(sample_rar_path):
-    """Test that RAR remove multiple files returns False (read-only)."""
-    archiver = RarArchiver(sample_rar_path)
-    result = archiver.remove_files(["file1.txt", "file2.txt"])
     assert result is False
 
 
@@ -617,20 +541,26 @@ def test_rar_get_filename_list_error(mock_rar_file, sample_rar_path):
         archiver.get_filename_list()
 
 
-def test_rar_copy_from_archive_readonly(sample_rar_path):
-    """Test that RAR copy operations return False (read-only)."""
-    archiver = RarArchiver(sample_rar_path)
-    other_archiver = Mock()
-    result = archiver.copy_from_archive(other_archiver)
-    assert result is False
-
-
 # UnknownArchiver Tests
-def test_unknown_archiver_name(temp_dir):
-    """Test UnknownArchiver name method."""
+@pytest.mark.parametrize(
+    ("operation", "args", "expected_result"),
+    [
+        ("name", [], "Unknown"),
+        ("write_file", ["test.txt", "data"], False),
+        ("remove_file", ["test.txt"], False),
+        ("remove_files", [["file1.txt", "file2.txt"]], False),
+        ("get_filename_list", [], []),
+        ("copy_from_archive", [Mock()], False),
+    ],
+)
+def test_unknown_archiver_operations(temp_dir, operation, args, expected_result):
+    """Test UnknownArchiver operations."""
     path = temp_dir / "unknown.xyz"
     archiver = UnknownArchiver(path)
-    assert archiver.name() == "Unknown"
+
+    result = archiver.name() if operation == "name" else getattr(archiver, operation)(*args)
+
+    assert result == expected_result
 
 
 def test_unknown_archiver_read_file_not_implemented(temp_dir):
@@ -641,95 +571,27 @@ def test_unknown_archiver_read_file_not_implemented(temp_dir):
         archiver.read_file("test.txt")
 
 
-def test_unknown_archiver_write_file_false(temp_dir):
-    """Test UnknownArchiver write_file returns False."""
-    path = temp_dir / "unknown.xyz"
-    archiver = UnknownArchiver(path)
-    result = archiver.write_file("test.txt", "data")
-    assert result is False
-
-
-def test_unknown_archiver_remove_file_false(temp_dir):
-    """Test UnknownArchiver remove_file returns False."""
-    path = temp_dir / "unknown.xyz"
-    archiver = UnknownArchiver(path)
-    result = archiver.remove_file("test.txt")
-    assert result is False
-
-
-def test_unknown_archiver_remove_files_false(temp_dir):
-    """Test UnknownArchiver remove_files returns False."""
-    path = temp_dir / "unknown.xyz"
-    archiver = UnknownArchiver(path)
-    result = archiver.remove_files(["file1.txt", "file2.txt"])
-    assert result is False
-
-
-def test_unknown_archiver_get_filename_list_empty(temp_dir):
-    """Test UnknownArchiver get_filename_list returns empty list."""
-    path = temp_dir / "unknown.xyz"
-    archiver = UnknownArchiver(path)
-    files = archiver.get_filename_list()
-    assert files == []
-
-
-def test_unknown_archiver_copy_from_archive_false(temp_dir):
-    """Test UnknownArchiver copy_from_archive returns False."""
-    path = temp_dir / "unknown.xyz"
-    archiver = UnknownArchiver(path)
-    other_archiver = Mock()
-    result = archiver.copy_from_archive(other_archiver)
-    assert result is False
-
-
 # ArchiverFactory Tests
-def test_factory_create_zip_archiver(temp_dir):
-    """Test factory creates ZipArchiver for .zip files."""
-    zip_path = temp_dir / "test.zip"
-    archiver = ArchiverFactory.create_archiver(zip_path)
-    assert isinstance(archiver, ZipArchiver)
-    assert archiver.path == zip_path
+@pytest.mark.parametrize(("extension", "expected_class"), FACTORY_EXTENSION_DATA)
+def test_factory_create_archiver(temp_dir, extension, expected_class):
+    """Test factory creates correct archiver for extensions."""
+    path = temp_dir / f"test{extension}"
+    archiver = ArchiverFactory.create_archiver(path)
+    assert isinstance(archiver, expected_class)
+    assert archiver.path == path
 
 
-def test_factory_create_cbz_archiver(temp_dir):
-    """Test factory creates ZipArchiver for .cbz files."""
-    cbz_path = temp_dir / "test.cbz"
-    archiver = ArchiverFactory.create_archiver(cbz_path)
-    assert isinstance(archiver, ZipArchiver)
-
-
-def test_factory_create_rar_archiver(temp_dir):
-    """Test factory creates RarArchiver for .rar files."""
-    rar_path = temp_dir / "test.rar"
-    archiver = ArchiverFactory.create_archiver(rar_path)
-    assert isinstance(archiver, RarArchiver)
-
-
-def test_factory_create_cbr_archiver(temp_dir):
-    """Test factory creates RarArchiver for .cbr files."""
-    cbr_path = temp_dir / "test.cbr"
-    archiver = ArchiverFactory.create_archiver(cbr_path)
-    assert isinstance(archiver, RarArchiver)
-
-
-def test_factory_create_unknown_archiver(temp_dir):
-    """Test factory creates UnknownArchiver for unknown extensions."""
-    unknown_path = temp_dir / "test.xyz"
-    archiver = ArchiverFactory.create_archiver(unknown_path)
-    assert isinstance(archiver, UnknownArchiver)
-
-
-def test_factory_case_insensitive(temp_dir):
-    """Test factory is case insensitive for extensions."""
-    zip_path = temp_dir / "test.ZIP"
-    archiver = ArchiverFactory.create_archiver(zip_path)
-    assert isinstance(archiver, ZipArchiver)
+@pytest.mark.parametrize("extension", [".ZIP", ".CBZ", ".RAR", ".CBR"])
+def test_factory_case_insensitive(temp_dir, extension):
+    """Test factory is case-insensitive for extensions."""
+    path = temp_dir / f"test{extension}"
+    archiver = ArchiverFactory.create_archiver(path)
+    assert not isinstance(archiver, UnknownArchiver)
 
 
 def test_factory_register_new_archiver(temp_dir):
     """Test registering new archiver type with factory."""
 
-    # Create a mock archiver class
     class MockArchiver(Archiver):
         def read_file(self, archive_file: str) -> bytes:
             return b"mock"
@@ -816,9 +678,15 @@ def test_factory_integration(temp_dir):
     assert archiver.exists("new.txt")
 
 
-def test_context_manager_integration(sample_zip_path):
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), ARCHIVE_TEST_DATA)
+def test_context_manager_integration(temp_dir, archive_type, archiver_class, filename, request):
     """Integration test: use archiver as context manager."""
-    with ZipArchiver(sample_zip_path) as archiver:
+    if archive_type == "zip":
+        archive_path = request.getfixturevalue("sample_zip_path")
+    else:
+        archive_path = request.getfixturevalue("sample_tar_path")
+
+    with archiver_class(archive_path) as archiver:
         files = archiver.get_filename_list()
         assert len(files) > 0
 
@@ -855,37 +723,41 @@ def test_zip_large_file_handling(temp_dir):
     assert content == large_content.encode("utf-8")
 
 
-def test_archiver_with_unicode_filenames(temp_dir):
+@pytest.mark.parametrize(
+    ("filename", "content"),
+    [
+        ("тест_файл.txt", "unicode content"),  # Russian text
+        ("файл_тест.txt", "more unicode"),  # More Russian text
+    ],
+)
+def test_archiver_with_unicode_filenames(temp_dir, filename, content):
     """Test handling Unicode filenames in archives."""
     zip_path = temp_dir / "unicode.zip"
     archiver = ZipArchiver(zip_path)
 
-    # Test with Unicode filename
-    unicode_filename = "тест_файл.txt"  # Russian text
-    result = archiver.write_file(unicode_filename, "unicode content")
+    result = archiver.write_file(filename, content)
     assert result is True
 
-    assert archiver.exists(unicode_filename)
-    content = archiver.read_file(unicode_filename)
-    assert content == b"unicode content"
+    assert archiver.exists(filename)
+    read_content = archiver.read_file(filename)
+    assert read_content == content.encode("utf-8")
 
 
-def test_archiver_empty_data_handling(temp_dir):
+@pytest.mark.parametrize(
+    ("data_type", "data", "expected"),
+    [
+        ("empty_string", "", b""),
+        ("empty_bytes", b"", b""),
+    ],
+)
+def test_archiver_empty_data_handling(temp_dir, data_type, data, expected):
     """Test handling empty data in archives."""
     zip_path = temp_dir / "empty_data.zip"
     archiver = ZipArchiver(zip_path)
 
-    # Write empty string
-    result = archiver.write_file("empty.txt", "")
+    filename = f"empty_{data_type}.txt"
+    result = archiver.write_file(filename, data)
     assert result is True
 
-    # Read it back
-    content = archiver.read_file("empty.txt")
-    assert content == b""
-
-    # Write empty bytes
-    result = archiver.write_file("empty.bin", b"")
-    assert result is True
-
-    content = archiver.read_file("empty.bin")
-    assert content == b""
+    content = archiver.read_file(filename)
+    assert content == expected
