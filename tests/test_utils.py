@@ -116,6 +116,7 @@ def test_get_recursive_filelist_with_files():
         (temp_path / "comic1.cbz").touch()
         (temp_path / "comic2.cbr").touch()
         (temp_path / "not_comic.txt").touch()
+        (temp_path / "comic4.cbt").touch()
 
         # Create subdirectory with more comics
         subdir = temp_path / "subdir"
@@ -124,9 +125,9 @@ def test_get_recursive_filelist_with_files():
 
         result = get_recursive_filelist([temp_path])
 
-        # Should find 3 comic files, sorted
-        assert len(result) == 3
-        assert all(path.suffix in [".cbz", ".cbr"] for path in result)
+        # Should find 4 comic files, sorted
+        assert len(result) == 4
+        assert all(path.suffix in [".cbz", ".cbr", ".cbt"] for path in result)
         assert result == sorted(result)
 
 

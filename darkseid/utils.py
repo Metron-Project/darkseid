@@ -104,7 +104,7 @@ def get_recursive_filelist(path_list: list[Path]) -> list[Path]:
         True
 
     """
-    comic_extensions = ["*.cbz", "*.cbr"]
+    comic_extensions = ["*.cbz", "*.cbr", "*.cbt"]
     filelist: list[Path] = []
 
     for path_item in path_list:
