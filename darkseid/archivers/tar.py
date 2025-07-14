@@ -259,19 +259,18 @@ class TarArchiver(Archiver):
 
             # Read all files except the one to remove
             remaining_files = {}
-            file_to_remove = set()
-
+            file_exists = False
             with self._open_for_reading() as tar:
                 for member in tar.getmembers():
                     if member.isfile():
                         if member.name == archive_file:
-                            file_to_remove.add(member.name)
+                            file_exists = True
                         else:
                             file_obj = tar.extractfile(member)
                             if file_obj:
                                 remaining_files[member.name] = file_obj.read()
 
-            if not file_to_remove:
+            if not file_exists:
                 return False
 
             # Recreate archive without the removed file
