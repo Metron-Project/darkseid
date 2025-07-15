@@ -1,7 +1,8 @@
 """A class to represent a single comic archive with comprehensive metadata support.
 
 This module provides the Comic class for reading, writing, and manipulating comic book archives
-(CBZ/ZIP and CBR/RAR formats) along with their associated metadata in ComicInfo and MetronInfo formats.
+(CBZ/ZIP, CBR/RAR, CBT, and optionally CB7 formats) along with their associated metadata in ComicInfo and MetronInfo
+formats.
 
 Examples:
     Basic usage of the Comic class:
@@ -32,11 +33,15 @@ from natsort import natsorted, ns
 from PIL import Image
 
 from darkseid.archivers import ArchiverFactory, ArchiverReadError
+from darkseid.archivers.sevenzip import PY7ZR_AVAILABLE
 from darkseid.archivers.zip import ZipArchiver
 from darkseid.metadata.comicinfo import ComicInfo
 from darkseid.metadata.data_classes import ImageMetadata, Metadata
 from darkseid.metadata.metroninfo import MetronInfo
 from darkseid.validate import SchemaVersion, ValidateMetadata, ValidationError
+
+if PY7ZR_AVAILABLE:
+    from darkseid.archivers.sevenzip import SevenZipArchiver
 
 if TYPE_CHECKING:
     from darkseid.archivers.archiver import Archiver
@@ -126,11 +131,11 @@ class Comic:
     """A comprehensive comic book archive handler with metadata support.
 
     The Comic class provides a high-level interface for working with comic book archives
-    in CBZ (ZIP) and CBR (RAR) formats. It supports reading and writing metadata in
+    in CBZ (ZIP) CBR (RAR), CBT (TAR) and CB7 (7ZIP) formats. It supports reading and writing metadata in
     ComicInfo and MetronInfo formats, page manipulation, and archive validation.
 
     Key Features:
-        - Support for CBZ/ZIP, CBR/RAR, and CBT/TAR comic archives
+        - Support for CBZ/ZIP, CBR/RAR, CBT/TAR, and CB7/7ZIP comic archives
         - Read/write ComicInfo and MetronInfo metadata
         - Page extraction and manipulation
         - Archive validation and format detection
@@ -177,6 +182,7 @@ class Comic:
     _RAR_EXTENSIONS: Final[frozenset[str]] = frozenset([".cbr", ".rar"])
     _ZIP_EXTENSIONS: Final[frozenset[str]] = frozenset([".cbz", ".zip"])
     _TAR_EXTENSIONS: Final[frozenset[str]] = frozenset([".cbt"])
+    _SEVEN_ZIP_EXTENSIONS: Final[frozenset[str]] = frozenset([".cb7"])
 
     def __init__(self, path: Path | str) -> None:
         """Initialize a Comic object with the provided path.
@@ -219,6 +225,8 @@ class Comic:
             ComicArchiveError: If no suitable archiver can be created for the file.
 
         """
+        if PY7ZR_AVAILABLE:
+            ArchiverFactory.register_archiver(".cb7", SevenZipArchiver)
         try:
             self._archiver: Archiver = ArchiverFactory.create_archiver(self._path)
         except Exception as e:
@@ -372,6 +380,22 @@ class Comic:
             return self._archiver.test()
         return False
 
+    def is_seven_zip(self) -> bool:
+        """Check if the archive is a CB7 file based on its extension.
+
+        Returns:
+            bool: True if the file has a CB7 extension (.cb7).
+
+        Note:
+            If 7zip support is available, his method only checks the file extension,
+             not the actual file format.
+            Use seven_zip_test() for a more thorough validation.
+
+        """
+        if not PY7ZR_AVAILABLE:
+            return False
+        return self._path.suffix.lower() in self._SEVEN_ZIP_EXTENSIONS
+
     def is_tar(self) -> bool:
         """Check if the archive is a TAR file based on its extension.
 
@@ -440,7 +464,7 @@ class Comic:
             Use is_valid_comic() for a more comprehensive validation.
 
         """
-        return (self.is_zip() or self.is_rar() or self.is_tar()) and (
+        return (self.is_zip() or self.is_rar() or self.is_tar() or self.is_seven_zip()) and (
             self.get_number_of_pages() > 0
         )
 
