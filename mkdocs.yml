@@ -42,6 +42,7 @@ nav:
       - Archiver: darkseid/archivers/archiver.md
       - ArchiverFactory: darkseid/archivers/factory.md
       - Rar: darkseid/archivers/rar.md
+      - SevenZip: darkseid/archivers/sevenzip.md
       - Tar: darkseid/archivers/tar.md
       - Zip: darkseid/archivers/zip.md
   - Metadata:

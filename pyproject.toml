@@ -39,6 +39,9 @@ dependencies = [
 Homepage = "https://github.com/Metron-Project/darkseid"
 "Bug Tracker" = "https://github.com/Metron-Project/darkseid/issues"
 
+[project.optional-dependencies]
+7zip = ["py7zr>=1.0.0"]
+
 [dependency-groups]
 dev = [
   "pre-commit>=4",
