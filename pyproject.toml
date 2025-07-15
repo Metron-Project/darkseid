@@ -68,7 +68,7 @@ docs = [
 ]
 
 [tool.uv]
-default-groups = ["dev", "test", "docs"]
+default-groups = ["dev", "test", "docs", "7zip"]
 
 [tool.hatch.build.targets.sdist]
 include = ["darkseid", "tests"]
