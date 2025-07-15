@@ -1,7 +1,7 @@
 """A class to represent a single comic archive with comprehensive metadata support.
 
 This module provides the Comic class for reading, writing, and manipulating comic book archives
-(CBZ/ZIP, CBR/RAR, CBT, and optionally CB7 formats) along with their associated metadata in ComicInfo and MetronInfo
+(CBZ/ZIP, CBR/RAR, CBT, and CB7 (optional) formats) along with their associated metadata in ComicInfo and MetronInfo
 formats.
 
 Examples:
@@ -135,7 +135,7 @@ class Comic:
     ComicInfo and MetronInfo formats, page manipulation, and archive validation.
 
     Key Features:
-        - Support for CBZ/ZIP, CBR/RAR, CBT/TAR, and CB7/7ZIP comic archives
+        - Support for CBZ/ZIP, CBR/RAR, CBT/TAR, and CB7/7ZIP (optional) comic archives
         - Read/write ComicInfo and MetronInfo metadata
         - Page extraction and manipulation
         - Archive validation and format detection
@@ -1466,6 +1466,7 @@ class Comic:
         Format Conversion:
             - RAR/CBR → ZIP/CBZ: Full conversion with file extraction and re-compression
             - CBT -> ZIP/CBZ: Full conversion with file extraction and re-compression
+            - CB7 -> ZIP/CBZ: Full conversion with file extraction and re-compression
             - ZIP/CBZ → ZIP/CBZ: Returns True immediately (no-op)
             - Maintains compatibility with all comic reading applications
             - Preserves metadata across format conversion
@@ -1530,7 +1531,7 @@ class Comic:
             - Ensure adequate free space before starting large conversions
 
         Use Cases:
-            - Converting RAR/CBR/CBT archives to more widely supported ZIP/CBZ format
+            - Converting RAR/CBR/CBT/CB7 archives to more widely supported ZIP/CBZ format
             - Creating backup copies in standardized format
             - Preparing archives for systems that don't support RAR format
             - Batch processing comic collections for format standardization

@@ -406,7 +406,7 @@ class SevenZipArchiver(Archiver):
             other_archive: Source archive to copy files from.
 
         Returns:
-            False
+            False since this functionality is not present.
 
         Note:
             If the user wants to decrease comic size, they are better off optimizing the images within comic that creating a 7zip archive.
