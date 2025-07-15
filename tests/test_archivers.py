@@ -227,10 +227,6 @@ def test_write_file(temp_dir, archive_type, archiver_class, filename, test_data,
     content = archiver.read_file("test.txt")
     assert content == expected_content
 
-    # Test file
-    # if archive_type == "seven_zip":
-    #     assert archiver.test() is True
-
 
 @pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), READ_WRITE_ARCHIVE_DATA)
 def test_write_file_overwrite_existing(temp_dir, archive_type, archiver_class, filename, request):
