@@ -30,7 +30,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
 from natsort import natsorted, ns
-from PIL import Image
+
+try:
+    from PIL import Image
+
+    PILLOW_AVAILABLE = True
+except ImportError:
+    PILLOW_AVAILABLE = False
+    Image = None
+
 
 from darkseid.archivers import ArchiverFactory, ArchiverReadError
 from darkseid.archivers.sevenzip import PY7ZR_AVAILABLE
@@ -1361,6 +1369,12 @@ class Comic:
         """
         metadata.page_count = self.get_number_of_pages()
 
+        if not PILLOW_AVAILABLE:
+            logger.warning(
+                "Unable to calculate page sizes since Pillow is not available: %s", self._path.name
+            )
+            return
+
         if calc_page_sizes:
             self._calculate_all_page_info(metadata)
 
@@ -1419,6 +1433,8 @@ class Comic:
             idx: The page index for logging.
 
         """
+        if not PILLOW_AVAILABLE:
+            return
         try:
             with Image.open(io.BytesIO(data)) as page_image:
                 width, height = page_image.size
