@@ -227,6 +227,10 @@ def test_write_file(temp_dir, archive_type, archiver_class, filename, test_data,
     content = archiver.read_file("test.txt")
     assert content == expected_content
 
+    # Verify 7zip is valid
+    if archive_type == "seven_zip":
+        assert archiver.test() is True
+
 
 @pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), READ_WRITE_ARCHIVE_DATA)
 def test_write_file_overwrite_existing(temp_dir, archive_type, archiver_class, filename, request):
@@ -247,6 +251,10 @@ def test_write_file_overwrite_existing(temp_dir, archive_type, archiver_class, f
     # Verify content was updated
     content = archiver.read_file("file1.txt")
     assert content == b"new content"
+
+    # Verify 7zip is valid
+    if archive_type == "seven_zip":
+        assert archiver.test() is True
 
 
 @pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), READ_WRITE_ARCHIVE_DATA)
@@ -270,6 +278,10 @@ def test_remove_file_success(temp_dir, archive_type, archiver_class, filename, r
 
     # Verify file is gone
     assert "file1.txt" not in archiver.get_filename_list()
+
+    # Verify 7zip is valid
+    if archive_type == "seven_zip":
+        assert archiver.test() is True
 
 
 @pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), READ_WRITE_ARCHIVE_DATA)
@@ -309,6 +321,10 @@ def test_remove_multiple_files(temp_dir, archive_type, archiver_class, filename,
     assert "file1.txt" not in remaining_files
     assert "file2.jpg" not in remaining_files
     assert "dir/file3.txt" in remaining_files  # Should still exist
+
+    # Verify 7zip is valid
+    if archive_type == "seven_zip":
+        assert archiver.test() is True
 
 
 @pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), READ_WRITE_ARCHIVE_DATA)
