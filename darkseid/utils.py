@@ -15,6 +15,8 @@ import re
 from enum import Enum
 from pathlib import Path
 
+from darkseid.archivers import PY7ZR_AVAILABLE
+
 
 # TODO: Change to StrEnum when Python-3.10 support dropped
 class DataSources(str, Enum):
@@ -105,6 +107,8 @@ def get_recursive_filelist(path_list: list[Path]) -> list[Path]:
 
     """
     comic_extensions = ["*.cbz", "*.cbr", "*.cbt"]
+    if PY7ZR_AVAILABLE:
+        comic_extensions += ["*.cb7"]
     filelist: list[Path] = []
 
     for path_item in path_list:
