@@ -1,6 +1,6 @@
 [project]
 name = "darkseid"
-version = "6.1.0rc3"
+version = "6.1.0rc4"
 description = "A library to interact with comic archives"
 authors = [{ name = "Brian Pepple", email = "bpepple@metron.cloud" }]
 requires-python = ">=3.10"
