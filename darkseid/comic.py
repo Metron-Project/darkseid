@@ -186,12 +186,6 @@ class Comic:
 
     """
 
-    # Class-level constants for better maintainability
-    _RAR_EXTENSIONS: Final[frozenset[str]] = frozenset([".cbr", ".rar"])
-    _ZIP_EXTENSIONS: Final[frozenset[str]] = frozenset([".cbz", ".zip"])
-    _TAR_EXTENSIONS: Final[frozenset[str]] = frozenset([".cbt"])
-    _SEVEN_ZIP_EXTENSIONS: Final[frozenset[str]] = frozenset([".cb7"])
-
     def __init__(self, path: Path | str) -> None:
         """Initialize a Comic object with the provided path.
 
@@ -211,6 +205,8 @@ class Comic:
 
         """
         self._path: Path = Path(path) if isinstance(path, str) else path
+        # This needs to be initialized *before* the archivers
+        self._supported_extensions: set[str] = set()
         self._validate_path()
         self._initialize_archiver()
         self._initialize_attributes()
@@ -240,6 +236,8 @@ class Comic:
         except Exception as e:
             msg = f"Failed to create archiver for {self._path}: {e}"
             raise ComicArchiveError(msg) from e
+        # Set the supported archive extensions
+        self._supported_extensions = set(ArchiverFactory.get_supported_extensions())
 
     def _initialize_attributes(self) -> None:
         """Initialize instance attributes and set up caching system."""
@@ -388,61 +386,6 @@ class Comic:
             return self._archiver.test()
         return False
 
-    def is_seven_zip(self) -> bool:
-        """Check if the archive is a CB7 file based on its extension.
-
-        Returns:
-            bool: True if the file has a CB7 extension (.cb7).
-
-        Note:
-            If 7zip support is available, his method only checks the file extension,
-             not the actual file format.
-            Use seven_zip_test() for a more thorough validation.
-
-        """
-        if not PY7ZR_AVAILABLE:
-            return False
-        return self._path.suffix.lower() in self._SEVEN_ZIP_EXTENSIONS
-
-    def is_tar(self) -> bool:
-        """Check if the archive is a TAR file based on its extension.
-
-        Returns:
-            bool: True if the file has a TAR extension (.cbt).
-
-        Note:
-            This method only checks the file extension, not the actual file format.
-            Use archiver.test() for a more thorough validation.
-
-        """
-        return self._path.suffix.lower() in self._TAR_EXTENSIONS
-
-    def is_rar(self) -> bool:
-        """Check if the archive is a RAR file based on its extension.
-
-        Returns:
-            bool: True if the file has a RAR extension (.cbr or .rar).
-
-        Note:
-            This method only checks the file extension, not the actual file format.
-            Use archiver.test() for a more thorough validation.
-
-        """
-        return self._path.suffix.lower() in self._RAR_EXTENSIONS
-
-    def is_zip(self) -> bool:
-        """Check if the archive is a ZIP file based on its extension.
-
-        Returns:
-            bool: True if the file has a ZIP extension (.cbz or .zip).
-
-        Note:
-            This method only checks the file extension, not the actual file format.
-            Use archiver.test() for a more thorough validation.
-
-        """
-        return self._path.suffix.lower() in self._ZIP_EXTENSIONS
-
     def is_writable(self) -> bool:
         """Check if the archive supports write operations.
 
@@ -461,7 +404,7 @@ class Comic:
 
         A file is considered a comic archive if it meets the following criteria:
 
-        1. It's either a ZIP, RAR, or TAR archive
+        1. It's a supported archive based on it's extension
         2. It contains at least one image file
 
         Returns:
@@ -472,7 +415,7 @@ class Comic:
             Use is_valid_comic() for a more comprehensive validation.
 
         """
-        return (self.is_zip() or self.is_rar() or self.is_tar() or self.is_seven_zip()) and (
+        return (self._path.suffix.lower() in self._supported_extensions) and (
             self.get_number_of_pages() > 0
         )
 
@@ -1568,13 +1511,11 @@ class Comic:
             - Consider the target audience's software compatibility
 
         See Also:
-            - is_zip(): Check if the current archive is already in ZIP format
-            - is_rar(): Check if the current archive is in RAR format
             - is_writable(): Check if the archive supports write operations
             - seems_to_be_a_comic_archive(): Validate archive as comic format
 
         """
-        if self.is_zip():
+        if self._path.suffix.lower() in {".cbz", ".zip"}:
             logger.info("Archive %s is already in ZIP format", self._path)
             return True
 

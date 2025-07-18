@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from PIL import Image
+from py7zr import py7zr
 
 from darkseid.comic import (
     COMIC_RACK_FILENAME,
@@ -49,6 +50,16 @@ def sample_cbz_file(temp_dir):
         zf.writestr("ComicInfo.xml", "<ComicInfo><Title>Test Comic</Title></ComicInfo>")
 
     return cbz_path
+
+
+@pytest.fixture
+def sample_seven_zip_path(temp_dir):
+    seven_zip_path = temp_dir / "test.cb7"
+    with py7zr.SevenZipFile(seven_zip_path, "w") as zf:
+        zf.writestr("content1", "file1.txt")
+        zf.writestr(b"fake_image_data", "file2.jpg")
+        zf.writestr("content3", "dir/file3.txt")
+    return seven_zip_path
 
 
 @pytest.fixture
@@ -225,7 +236,7 @@ def test_is_zip_by_extension(temp_dir):
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_factory.return_value = Mock()
         comic = Comic(zip_path)
-        assert comic.is_zip() is True
+        assert (comic.path.suffix.lower() in {".cbz", ".zip"}) is True
 
 
 def test_is_rar_by_extension(temp_dir):
@@ -236,7 +247,7 @@ def test_is_rar_by_extension(temp_dir):
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_factory.return_value = Mock()
         comic = Comic(rar_path)
-        assert comic.is_rar() is True
+        assert (comic.path.suffix.lower() in {".cbr"}) is True
 
 
 # Test writability
@@ -280,15 +291,8 @@ def test_is_writable_no_file_access(sample_cbz_file):
 # Test comic archive detection
 def test_seems_to_be_a_comic_archive(sample_cbz_file):
     """Test comic archive detection."""
-    with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
-        mock_archiver = Mock()
-        mock_archiver.get_filename_list.return_value = ["page1.jpg", "page2.jpg"]
-        mock_factory.return_value = mock_archiver
-
-        comic = Comic(sample_cbz_file)
-
-        with patch.object(comic, "is_zip", return_value=True):
-            assert comic.seems_to_be_a_comic_archive() is True
+    comic = Comic(sample_cbz_file)
+    assert comic.seems_to_be_a_comic_archive() is True
 
 
 def test_seems_to_be_a_comic_archive_no_pages(sample_cbz_file):
@@ -300,8 +304,7 @@ def test_seems_to_be_a_comic_archive_no_pages(sample_cbz_file):
 
         comic = Comic(sample_cbz_file)
 
-        with patch.object(comic, "is_zip", return_value=True):
-            assert comic.seems_to_be_a_comic_archive() is False
+        assert comic.seems_to_be_a_comic_archive() is False
 
 
 # Test page operations
@@ -544,33 +547,6 @@ def test_read_metadata_parse_error(sample_cbz_file):
         ):
             metadata = comic.read_metadata(MetadataFormat.COMIC_INFO)
             assert isinstance(metadata, Metadata)
-
-
-# Test raw metadata reading
-# def test_read_raw_ci_metadata(sample_cbz_file):
-#     """Test reading raw ComicInfo metadata."""
-#     with patch('darkseid.comic.ArchiverFactory.create_archiver') as mock_factory:
-#         mock_archiver = Mock()
-#         mock_archiver.get_filename_list.return_value = ["ComicInfo.xml"]
-#         mock_archiver.read_file.return_value = b"<ComicInfo>test</ComicInfo>"
-#         mock_factory.return_value = mock_archiver
-#
-#         comic = Comic(sample_cbz_file)
-#         raw_data = comic.read_raw_ci_metadata()
-#         assert raw_data == "<ComicInfo>test</ComicInfo>"
-#
-#
-# def test_read_raw_mi_metadata(sample_cbz_file):
-#     """Test reading raw MetronInfo metadata."""
-#     with patch('darkseid.comic.ArchiverFactory.create_archiver') as mock_factory:
-#         mock_archiver = Mock()
-#         mock_archiver.get_filename_list.return_value = ["MetronInfo.xml"]
-#         mock_archiver.read_file.return_value = b"<MetronInfo>test</MetronInfo>"
-#         mock_factory.return_value = mock_archiver
-#
-#         comic = Comic(sample_cbz_file)
-#         raw_data = comic.read_raw_mi_metadata()
-#         assert raw_data == "<MetronInfo>test</MetronInfo>"
 
 
 def test_read_raw_metadata_not_found(sample_cbz_file):
@@ -1003,9 +979,8 @@ def test_export_as_zip_already_zip(sample_cbz_file, temp_dir):
         mock_factory.return_value = Mock()
         comic = Comic(sample_cbz_file)
 
-        with patch.object(comic, "is_zip", return_value=True):
-            result = comic.export_as_zip(temp_dir / "output.cbz")
-            assert result is True
+        result = comic.export_as_zip(temp_dir / "output.cbz")
+        assert result is True
 
 
 # def test_export_as_zip_success(sample_cbz_file, temp_dir):
@@ -1026,14 +1001,13 @@ def test_export_as_zip_already_zip(sample_cbz_file, temp_dir):
 #                 assert result is True
 
 
-def test_export_as_zip_failure(sample_cbz_file, temp_dir):
+def test_export_as_zip_failure(sample_seven_zip_path, temp_dir):
     """Test ZIP export failure."""
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_factory.return_value = Mock()
-        comic = Comic(sample_cbz_file)
+        comic = Comic(sample_seven_zip_path)
 
         with (
-            patch.object(comic, "is_zip", return_value=False),
             patch("darkseid.archivers.zip.ZipArchiver", side_effect=Exception("Error")),
         ):
             result = comic.export_as_zip(temp_dir / "output.cbz")
