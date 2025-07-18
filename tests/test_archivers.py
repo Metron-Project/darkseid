@@ -37,7 +37,7 @@ def sample_seven_zip_path(temp_dir):
     seven_zip_path = temp_dir / "test.cb7"
     with py7zr.SevenZipFile(seven_zip_path, "w") as zf:
         zf.writestr("content1", "file1.txt")
-        zf.writestr(io.BytesIO(b"fake_image_data").getvalue(), "file2.jpg")
+        zf.writestr(b"fake_image_data", "file2.jpg")
         zf.writestr("content3", "dir/file3.txt")
     return seven_zip_path
 
@@ -251,6 +251,10 @@ def test_write_file_overwrite_existing(temp_dir, archive_type, archiver_class, f
     # Verify content was updated
     content = archiver.read_file("file1.txt")
     assert content == b"new content"
+
+    # Verify existing data is *still* present
+    existing = archiver.read_file("dir/file3.txt")
+    assert existing == b"content3"
 
     # Verify 7zip is valid
     if archive_type == "seven_zip":

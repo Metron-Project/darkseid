@@ -642,7 +642,7 @@ class SevenZipArchiver(Archiver):
         try:
             with self._get_archive_for_reading() as archive:
                 # Get file list from archive
-                file_list = archive.getnames()
+                file_list = [file_.filename for file_ in archive.list() if not file_.is_directory]
                 self._filename_list_cache = sorted(file_list)
                 return self._filename_list_cache
         except Exception as e:
