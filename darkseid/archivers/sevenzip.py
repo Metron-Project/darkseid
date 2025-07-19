@@ -509,6 +509,11 @@ class SevenZipArchiver(Archiver):
             current_files = self.get_filename_list()
             files_to_remove = set(filename_list)
 
+            # If none of the files to remove are in the archive, return True
+            current_files_set = set(current_files)
+            if not any(filename in current_files_set for filename in filename_list):
+                return True
+
             # Read all files except those to remove
             remaining_files: dict[str, bytes] = {}
 
