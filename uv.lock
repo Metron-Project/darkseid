@@ -381,7 +381,7 @@ toml = [
 
 [[package]]
 name = "darkseid"
-version = "6.1.0rc5"
+version = "7.0.0rc1"
 source = { editable = "." }
 dependencies = [
     { name = "defusedxml" },
