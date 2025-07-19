@@ -975,19 +975,19 @@ class Comic:
             logger.exception("Error writing metadata to %s", self._path)
             return False
 
-    def remove_metadata(self, metadata_format: MetadataFormat) -> bool:
+    def remove_metadata(self, metadata_format_list: list[MetadataFormat]) -> bool:
         """Remove metadata from the comic archive.
 
         Args:
-            metadata_format: The format of metadata to remove.
+            metadata_format_list: A list of metadata formats to remove.
 
         Returns:
-            bool: True if the metadata was successfully removed or didn't exist,
+            bool: True if any metadata was successfully removed or didn't exist,
                  False if an error occurred.
 
         Examples:
             >>> comic = Comic(Path("example.cbz"))
-            >>> success = comic.remove_metadata(MetadataFormat.COMIC_INFO)
+            >>> success = comic.remove_metadata([MetadataFormat.COMIC_INFO])
             >>> if success:
             ...     print("ComicInfo metadata removed")
 
@@ -999,31 +999,19 @@ class Comic:
         """
         supported_formats = {MetadataFormat.COMIC_INFO, MetadataFormat.METRON_INFO}
 
-        if metadata_format not in supported_formats:
-            logger.warning("Unsupported metadata format for removal: %s", metadata_format)
+        if not any(fmt in supported_formats for fmt in metadata_format_list):
+            logger.warning("Unsupported metadata formats for removal: %s", metadata_format_list)
             return False
 
-        if not self.has_metadata(metadata_format):
-            logger.info("No %s metadata found in %s", metadata_format, self._path)
+        if not any(self.has_metadata(fmt) for fmt in metadata_format_list):
+            logger.info("No metadata found in %s", self._path)
             return True  # Already removed, consider it success
 
-        return self._remove_metadata_files(metadata_format)
+        return self._remove_metadata_files(metadata_format_list)
 
-    def _remove_metadata_files(self, metadata_format: MetadataFormat) -> bool:
-        """Remove metadata files from the archive.
-
-        Args:
-            metadata_format: The format of metadata to remove.
-
-        Returns:
-            bool: True if successful, False otherwise.
-
-        """
-        filename = self._get_metadata_filename(metadata_format)
-        if filename is None:
-            return False
-
-        try:
+    def _metadata_present(self, metadata_format_filenames: list[str]) -> list[str]:
+        all_metadata_present = []
+        for filename in metadata_format_filenames:
             # Find all metadata files (case-insensitive)
             filename_lower = filename.lower()
             metadata_files = [
@@ -1031,24 +1019,50 @@ class Comic:
                 for path in self._archiver.get_filename_list()
                 if Path(str(path)).name.lower() == filename_lower
             ]
+            all_metadata_present.extend(metadata_files)
+        return all_metadata_present
 
-            if not metadata_files:
-                return True  # No files to remove
+    def _remove_metadata_files(self, metadata_format_list: list[MetadataFormat]) -> bool:
+        """Remove metadata files from the archive.
 
-            write_success = self._archiver.remove_files(metadata_files)
+        Args:
+            metadata_format_list: A list of metadata formats to remove.
 
-            if write_success:
-                # Update cache flags
-                if metadata_format == MetadataFormat.METRON_INFO:
-                    self._has_mi = False
-                elif metadata_format == MetadataFormat.COMIC_INFO:
-                    self._has_ci = False
+        Returns:
+            bool: True if successful, False otherwise.
 
-            return self._successful_write(write_success, None)
+        """
+        metadata_format_filenames = []
+        ci_present = mi_present = False
+        for fmt in metadata_format_list:
+            filename = self._get_metadata_filename(fmt)
+            if filename is None:
+                continue
+            if fmt == MetadataFormat.METRON_INFO:
+                mi_present = True
+            elif fmt == MetadataFormat.COMIC_INFO:
+                ci_present = True
 
+            metadata_format_filenames.append(filename)
+
+        all_metadata_present = self._metadata_present(metadata_format_filenames)
+
+        if not all_metadata_present:
+            return True  # No files to remove
+
+        try:
+            write_success = self._archiver.remove_files(all_metadata_present)
         except Exception:
-            logger.exception("Error removing %s metadata from %s", metadata_format, self._path)
+            logger.exception("Error removing metadata from %s", self._path)
             return False
+
+        # Update cache flags
+        if write_success and mi_present:
+            self._has_mi = False
+        if write_success and ci_present:
+            self._has_ci = False
+
+        return self._successful_write(write_success, None)
 
     def remove_pages(self, pages_index: list[int]) -> bool:
         """Remove pages from the comic archive.
