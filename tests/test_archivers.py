@@ -277,7 +277,7 @@ def test_remove_file_success(temp_dir, archive_type, archiver_class, filename, r
     assert "file1.txt" in archiver.get_filename_list()
 
     # Remove file
-    result = archiver.remove_file("file1.txt")
+    result = archiver.remove_files(["file1.txt"])
     assert result is True
 
     # Verify file is gone
@@ -300,8 +300,8 @@ def test_remove_nonexistent_file(temp_dir, archive_type, archiver_class, filenam
         archive_path = request.getfixturevalue("sample_tar_path")
 
     archiver = archiver_class(archive_path)
-    result = archiver.remove_file("nonexistent.txt")
-    assert result is False
+    result = archiver.remove_files(["nonexistent.txt"])
+    assert result is True
 
 
 @pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), READ_WRITE_ARCHIVE_DATA)
@@ -579,7 +579,7 @@ def test_rar_readonly_operations(sample_rar_path, operation):
     if operation == "write_file":
         result = archiver.write_file("test.txt", "data")
     elif operation == "remove_file":
-        result = archiver.remove_file("test.txt")
+        result = archiver.remove_files(["test.txt"])
     elif operation == "remove_files":
         result = archiver.remove_files(["file1.txt", "file2.txt"])
     elif operation == "copy_from_archive":
@@ -619,7 +619,6 @@ def test_rar_get_filename_list_error(mock_rar_file, sample_rar_path):
     [
         ("name", [], "Unknown"),
         ("write_file", ["test.txt", "data"], False),
-        ("remove_file", ["test.txt"], False),
         ("remove_files", [["file1.txt", "file2.txt"]], False),
         ("get_filename_list", [], []),
         ("copy_from_archive", [Mock()], False),
@@ -671,9 +670,6 @@ def test_factory_register_new_archiver(temp_dir):
             return b"mock"
 
         def write_file(self, archive_file: str, data) -> bool:
-            return True
-
-        def remove_file(self, archive_file: str) -> bool:
             return True
 
         def remove_files(self, filename_list: list[str]) -> bool:

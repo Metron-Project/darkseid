@@ -12,7 +12,7 @@ Examples:
     >>> print(content.decode('utf-8'))
 
 Note:
-    All write operations (write_file, remove_file, copy_from_archive) will
+    All write operations (write_file, remove_files, copy_from_archive) will
     return False and log warnings since RAR archives are read-only.
 
 """
@@ -148,28 +148,6 @@ class RarArchiver(Archiver):
 
         """
         logger.warning("Cannot write to RAR archive: %s", archive_file)
-        return False
-
-    def remove_file(self, archive_file: str) -> bool:
-        """Attempt to remove a file from the RAR archive.
-
-        Args:
-            archive_file: The path of the file to remove from the archive.
-
-        Returns:
-            False: RAR files are read-only, so this operation always fails.
-
-        Note:
-            This method logs a warning and returns False immediately.
-            No actual removal operation is attempted since RAR format
-            does not support modification of existing archives.
-
-        Warning:
-            A warning will be logged indicating that the remove operation
-            was attempted on a read-only RAR archive.
-
-        """
-        logger.warning("Cannot remove file from RAR archive: %s", archive_file)
         return False
 
     def remove_files(self, filename_list: list[str]) -> bool:

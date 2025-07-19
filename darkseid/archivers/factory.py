@@ -116,25 +116,6 @@ class UnknownArchiver(Archiver):
         """
         return False
 
-    def remove_file(self, archive_file: str) -> bool:  # noqa: ARG002
-        """Remove a single file from the archive.
-
-        This method is not implemented for unknown archive types and always returns False.
-
-        Args:
-            archive_file: The filename to remove from the archive.
-
-        Returns:
-            bool: Always False, indicating that file removal is not supported for unknown archive types.
-
-        Examples:
-            >>> archiver = UnknownArchiver(Path("file.unknown"))
-            >>> archiver.remove_file("file_to_remove.txt")
-            False
-
-        """
-        return False
-
     def remove_files(self, filename_list: list[str]) -> bool:  # noqa: ARG002
         """Remove multiple files from the archive.
 
