@@ -1,6 +1,9 @@
 name-template: "v$RESOLVED_VERSION 🌈"
 tag-template: "v$RESOLVED_VERSION"
 categories:
+  - title: "🛠️ API Change"
+    labels:
+      - "breaking"
   - title: "🚀 Features"
     labels:
       - "enhancement"
