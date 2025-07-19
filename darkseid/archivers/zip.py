@@ -13,7 +13,7 @@ Examples:
     >>> content = archiver.read_file("readme.txt")
     >>> archiver.write_file("new_file.txt", "Hello, World!")
     >>> files = archiver.get_filename_list()
-    >>> archiver.remove_file("old_file.txt")
+    >>> archiver.remove_files(["old_file.txt"])
 
 """
 
@@ -58,7 +58,7 @@ class ZipArchiver(Archiver):
         >>> archiver = ZipArchiver(Path("my_archive.zip"))
         >>> archiver.write_file("config.json", '{"version": "1.0"}')
         >>> data = archiver.read_file("config.json")
-        >>> archiver.remove_file("old_config.json")
+        >>> archiver.remove_files(["old_config.json"])
 
     """
 
@@ -179,52 +179,11 @@ class ZipArchiver(Archiver):
         else:
             return True
 
-    def remove_file(self, archive_file: str) -> bool:
-        """Remove a file from the ZIP archive.
-
-        Removes the specified file from the ZIP archive and repacks the archive
-        to reclaim the space. Uses the zipremove library for safe file removal
-        that maintains archive integrity.
-
-        Args:
-            archive_file: Path of the file to remove from the archive.
-                         Should use forward slashes (/) as path separators.
-
-        Returns:
-            True if the file was successfully removed, False if the file
-                was not found or an error occurred during removal.
-
-        Note:
-            - If the file doesn't exist, a warning is logged but False is returned
-            - The archive is automatically repacked after removal
-            - Partial failures during repacking will leave the archive unchanged
-
-        Examples:
-            >>> archiver = ZipArchiver(Path("cleanup.zip"))
-            >>> success = archiver.remove_file("old_file.txt")
-            >>> if success:
-            ...     print("File removed successfully")
-
-        """
-        try:
-            with ZipFile(self.path, "a") as zf:
-                zf_infos = [zf.remove(archive_file)]
-                zf.repack(zf_infos)
-        except KeyError:
-            logger.warning("File not found for removal: %s", archive_file)
-            return False
-        except (BadZipfile, OSError) as e:
-            self._handle_error("remove", archive_file, e)
-            return False
-        else:
-            return True
-
     def remove_files(self, filename_list: list[str]) -> bool:
         """Remove multiple files from the ZIP archive in a single operation.
 
         Efficiently removes multiple files from the ZIP archive by performing
-        all removals in a single transaction and repacking once. This is more
-        efficient than calling remove_file() multiple times.
+        all removals in a single transaction and repacking once.
 
         Only files that actually exist in the archive will be removed. Files
         that don't exist are silently skipped.

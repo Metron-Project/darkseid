@@ -243,48 +243,6 @@ class TarArchiver(Archiver):
         else:
             return True
 
-    def remove_file(self, archive_file: str) -> bool:
-        """Remove a file from the TAR archive.
-
-        Args:
-            archive_file: Path of the file to remove from the archive.
-
-        Returns:
-            True if the file was successfully removed, False if the removal failed or didn't exist
-
-        """
-        try:
-            if not self._path.exists():
-                return True  # File doesn't exist, consider it removed
-
-            # Read all files except the one to remove
-            remaining_files = {}
-            file_exists = False
-            with self._open_for_reading() as tar:
-                for member in tar.getmembers():
-                    if member.isfile():
-                        if member.name == archive_file:
-                            file_exists = True
-                        else:
-                            file_obj = tar.extractfile(member)
-                            if file_obj:
-                                remaining_files[member.name] = file_obj.read()
-
-            if not file_exists:
-                return False
-
-            # Recreate archive without the removed file
-            with self._open_for_writing() as tar:
-                for filename, file_data in remaining_files.items():
-                    tarinfo = tarfile.TarInfo(name=filename)
-                    tarinfo.size = len(file_data)
-                    tar.addfile(tarinfo, io.BytesIO(file_data))
-        except (tarfile.TarError, OSError) as e:
-            self._handle_error("remove", archive_file, e)
-            return False
-        else:
-            return True
-
     def remove_files(self, filename_list: list[str]) -> bool:
         """Remove multiple files from the TAR archive.
 

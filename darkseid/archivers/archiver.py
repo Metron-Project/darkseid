@@ -335,43 +335,11 @@ class Archiver(ABC):
         """
 
     @abstractmethod
-    def remove_file(self, archive_file: str) -> bool:
-        """Remove a file from the archive.
-
-        Deletes the specified file from the archive. The operation is
-        permanent and cannot be undone. If the file doesn't exist,
-        the behavior depends on the implementation but should not raise
-        an exception.
-
-        Args:
-            archive_file: Path of the file to remove from the archive.
-                Should use forward slashes as path separators.
-
-        Returns:
-            True if the file was successfully removed or didn't exist,
-            False if the removal failed for other reasons.
-
-        Examples:
-            >>> # Remove a single file
-            >>> success = archive.remove_file("old_config.txt")
-            >>> if success:
-            ...     print("File removed successfully")
-            >>> else:
-            ...     print("Failed to remove file")
-
-        Note:
-            This method only removes files, not directories. Empty directories
-            may remain in the archive depending on the format and implementation.
-
-        """
-
-    @abstractmethod
     def remove_files(self, filename_list: list[str]) -> bool:
         """Remove multiple files from the archive.
 
         Batch operation to remove multiple files from the archive in a single
-        call. This is more efficient than calling remove_file() multiple times
-        for large numbers of files.
+        call.
 
         Args:
             filename_list: List of file paths to remove from the archive.

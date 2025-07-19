@@ -473,76 +473,10 @@ class SevenZipArchiver(Archiver):
         else:
             return True
 
-    def remove_file(self, archive_file: str) -> bool:
-        """Remove a file from the 7z archive.
-
-        Removes the specified file from the archive. The archive is completely
-        reconstructed without the removed file. If the file doesn't exist,
-        the operation is considered successful.
-
-        Args:
-            archive_file: Path of the file to remove from the archive.
-
-        Returns:
-            True if the file was successfully removed or didn't exist,
-                False if the operation failed.
-
-        Examples:
-            >>> with SevenZipArchiver(Path("archive.cb7")) as archive:
-            ...     # Remove a single file
-            ...     success = archive.remove_file("temp.txt")
-            ...     if success:
-            ...         print("File removed successfully")
-            ...
-            ...     # Remove file from subdirectory
-            ...     archive.remove_file("old_data/obsolete.json")
-
-        Performance:
-            This operation rewrites the entire archive, so it can be slow for
-            large archives. Use remove_files() for removing multiple files.
-
-        Note:
-            No exception is raised if the file doesn't exist - the method
-            returns True in this case.
-
-        """
-        try:
-            if not self._path.exists():
-                return True  # File doesn't exist, so removal is successful
-
-            # Get current file list
-            current_files = self.get_filename_list()
-
-            if archive_file not in current_files:
-                return True  # File doesn't exist, so removal is successful
-
-            # Read all files except the one to remove
-            remaining_files: dict[str, bytes] = {}
-
-            for filename in current_files:
-                if filename != archive_file:
-                    remaining_files[filename] = self.read_file(filename)
-
-            # Rewrite archive without the removed file
-            with self._get_archive_for_writing() as write_archive:
-                for filename, content in remaining_files.items():
-                    write_archive.writestr(content, filename)
-
-            # Update cache
-            self._file_cache.pop(archive_file, None)
-            self._filename_list_cache = None  # Invalidate filename cache
-        except Exception as e:
-            self._handle_error("remove", archive_file, e)
-            return False
-        else:
-            return True
-
     def remove_files(self, filename_list: list[str]) -> bool:
         """Remove multiple files from the 7z archive.
 
         Removes all specified files from the archive in a single operation.
-        This is more efficient than calling remove_file() multiple times
-        because it only reconstructs the archive once.
 
         Args:
             filename_list: List of file paths to remove from the archive.
@@ -562,10 +496,6 @@ class SevenZipArchiver(Archiver):
             ...     else:
             ...         print("Some files could not be removed")
 
-        Performance:
-            This is much more efficient than multiple remove_file() calls
-            because it only reconstructs the archive once.
-
         Note:
             The operation is atomic - either all files are removed or none are.
             Files that don't exist are ignored (not treated as errors).
@@ -578,6 +508,11 @@ class SevenZipArchiver(Archiver):
             # Get current file list
             current_files = self.get_filename_list()
             files_to_remove = set(filename_list)
+
+            # If none of the files to remove are in the archive, return True
+            current_files_set = set(current_files)
+            if not any(filename in current_files_set for filename in filename_list):
+                return True
 
             # Read all files except those to remove
             remaining_files: dict[str, bytes] = {}
