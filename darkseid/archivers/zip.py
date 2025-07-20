@@ -48,11 +48,10 @@ class ZipArchiver(Archiver):
     - Writing new files or updating existing ones
     - Removing single files or multiple files in batch
     - Copying entire archive contents to a new ZIP file
-    - Automatic cleanup of temporary files and partial operations
+    - Automatic cleanup of  partial operations
 
     Attributes:
         path (Path): Path to the ZIP archive file
-        _temp_files (list[Path]): List of temporary files created during operations
 
     Examples:
         >>> archiver = ZipArchiver(Path("my_archive.zip"))
@@ -69,13 +68,9 @@ class ZipArchiver(Archiver):
             path: Path to the ZIP archive file. The file doesn't need to exist
                   yet - it will be created when first written to.
 
-        Note:
-            The archiver maintains a list of temporary files that will be
-            automatically cleaned up when the object is destroyed.
 
         """
         super().__init__(path)
-        self._temp_files: list[Path] = []
 
     def read_file(self, archive_file: str) -> bytes:
         """Read the contents of a file from the ZIP archive.
@@ -355,39 +350,3 @@ class ZipArchiver(Archiver):
                 self.path.unlink()
             except OSError as e:
                 logger.warning("Could not remove partial file %s: %s", self.path, e)
-
-    def _cleanup_temp_files(self) -> None:
-        """Clean up any temporary files created during operations.
-
-        Removes all temporary files tracked in _temp_files and clears the list.
-        This is automatically called when the archiver is destroyed, but can
-        also be called manually for immediate cleanup.
-
-        Note:
-            - Silently continues if temp files don't exist
-            - Logs warnings for removal failures
-            - Clears the temp files list after cleanup attempt
-
-        """
-        for temp_file in self._temp_files:
-            if temp_file.exists():
-                try:
-                    temp_file.unlink()
-                except OSError as e:
-                    logger.warning("Could not remove temp file %s: %s", temp_file, e)
-        self._temp_files.clear()
-
-    def __del__(self) -> None:
-        """Clean up resources when archiver is destroyed.
-
-        Ensures all temporary files are cleaned up when the archiver object
-        is garbage collected. This provides a safety net for resource cleanup
-        even if explicit cleanup is not performed.
-
-        Note:
-            - Automatically called by Python's garbage collector
-            - Provides fail-safe cleanup of temporary resources
-            - Should not be called directly - use _cleanup_temp_files() instead
-
-        """
-        self._cleanup_temp_files()

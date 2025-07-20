@@ -13,6 +13,15 @@ A [Python](https://www.python.org/) library to interact with comic archives.
 pip install darkseid
 ```
 
+There are optional dependencies which can be installed by specifying one or more
+of them in braces e.g. darkseid[7zip]
+
+The optional dependencies are:
+
+- **7zip**: Provides support for reading/writing to CB7 files.
+- **pillow**: Provides support for getting page information that is used with
+  ComicInfo.xml metadata.
+
 ## Example
 
 ```python
