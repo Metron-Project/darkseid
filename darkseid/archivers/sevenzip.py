@@ -65,12 +65,12 @@ class SevenZipArchiver(Archiver):
 
     This class provides comprehensive 7-Zip archive support following the Archiver interface.
     It handles reading, writing, and management of 7-Zip archives (.cb7) using the
-    py7zr library with efficient caching and batch operations.
+    py7zr library with efficient filename caching and batch operations.
 
     Features:
         - Full read/write support for 7-Zip archives
         - LZMA compression for optimal file size reduction
-        - Intelligent file caching for improved performance
+        - Filename list caching for improved performance
         - Batch operations for multiple files
         - Memory-efficient streaming operations
         - Context manager support for proper resource cleanup
@@ -84,7 +84,6 @@ class SevenZipArchiver(Archiver):
         - Performance may be slower than native 7-Zip for very large archives
 
     Performance Notes:
-        - Files are cached in memory after first read for faster subsequent access
         - Filename lists are cached to avoid repeated archive parsing
         - Write operations rewrite the entire archive (7-Zip format limitation)
         - Use batch operations (write_files, remove_files) when possible
@@ -165,7 +164,6 @@ class SevenZipArchiver(Archiver):
     Attributes:
         path (Path): Path to the 7-Zip archive file
         _archive (py7zr.SevenZipFile | None): Current archive instance
-        _file_cache (dict[str, bytes]): In-memory cache of read files
         _filename_list_cache (list[str] | None): Cached list of filenames
 
     """
@@ -193,7 +191,6 @@ class SevenZipArchiver(Archiver):
         """
         super().__init__(path)
         self._archive: py7zr.SevenZipFile | None = None
-        self._file_cache: dict[str, bytes] = {}
         self._filename_list_cache: list[str] | None = None
 
     def __enter__(self) -> Self:
@@ -213,7 +210,7 @@ class SevenZipArchiver(Archiver):
     def __exit__(self, *_: object) -> None:
         """Context manager exit with proper cleanup.
 
-        Ensures the archive is properly closed and all caches are cleared
+        Ensures the archive is properly closed and caches are cleared
         to prevent memory leaks and resource issues.
 
         Args:
@@ -232,8 +229,7 @@ class SevenZipArchiver(Archiver):
             finally:
                 self._archive = None
 
-        # Clear caches to free memory
-        self._file_cache.clear()
+        # Clear filename cache to free memory
         self._filename_list_cache = None
 
     def _get_archive_for_reading(self) -> py7zr.SevenZipFile:
@@ -290,46 +286,10 @@ class SevenZipArchiver(Archiver):
             msg = f"Failed to open archive for writing: {self._path}"
             raise ArchiverWriteError(msg) from e
 
-    def _load_file_cache(self) -> None:
-        """Load all files into memory cache for efficient access.
-
-        Reads all files from the archive into memory to enable faster
-        subsequent access. This is particularly useful when multiple
-        files will be read from the same archive.
-
-        Note:
-            This method is called automatically when needed. It's safe to
-            call multiple times - subsequent calls are ignored if cache
-            is already loaded.
-
-        Warning:
-            Large archives may consume significant memory when cached.
-            The cache is cleared when the context manager exits.
-
-        """
-        if self._file_cache:
-            return  # Already loaded
-
-        try:
-            with self._get_archive_for_reading() as archive:
-                # Read all files to memory
-                extracted = archive.readall()
-                for filename, file_info in extracted.items():
-                    if hasattr(file_info, "read"):
-                        # file_info is a file-like object
-                        self._file_cache[filename] = file_info.read()
-                    else:
-                        # file_info might be bytes directly, tho this shouldn't happen
-                        self._file_cache[filename] = file_info  # Do we need to cast this?
-        except Exception as e:
-            self._handle_error("load_cache", str(self._path), e)
-            # Continue without cache - individual operations will handle errors
-
     def read_file(self, archive_file: str) -> bytes:
         """Read a file from the 7z archive.
 
         Reads the specified file from the archive and returns its contents as bytes.
-        Files are automatically cached in memory for faster subsequent access.
 
         Args:
             archive_file: Path of the file within the archive. Use forward slashes
@@ -356,15 +316,7 @@ class SevenZipArchiver(Archiver):
             ...     # Read file in subdirectory
             ...     data = archive.read_file("data/records/file.json")
 
-        Performance:
-            Files are cached after first read, so subsequent reads of the same
-            file are very fast. Cache is cleared when context manager exits.
-
         """
-        # Try cache first
-        if archive_file in self._file_cache:
-            return self._file_cache[archive_file]
-
         try:
             with self._get_archive_for_reading() as archive:
                 # read specific file
@@ -384,17 +336,14 @@ class SevenZipArchiver(Archiver):
                 else:
                     # Convert to bytes if needed
                     content = bytes(file_data)
-
-                # Cache the result
-                self._file_cache[archive_file] = content
-                return content
-
         except ArchiverReadError:
             raise
         except Exception as e:
             self._handle_error("read", archive_file, e)
             msg = f"Failed to read file {archive_file}"
             raise ArchiverReadError(msg) from e
+        else:
+            return content
 
     def write_file(self, archive_file: str, data: str | bytes) -> bool:
         """Write a file to the 7z archive.
@@ -463,9 +412,8 @@ class SevenZipArchiver(Archiver):
                 # Add new file
                 write_archive.writestr(file_data, archive_file)
 
-            # Update cache
-            self._file_cache[archive_file] = file_data
-            self._filename_list_cache = None  # Invalidate filename cache
+            # Invalidate filename cache since the archive contents changed
+            self._filename_list_cache = None
         except Exception as e:
             self._handle_error("write", archive_file, e)
             msg = f"Failed to write file {archive_file}"
@@ -526,10 +474,8 @@ class SevenZipArchiver(Archiver):
                 for filename, content in remaining_files.items():
                     write_archive.writestr(content, filename)
 
-            # Update cache
-            for filename in filename_list:
-                self._file_cache.pop(filename, None)
-            self._filename_list_cache = None  # Invalidate filename cache
+            # Invalidate filename cache since the archive contents changed
+            self._filename_list_cache = None
         except Exception as e:
             self._handle_error("remove_files", str(filename_list), e)
             return False
@@ -579,10 +525,11 @@ class SevenZipArchiver(Archiver):
                 # Get file list from archive
                 file_list = [file_.filename for file_ in archive.list() if not file_.is_directory]
                 self._filename_list_cache = sorted(file_list)
-                return self._filename_list_cache
         except Exception as e:
             self._handle_error("get_filename_list", str(self._path), e)
             self._filename_list_cache = []
+            return self._filename_list_cache
+        else:
             return self._filename_list_cache
 
     def test(self) -> bool:
