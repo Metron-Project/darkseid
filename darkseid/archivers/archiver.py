@@ -223,7 +223,7 @@ class Archiver(ABC):
 
         Returns:
             True if write operations are expected (default), False if the archiver
-            is read-only or primarily intended for reading existing archives.
+                is read-only or primarily intended for reading existing archives.
 
         Note:
             Override this method in read-only implementations to return False.
@@ -306,8 +306,8 @@ class Archiver(ABC):
 
         Returns:
             True if the write operation was successful, False otherwise.
-            Note that returning False doesn't necessarily mean an error
-            occurred - check the logs for detailed error information.
+                Note that returning False doesn't necessarily mean an error
+                occurred - check the logs for detailed error information.
 
         Raises:
             ArchiverWriteError: If the write operation fails due to serious
@@ -347,8 +347,8 @@ class Archiver(ABC):
 
         Returns:
             True if ALL files were successfully removed (or didn't exist),
-            False if ANY file removal failed. The operation may be partially
-            successful - some files may be removed even if the method returns False.
+                False if ANY file removal failed. The operation may be partially
+                successful - some files may be removed even if the method returns False.
 
         Examples:
             >>> # Remove multiple files at once
@@ -376,8 +376,8 @@ class Archiver(ABC):
 
         Returns:
             List of file paths within the archive. The list is sorted
-            alphabetically by most implementations. Returns an empty list
-            if the archive is empty or doesn't exist.
+                alphabetically by most implementations. Returns an empty list
+                if the archive is empty or doesn't exist.
 
         Examples:
             >>> files = archive.get_filename_list()
@@ -422,7 +422,7 @@ class Archiver(ABC):
 
         Returns:
             True if all files were successfully copied, False if any
-            copy operation failed. The operation may be partially successful.
+                copy operation failed. The operation may be partially successful.
 
         Examples:
             >>> # Copy from ZIP to 7Z
