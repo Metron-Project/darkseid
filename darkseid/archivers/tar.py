@@ -76,6 +76,9 @@ class TarArchiver(Archiver):
     - Efficient batch operations
     - Proper resource cleanup via context manager
 
+    Performance Notes:
+        - Filename lists are cached to avoid repeated archive parsing
+
     Note:
         TAR files are append-only by nature. When removing files, the entire
         archive is reconstructed without the specified files. This can be
@@ -93,7 +96,38 @@ class TarArchiver(Archiver):
         """
         super().__init__(path)
         self._mode = self._determine_mode()
-        self._tar_file = None
+        self._filename_list_cache: list[str] | None = None
+
+    def __enter__(self) -> Self:
+        """Context manager entry for Tar archive operations.
+
+        Returns:
+            Self: The archiver instance for use in the context.
+
+        Examples:
+            >>> with TarArchiver(Path("archive.cbt")) as archive:
+            ...     # Use archive here
+            ...     files = archive.get_filename_list()
+
+        """
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        """Context manager exit with proper cleanup.
+
+        Ensures the archive is properly closed and caches are cleared
+        to prevent memory leaks and resource issues.
+
+        Args:
+            *_: Exception information (ignored)
+
+        Note:
+            This method is called automatically when exiting a 'with' block.
+            It handles exceptions gracefully and always cleans up resources.
+
+        """
+        # Clear filename cache to free memory
+        self._filename_list_cache = None
 
     def _determine_mode(self) -> str:  # noqa: PLR0911
         """Determine the appropriate tarfile mode based on file extension.
@@ -120,39 +154,11 @@ class TarArchiver(Archiver):
             return "xz"
         return ""  # Uncompressed TAR & .cbt
 
-    def _open_for_reading(self) -> tarfile.TarFile:
-        """Open the TAR file for reading operations.
+    def _write_mode(self) -> str:
+        return f"w:{self._mode}" if self._mode else "w"
 
-        Returns:
-            TarFile object opened for reading.
-
-        Raises:
-            ArchiverReadError: If the file cannot be opened for reading.
-
-        """
-        try:
-            mode = f"r:{self._mode}" if self._mode else "r"
-            return tarfile.open(self._path, mode=mode)
-        except (tarfile.TarError, OSError) as e:
-            msg = f"Cannot open TAR file for reading: {e}"
-            raise ArchiverReadError(msg) from e
-
-    def _open_for_writing(self) -> tarfile.TarFile:
-        """Open the TAR file for writing operations.
-
-        Returns:
-            TarFile object opened for writing.
-
-        Raises:
-            ArchiverWriteError: If the file cannot be opened for writing.
-
-        """
-        try:
-            mode = f"w:{self._mode}" if self._mode else "w"
-            return tarfile.open(self._path, mode=mode)
-        except (tarfile.TarError, OSError) as e:
-            msg = f"Cannot open TAR file for writing: {e}"
-            raise ArchiverWriteError(msg) from e
+    def _read_mode(self) -> str:
+        return f"r:{self._mode}" if self._mode else "r"
 
     def read_file(self, archive_file: str) -> bytes:
         """Read the contents of a file from the TAR archive.
@@ -168,8 +174,8 @@ class TarArchiver(Archiver):
 
         """
         try:
-            with self._open_for_reading() as tar:
-                try:
+            try:
+                with tarfile.open(self._path, mode=self._read_mode()) as tar:
                     member = tar.getmember(archive_file)
                     if not member.isfile():
                         msg = f"'{archive_file}' is not a regular file"
@@ -181,9 +187,9 @@ class TarArchiver(Archiver):
                         raise ArchiverReadError(msg)
 
                     return file_obj.read()
-                except KeyError as err:
-                    msg = f"File not found in archive: {archive_file}"
-                    raise ArchiverReadError(msg) from err
+            except KeyError as err:
+                msg = f"File not found in archive: {archive_file}"
+                raise ArchiverReadError(msg) from err
         except (tarfile.TarError, OSError) as e:
             self._handle_error("read", archive_file, e)
             msg = f"Failed to read file '{archive_file}': {e}"
@@ -214,7 +220,7 @@ class TarArchiver(Archiver):
             # Read existing files if the archive exists
             if self._path.exists():
                 try:
-                    with self._open_for_reading() as tar:
+                    with tarfile.open(self._path, mode=self._read_mode()) as tar:
                         for member in tar.getmembers():
                             if member.isfile() and member.name != archive_file:
                                 file_obj = tar.extractfile(member)
@@ -225,7 +231,7 @@ class TarArchiver(Archiver):
                     existing_files = {}
 
             # Create new archive with existing files plus the new one
-            with self._open_for_writing() as tar:
+            with tarfile.open(self._path, mode=self._write_mode()) as tar:
                 # Add existing files
                 for filename, file_data in existing_files.items():
                     tarinfo = tarfile.TarInfo(name=filename)
@@ -241,6 +247,8 @@ class TarArchiver(Archiver):
             msg = f"Failed to write file '{archive_file}': {e}"
             raise ArchiverWriteError(msg) from e
         else:
+            # Invalidate filename cache since the archive contents changed
+            self._filename_list_cache = None
             return True
 
     def remove_files(self, filename_list: list[str]) -> bool:
@@ -261,7 +269,7 @@ class TarArchiver(Archiver):
             remaining_files = {}
 
             # Read all files except those to remove
-            with self._open_for_reading() as tar:
+            with tarfile.open(self._path, mode=self._read_mode()) as tar:
                 for member in tar.getmembers():
                     if member.isfile() and member.name not in files_to_remove:
                         file_obj = tar.extractfile(member)
@@ -269,7 +277,7 @@ class TarArchiver(Archiver):
                             remaining_files[member.name] = file_obj.read()
 
             # Recreate archive without the removed files
-            with self._open_for_writing() as tar:
+            with tarfile.open(self._path, mode=self._write_mode()) as tar:
                 for filename, file_data in remaining_files.items():
                     tarinfo = tarfile.TarInfo(name=filename)
                     tarinfo.size = len(file_data)
@@ -278,26 +286,58 @@ class TarArchiver(Archiver):
             self._handle_error("remove_files", str(filename_list), e)
             return False
         else:
+            # Invalidate filename cache since the archive contents changed
+            self._filename_list_cache = None
             return True
 
     def get_filename_list(self) -> list[str]:
-        """Get a list of all files in the TAR archive.
+        """Get list of all files in the Tar archive.
+
+        Returns a sorted list of all file paths contained in the archive.
+        The list is cached for performance and updated when files are
+        added or removed.
 
         Returns:
-            List of file paths within the archive, sorted alphabetically.
+            List of file paths in the archive, sorted alphabetically.
+                Returns empty list if archive doesn't exist or is empty.
+
+        Examples:
+            >>> with TarArchiver(Path("archive.cbt")) as archive:
+            ...     files = archive.get_filename_list()
+            ...     print(f"Archive contains {len(files)} files:")
+            ...     for file in files:
+            ...         print(f"  - {file}")
+            ...
+            ...     # Check if specific file exists
+            ...     if "config.txt" in files:
+            ...         print("Config file found")
+
+        Performance:
+            The filename list is cached after first access, so subsequent
+            calls are very fast. Cache is invalidated when files are added
+            or removed.
+
+        Note:
+            File paths use forward slashes regardless of platform.
 
         """
+        if self._filename_list_cache is not None:
+            return self._filename_list_cache
+
         if not self._path.exists():
-            return []
+            self._filename_list_cache = []
+            return self._filename_list_cache
 
         try:
-            with self._open_for_reading() as tar:
+            with tarfile.open(self._path, mode=self._read_mode()) as tar:
                 # Only return regular files, not directories
                 filenames = [member.name for member in tar.getmembers() if member.isfile()]
-                return sorted(filenames)
+                self._filename_list_cache = sorted(filenames)
         except (tarfile.TarError, OSError, ArchiverReadError) as e:
             self._handle_error("get_filename_list", str(self._path), e)
             return []
+        else:
+            return self._filename_list_cache
 
     def test(self) -> bool:
         """Test whether the TAR archive is valid.
@@ -310,13 +350,14 @@ class TarArchiver(Archiver):
             return False
 
         try:
-            with self._open_for_reading() as tar:
+            with tarfile.open(self._path, mode=self._read_mode()) as tar:
                 # Try to read the member list to validate the archive
                 list(tar.getmembers())
-                return True
         except (tarfile.TarError, OSError) as e:
             logger.debug("TAR test failed for %s: %s", self._path, e)
             return False
+        else:
+            return True
 
     def copy_from_archive(self, other_archive: Archiver) -> bool:  # noqa: C901
         """Copy files from another archive to this TAR archive.
@@ -338,7 +379,7 @@ class TarArchiver(Archiver):
             existing_files = {}
             if self._path.exists():
                 try:
-                    with self._open_for_reading() as tar:
+                    with tarfile.open(self._path, mode=self._read_mode()) as tar:
                         for member in tar.getmembers():
                             if member.isfile():
                                 file_obj = tar.extractfile(member)
@@ -349,7 +390,7 @@ class TarArchiver(Archiver):
                     existing_files = {}
 
             # Create new archive with existing files plus copied files
-            with self._open_for_writing() as tar:
+            with tarfile.open(self._path, mode=self._write_mode()) as tar:
                 # Add existing files first
                 for filename, file_data in existing_files.items():
                     if filename not in source_files:  # Don't duplicate files
@@ -372,17 +413,3 @@ class TarArchiver(Archiver):
             return False
         else:
             return True
-
-    def __enter__(self) -> Self:
-        """Context manager entry."""
-        return self
-
-    def __exit__(self, *_: object) -> None:
-        """Context manager exit with cleanup."""
-        if self._tar_file:
-            try:
-                self._tar_file.close()
-            except Exception:
-                logger.exception("Failed to close archive file")
-            finally:
-                self._tar_file = None
