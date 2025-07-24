@@ -21,9 +21,10 @@ from __future__ import annotations
 
 import logging
 from contextlib import suppress
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING
 
 import rarfile
+from typing_extensions import Self
 from zipremove import ZIP_DEFLATED, ZIP_STORED, BadZipfile, ZipFile
 
 from darkseid.archivers.archiver import Archiver, ArchiverReadError
