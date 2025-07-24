@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import suppress
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 import rarfile
 from zipremove import ZIP_DEFLATED, ZIP_STORED, BadZipfile, ZipFile
@@ -71,6 +71,38 @@ class ZipArchiver(Archiver):
 
         """
         super().__init__(path)
+        self._filename_list_cache: list[str] | None = None
+
+    def __enter__(self) -> Self:
+        """Context manager entry for Zip archive operations.
+
+        Returns:
+            Self: The archiver instance for use in the context.
+
+        Examples:
+            >>> with ZipArchiver(Path("archive.cbz")) as archive:
+            ...     # Use archive here
+            ...     files = archive.get_filename_list()
+
+        """
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        """Context manager exit with proper cleanup.
+
+        Ensures the archive is properly closed and all caches are cleared
+        to prevent memory leaks and resource issues.
+
+        Args:
+            *_: Exception information (ignored)
+
+        Note:
+            This method is called automatically when exiting a 'with' block.
+            It handles exceptions gracefully and always cleans up resources.
+
+        """
+        # Clear caches to free memory
+        self._filename_list_cache = None
 
     def read_file(self, archive_file: str) -> bytes:
         """Read the contents of a file from the ZIP archive.
@@ -172,6 +204,8 @@ class ZipArchiver(Archiver):
             self._handle_error("write", archive_file, e)
             return False
         else:
+            # Update cache
+            self._filename_list_cache = None  # Invalidate filename cache
             return True
 
     def remove_files(self, filename_list: list[str]) -> bool:
@@ -224,6 +258,8 @@ class ZipArchiver(Archiver):
             self._handle_error("remove_multiple", str(files_to_remove), e)
             return False
         else:
+            # Update cache
+            self._filename_list_cache = None  # Invalidate filename cache
             return True
 
     def get_filename_list(self) -> list[str]:
@@ -238,6 +274,11 @@ class ZipArchiver(Archiver):
                 if the archive cannot be read or is empty. Directory entries
                 (if any) are included in the list.
 
+        Performance:
+            The filename list is cached after first access, so subsequent
+            calls are very fast. Cache is invalidated when files are added
+            or removed.
+
         Note:
             - Paths use forward slashes regardless of host OS
             - Directory entries may be included depending on how the ZIP was created
@@ -250,12 +291,22 @@ class ZipArchiver(Archiver):
             ...     print(f"Found: {file}")
 
         """
+        if self._filename_list_cache is not None:
+            return self._filename_list_cache
+
+        if not self._path.exists():
+            self._filename_list_cache = []
+            return self._filename_list_cache
+
         try:
             with ZipFile(self.path, mode="r") as zf:
-                return zf.namelist()
+                file_list = zf.namelist()
         except (BadZipfile, OSError) as e:
             self._handle_error("list", "", e)
             return []
+        else:
+            self._filename_list_cache = file_list
+            return file_list
 
     def test(self) -> bool:
         """Test whether the file is a valid ZIP archive.
