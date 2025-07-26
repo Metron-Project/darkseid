@@ -13,7 +13,7 @@ Examples:
     >>> from pathlib import Path
     >>> from darkseid.archivers.sevenzip import SevenZipArchiver
     >>>
-    >>> # Create a new 7z archive
+    >>> # Add files to a .cb7 archive
     >>> with SevenZipArchiver(Path("example.cb7")) as archive:
     ...     archive.write_file("hello.txt", "Hello, World!")
     ...     archive.write_file("page1.jpg", b'bogus image')
@@ -76,7 +76,6 @@ class SevenZipArchiver(Archiver):
         - Batch operations for multiple files
         - Memory-efficient streaming operations
         - Context manager support for proper resource cleanup
-        - Automatic parent directory creation
 
     Limitations:
         - Requires py7zr >= 1.0.0 to be installed
@@ -99,14 +98,13 @@ class SevenZipArchiver(Archiver):
         The class includes comprehensive error handling and logging for troubleshooting.
 
     Examples:
-        Creating and writing to a 7z archive:
+       Writing to a cbz archive:
 
         >>> from pathlib import Path
         >>> from darkseid.archivers.sevenzip import SevenZipArchiver
         >>>
-        >>> # Create new archive and add files
-        >>> archive = SevenZipArchiver(Path("comic.cb7"))
-        >>> with archive:
+        >>> # add files
+        >>> with SevenZipArchiver(Path("comic.cb7")) as archive:
         ...     # Add text file
         ...     archive.write_file("metadata.txt", "Comic metadata here")
         ...
@@ -165,7 +163,6 @@ class SevenZipArchiver(Archiver):
 
     Attributes:
         path (Path): Path to the 7-Zip archive file
-        _archive (py7zr.SevenZipFile | None): Current archive instance
         _filename_list_cache (list[str] | None): Cached list of filenames
 
     """
@@ -192,7 +189,6 @@ class SevenZipArchiver(Archiver):
 
         """
         super().__init__(path)
-        self._archive: py7zr.SevenZipFile | None = None
         self._filename_list_cache: list[str] | None = None
 
     def __enter__(self) -> Self:
@@ -212,8 +208,7 @@ class SevenZipArchiver(Archiver):
     def __exit__(self, *_: object) -> None:
         """Context manager exit with proper cleanup.
 
-        Ensures the archive is properly closed and caches are cleared
-        to prevent memory leaks and resource issues.
+        Ensures the archive caches are cleared to prevent memory leaks and resource issues.
 
         Args:
             *_: Exception information (ignored)
@@ -223,70 +218,8 @@ class SevenZipArchiver(Archiver):
             It handles exceptions gracefully and always cleans up resources.
 
         """
-        if self._archive is not None:
-            try:
-                self._archive.close()
-            except Exception as e:
-                logger.warning("Error closing 7z archive: %s", e)
-            finally:
-                self._archive = None
-
         # Clear filename cache to free memory
         self._filename_list_cache = None
-
-    def _get_archive_for_reading(self) -> py7zr.SevenZipFile:
-        """Get archive instance for reading operations.
-
-        Opens the archive file in read mode and returns a py7zr.SevenZipFile
-        instance. This is used internally by read operations.
-
-        Returns:
-            py7zr.SevenZipFile: Opened archive in read mode.
-
-        Raises:
-            ArchiverReadError: If the archive file doesn't exist or cannot be opened.
-
-        Note:
-            This method is for internal use. The returned archive should be
-            used in a context manager to ensure proper cleanup.
-
-        """
-        if not self._path.exists():
-            msg = f"Archive file does not exist: {self._path}"
-            raise ArchiverReadError(msg)
-
-        try:
-            return py7zr.SevenZipFile(self._path, mode="r")
-        except Exception as e:
-            self._handle_error("open_for_read", str(self._path), e)
-            msg = f"Failed to open archive for reading: {self._path}"
-            raise ArchiverReadError(msg) from e
-
-    def _get_archive_for_writing(self) -> py7zr.SevenZipFile:
-        """Get archive instance for writing operations.
-
-        Opens the archive file in write mode and returns a py7zr.SevenZipFile
-        instance. Creates parent directories if they don't exist.
-
-        Returns:
-            py7zr.SevenZipFile: Opened archive in write mode.
-
-        Raises:
-            ArchiverWriteError: If the archive cannot be opened for writing.
-
-        Note:
-            This method is for internal use. Write mode creates a new archive,
-            so existing content will be overwritten.
-
-        """
-        try:
-            # Create parent directories if they don't exist
-            self._path.parent.mkdir(parents=True, exist_ok=True)
-            return py7zr.SevenZipFile(self._path, mode="w")
-        except Exception as e:
-            self._handle_error("open_for_write", str(self._path), e)
-            msg = f"Failed to open archive for writing: {self._path}"
-            raise ArchiverWriteError(msg) from e
 
     def read_file(self, archive_file: str) -> bytes:
         """Read a file from the 7z archive.
@@ -319,10 +252,14 @@ class SevenZipArchiver(Archiver):
             ...     data = archive.read_file("data/records/file.json")
 
         """
+        if not self._path.exists():
+            msg = f"Archive file does not exist: {self._path}"
+            raise ArchiverReadError(msg)
+
         # py7zr expects consistent path separators
         normalized_path = archive_file.replace("\\", "/")
         try:
-            with self._get_archive_for_reading() as archive:
+            with py7zr.SevenZipFile(self._path, mode="r") as archive:
                 # read specific file
                 seven_zip_factory = py7zr.io.BytesIOFactory(maxsize)
                 archive.extract(targets=[normalized_path], factory=seven_zip_factory)
@@ -365,6 +302,7 @@ class SevenZipArchiver(Archiver):
         Raises:
             ArchiverWriteError: If the write operation fails due to permissions,
                                disk space, or other I/O errors.
+            ArchiveReadError: If the archive cannot be read.
 
         Examples:
             >>> with SevenZipArchiver(Path("archive.cb7")) as archive:
@@ -382,10 +320,6 @@ class SevenZipArchiver(Archiver):
             This operation rewrites the entire archive, so it can be slow for
             large archives. Consider batching multiple writes when possible.
 
-        Note:
-            The parent directory of the archive file will be created if it
-            doesn't exist.
-
         """
         # Get current file list
         current_files = self.get_filename_list()
@@ -396,18 +330,24 @@ class SevenZipArchiver(Archiver):
         # Check that the .cb7 archive exists. This is really just necessary for the tests,
         # since in the real world we wouldn't be writing to a non-existent .cb7.
         seven_zip_exists = self.path.exists()
-        try:
-            if seven_zip_exists and files_to_keep:
+
+        if seven_zip_exists and files_to_keep:
+            factory = py7zr.io.BytesIOFactory(maxsize)
+            try:
                 # Read existing files to keep into memory.
-                factory = py7zr.io.BytesIOFactory(maxsize)
-                with self._get_archive_for_reading() as read_archive:
+                with py7zr.SevenZipFile(self._path, mode="r") as read_archive:
                     read_archive.extract(targets=files_to_keep, factory=factory)
                 existing_data = factory.products
-            else:
-                existing_data = None
+            except Exception as e:
+                self._handle_error("open_for_read", str(self._path), e)
+                msg = f"Failed to open archive for reading: {self._path}"
+                raise ArchiverReadError(msg) from e
+        else:
+            existing_data = None
 
-            # Write new archive with all files.
-            with self._get_archive_for_writing() as write_archive:
+        # Write new archive with all files.
+        try:
+            with py7zr.SevenZipFile(self._path, mode="w") as write_archive:
                 if seven_zip_exists and existing_data is not None:
                     # Write existing files. Don't redefine `data` parameter
                     for filename, data_ in existing_data.items():
@@ -480,16 +420,19 @@ class SevenZipArchiver(Archiver):
             self._path.unlink(missing_ok=True)
             return True
 
+        factory = py7zr.io.BytesIOFactory(maxsize)
         try:
             # Read data for files to keep
-            factory = py7zr.io.BytesIOFactory(maxsize)
-            with self._get_archive_for_reading() as read_archive:
+            with py7zr.SevenZipFile(self._path, mode="r") as read_archive:
                 read_archive.extract(targets=files_to_keep, factory=factory)
+        except Exception as e:
+            self._handle_error("open_for_read", str(self._path), e)
+            return False
 
-            # Rewrite archive without the removed files
-            file_data = factory.products
-            with self._get_archive_for_writing() as write_archive:
-                for filename, data in file_data.items():
+        # Rewrite archive without the removed files
+        try:
+            with py7zr.SevenZipFile(self._path, mode="w") as write_archive:
+                for filename, data in factory.products.items():
                     content = data.read() if hasattr(data, "read") else data
                     write_archive.writestr(content, filename)
         except Exception as e:
@@ -539,7 +482,7 @@ class SevenZipArchiver(Archiver):
             return self._filename_list_cache
 
         try:
-            with self._get_archive_for_reading() as archive:
+            with py7zr.SevenZipFile(self._path, mode="r") as archive:
                 # Get file list from archive
                 file_list = [file_.filename for file_ in archive.list() if not file_.is_directory]
                 self._filename_list_cache = sorted(file_list)
