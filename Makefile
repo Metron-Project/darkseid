@@ -85,6 +85,12 @@ lint: lint-backend
 lint-backend:
 	./bin/lint-backend.sh
 
+.PHONY: cycle
+## Detect Circular imports
+## @category Lint
+cycle:
+	uvx pycycle --ignore node_modules,.venv --verbose --here
+
 ## Test
 ## @category Test
 T :=
@@ -99,6 +105,12 @@ test:
 ## @category Deploy
 news:
 	head -40 NEWS.md
+
+.PHONY: docs-server
+## Serve doc site
+## @category Docs
+docs-server:
+	uv run mkdocs serve --open
 
 .PHONY: all
 
