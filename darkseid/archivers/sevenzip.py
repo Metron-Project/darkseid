@@ -393,11 +393,11 @@ class SevenZipArchiver(Archiver):
         # If we are overwriting an existing file, let's not keep the original.
         files_to_keep = [item for item in current_files if item != archive_file]
 
-        # Check for existing file. This is really just necessary for the tests,
+        # Check that the .cb7 archive exists. This is really just necessary for the tests,
         # since in the real world we wouldn't be writing to a non-existent .cb7.
-        existing_file = self.path.exists()
+        seven_zip_exists = self.path.exists()
         try:
-            if existing_file:
+            if seven_zip_exists and files_to_keep:
                 # Read existing files to keep into memory.
                 factory = py7zr.io.BytesIOFactory(maxsize)
                 with self._get_archive_for_reading() as read_archive:
@@ -408,7 +408,7 @@ class SevenZipArchiver(Archiver):
 
             # Write new archive with all files.
             with self._get_archive_for_writing() as write_archive:
-                if existing_file:
+                if seven_zip_exists and existing_data is not None:
                     # Write existing files. Don't redefine `data` parameter
                     for filename, data_ in existing_data.items():
                         content = data_.read() if hasattr(data_, "read") else data_
