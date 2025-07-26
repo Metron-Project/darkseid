@@ -98,12 +98,12 @@ class SevenZipArchiver(Archiver):
         The class includes comprehensive error handling and logging for troubleshooting.
 
     Examples:
-       Writing to a cbz archive:
+        Writing to a cbz archive:
 
         >>> from pathlib import Path
         >>> from darkseid.archivers.sevenzip import SevenZipArchiver
         >>>
-        >>> # add files
+        >>> # Add files
         >>> with SevenZipArchiver(Path("comic.cb7")) as archive:
         ...     # Add text file
         ...     archive.write_file("metadata.txt", "Comic metadata here")
@@ -302,7 +302,7 @@ class SevenZipArchiver(Archiver):
         Raises:
             ArchiverWriteError: If the write operation fails due to permissions,
                                disk space, or other I/O errors.
-            ArchiveReadError: If the archive cannot be read.
+            ArchiverReadError: If the archive cannot be read.
 
         Examples:
             >>> with SevenZipArchiver(Path("archive.cb7")) as archive:
