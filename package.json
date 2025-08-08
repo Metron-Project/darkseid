@@ -1,5 +1,5 @@
 {
-  "version": "7.0.0",
+  "version": "7.1.0rc1",
   "description": "darkseid linting",
   "type": "module",
   "scripts": {
