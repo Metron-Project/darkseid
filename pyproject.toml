@@ -1,6 +1,6 @@
 [project]
 name = "darkseid"
-version = "7.1.0rc1"
+version = "7.1.0"
 description = "A library to interact with comic archives"
 authors = [{ name = "Brian Pepple", email = "bpepple@metron.cloud" }]
 requires-python = ">=3.10"
@@ -72,9 +72,9 @@ test = [
 ]
 docs = [
   "mkdocs>=1.6.0,<2",
-  "mkdocs-include-markdown-plugin>=6.2.0,<7",
+  "mkdocs-include-markdown-plugin>=7",
   "mkdocs-material>=9.5.27,<10",
-  "mkdocstrings[python]>=0.29.1,<0.30",
+  "mkdocstrings[python]>=0.30",
 ]
 
 [build-system]
