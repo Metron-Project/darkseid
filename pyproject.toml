@@ -39,7 +39,7 @@ dependencies = [
   "pycountry>=24.6.1,<25",
   "defusedxml>=0.7.1,<0.8",
   "xmlschema>=4",
-  "zipremove>=0.5.0",
+  "zipremove>=0.8.0",
   "rarfile>=4.2",
 ]
 
