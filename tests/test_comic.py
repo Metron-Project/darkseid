@@ -1159,7 +1159,7 @@ def test_validate_page_index_out_of_range(sample_cbz_file):
 
         comic = Comic(sample_cbz_file)
 
-        with pytest.raises(ValueError, match="Page index .* is out of range"):
+        with pytest.raises(ValueError, match=r"Page index .* is out of range"):
             comic._validate_page_index(10)
 
 

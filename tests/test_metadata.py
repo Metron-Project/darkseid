@@ -160,7 +160,7 @@ def test_series_start_year_validation():
     assert series_none.start_year is None
 
     # Invalid year length
-    with pytest.raises(ValueError, match="Year: .* length must be 4"):
+    with pytest.raises(ValueError, match=r"Year: .* length must be 4"):
         Series("Superman", start_year=38)
 
 
