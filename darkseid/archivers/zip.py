@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 from contextlib import suppress
 from typing import TYPE_CHECKING
+from zipfile import is_zipfile
 
 import rarfile
 from typing_extensions import Self
@@ -321,7 +322,7 @@ class ZipArchiver(Archiver):
 
         """
         with suppress(Exception):
-            return ZipFile.is_zipfile(self._path)
+            return is_zipfile(self._path)
         return False
 
     def copy_from_archive(self, other_archive: Archiver) -> bool:
