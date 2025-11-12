@@ -25,9 +25,13 @@ import io
 import logging
 import os
 from contextlib import suppress
+from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from natsort import natsorted, ns
 
@@ -102,6 +106,91 @@ class MetadataFormat(Enum):
 
         """
         return "".join(word.capitalize() for word in self.name.split("_"))
+
+
+@dataclass
+class ComicCache:
+    """Cache holder for comic archive data to improve performance.
+
+    This class centralizes all cached data for a comic, making it easier to
+    manage cache invalidation and state.
+    """
+
+    has_ci: bool | None = None
+    has_mi: bool | None = None
+    page_count: int | None = None
+    page_list: list[str] | None = None
+    metadata: Metadata | None = None
+
+    def reset(self) -> None:
+        """Clear all cached data to ensure fresh reads."""
+        self.has_ci = None
+        self.has_mi = None
+        self.page_count = None
+        self.page_list = None
+        self.metadata = None
+
+
+class MetadataFormatRegistry:
+    """Registry for metadata format handlers to consolidate format-specific operations.
+
+    This class centralizes all metadata format mappings, reducing duplication
+    and making it easier to add new metadata formats in the future.
+    """
+
+    def __init__(self, comic: Comic) -> None:
+        """Initialize registry with references to comic instance methods.
+
+        Args:
+            comic: The Comic instance this registry belongs to.
+
+        """
+        self._comic = comic
+        self._registry: dict[MetadataFormat, dict[str, Any]] = {
+            MetadataFormat.COMIC_INFO: {
+                "filename": COMIC_RACK_FILENAME,
+                "reader": comic._read_comicinfo,  # noqa: SLF001
+                "writer": comic._write_ci,  # noqa: SLF001
+                "checker": comic._has_comicinfo,  # noqa: SLF001
+                "calc_page_sizes": True,
+            },
+            MetadataFormat.METRON_INFO: {
+                "filename": METRON_INFO_FILENAME,
+                "reader": comic._read_metroninfo,  # noqa: SLF001
+                "writer": comic._write_mi,  # noqa: SLF001
+                "checker": comic._has_metroninfo,  # noqa: SLF001
+                "calc_page_sizes": False,
+            },
+        }
+
+    def get_filename(self, fmt: MetadataFormat) -> str | None:
+        """Get the filename for a metadata format."""
+        entry = self._registry.get(fmt)
+        return entry["filename"] if entry else None
+
+    def get_reader(self, fmt: MetadataFormat) -> Callable[[], Metadata] | None:
+        """Get the reader function for a metadata format."""
+        entry = self._registry.get(fmt)
+        return entry["reader"] if entry else None
+
+    def get_writer(self, fmt: MetadataFormat) -> Callable[[Metadata | None], bool] | None:
+        """Get the writer function for a metadata format."""
+        entry = self._registry.get(fmt)
+        return entry["writer"] if entry else None
+
+    def get_checker(self, fmt: MetadataFormat) -> Callable[[], bool] | None:
+        """Get the checker function for a metadata format."""
+        entry = self._registry.get(fmt)
+        return entry["checker"] if entry else None
+
+    def get_calc_page_sizes(self, fmt: MetadataFormat) -> bool:
+        """Get whether to calculate page sizes for a metadata format."""
+        entry = self._registry.get(fmt)
+        return entry.get("calc_page_sizes", False) if entry else False
+
+    def is_supported(self, fmt: MetadataFormat) -> bool:
+        """Check if a metadata format is supported."""
+        return fmt in self._registry
 
 
 class ComicError(Exception):
@@ -245,12 +334,9 @@ class Comic:
         self._ci_xml_filename: str = COMIC_RACK_FILENAME
         self._mi_xml_filename: str = METRON_INFO_FILENAME
 
-        # Cache attributes - Initialize as None for lazy loading
-        self._has_ci: bool | None = None
-        self._has_mi: bool | None = None
-        self._page_count: int | None = None
-        self._page_list: list[str] | None = None
-        self._metadata: Metadata | None = None
+        # Initialize cache and metadata format registry
+        self._cache = ComicCache()
+        self._metadata_registry = MetadataFormatRegistry(self)
 
     def __str__(self) -> str:
         """Return the name of the comic file.
@@ -340,11 +426,7 @@ class Comic:
         This method is called after write operations to ensure that cached
         data doesn't become stale after the archive is modified.
         """
-        self._has_ci = None
-        self._has_mi = None
-        self._page_count = None
-        self._page_list = None
-        self._metadata = None
+        self._cache.reset()
 
     def _validate_page_index(self, index: int) -> None:
         """Validate that a page index is within the valid range.
@@ -525,8 +607,8 @@ class Comic:
             - Results are cached for performance
 
         """
-        if self._page_list is not None:
-            return self._page_list
+        if self._cache.page_list is not None:
+            return self._cache.page_list
 
         try:
             # Get the list of file names in the archive
@@ -537,13 +619,13 @@ class Comic:
                 files = natsorted(files, alg=ns.IGNORECASE)
 
             # Filter for image files only
-            self._page_list = [str(name) for name in files if self.is_image(Path(str(name)))]
+            self._cache.page_list = [str(name) for name in files if self.is_image(Path(str(name)))]
 
         except Exception:
             logger.exception("Error getting page list from %s", self._path)
-            self._page_list = []
+            self._cache.page_list = []
 
-        return self._page_list
+        return self._cache.page_list
 
     def get_number_of_pages(self) -> int:
         """Get the total number of pages (images) in the archive.
@@ -556,9 +638,9 @@ class Comic:
             The result is cached for performance.
 
         """
-        if self._page_count is None:
-            self._page_count = len(self.get_page_name_list())
-        return self._page_count
+        if self._cache.page_count is None:
+            self._cache.page_count = len(self.get_page_name_list())
+        return self._cache.page_count
 
     def read_metadata(self, metadata_format: MetadataFormat) -> Metadata:
         """Read metadata from the archive in the specified format.
@@ -583,12 +665,7 @@ class Comic:
             - Returns empty Metadata object if format is unsupported
 
         """
-        metadata_readers = {
-            MetadataFormat.COMIC_INFO: self._read_comicinfo,
-            MetadataFormat.METRON_INFO: self._read_metroninfo,
-        }
-
-        reader = metadata_readers.get(metadata_format)
+        reader = self._metadata_registry.get_reader(metadata_format)
         if reader is None:
             logger.warning("Unknown metadata format: %s", metadata_format)
             return Metadata()
@@ -602,12 +679,12 @@ class Comic:
             Metadata: The parsed ComicInfo metadata.
 
         """
-        if self._metadata is not None:
-            return self._metadata
+        if self._cache.metadata is not None:
+            return self._cache.metadata
 
-        self._metadata = self._parse_metadata(self.read_raw_ci_metadata(), ComicInfo())
+        self._cache.metadata = self._parse_metadata(self.read_raw_ci_metadata(), ComicInfo())
         self._validate_and_fix_page_list()
-        return self._metadata
+        return self._cache.metadata
 
     def _read_metroninfo(self) -> Metadata:
         """Read and parse MetronInfo metadata from the archive.
@@ -616,12 +693,12 @@ class Comic:
             Metadata: The parsed MetronInfo metadata.
 
         """
-        if self._metadata is not None:
-            return self._metadata
+        if self._cache.metadata is not None:
+            return self._cache.metadata
 
-        self._metadata = self._parse_metadata(self.read_raw_mi_metadata(), MetronInfo())
+        self._cache.metadata = self._parse_metadata(self.read_raw_mi_metadata(), MetronInfo())
         self._validate_and_fix_page_list()
-        return self._metadata
+        return self._cache.metadata
 
     def _parse_metadata(self, raw_metadata: str | None, parser: MetronInfo | ComicInfo) -> Metadata:
         """Parse raw metadata XML using the appropriate parser.
@@ -650,11 +727,11 @@ class Comic:
         number of image files in the archive. If there's a mismatch, it resets
         the page list to default values.
         """
-        if self._metadata is None:
+        if self._cache.metadata is None:
             return
 
         actual_page_count = self.get_number_of_pages()
-        metadata_page_count = len(self._metadata.pages)
+        metadata_page_count = len(self._cache.metadata.pages)
 
         # If page counts don't match, reset the page list
         if metadata_page_count not in (0, actual_page_count):
@@ -664,11 +741,11 @@ class Comic:
                 metadata_page_count,
                 actual_page_count,
             )
-            self._metadata.pages = []
+            self._cache.metadata.pages = []
 
         # Set default page list if empty
-        if not self._metadata.pages:
-            self._metadata.set_default_page_list(actual_page_count)
+        if not self._cache.metadata.pages:
+            self._cache.metadata.set_default_page_list(actual_page_count)
 
     def _read_raw_metadata(self, metadata_format: MetadataFormat) -> str | None:
         """Read raw metadata XML from the archive.
@@ -707,11 +784,7 @@ class Comic:
             str | None: The filename for the metadata format, or None if unknown.
 
         """
-        filename_map = {
-            MetadataFormat.COMIC_INFO: self._ci_xml_filename,
-            MetadataFormat.METRON_INFO: self._mi_xml_filename,
-        }
-        return filename_map.get(metadata_format)
+        return self._metadata_registry.get_filename(metadata_format)
 
     def read_raw_ci_metadata(self) -> str | None:
         """Read raw ComicInfo metadata XML from the archive.
@@ -742,155 +815,36 @@ class Comic:
     def write_metadata(self, metadata: Metadata, metadata_format: MetadataFormat) -> bool:
         """Write metadata to the comic archive in the specified format.
 
-        This method serializes the provided metadata object and writes it to the comic archive
-        as an XML file. The metadata is automatically synchronized with the current archive
-        state before writing to ensure consistency. The operation modifies the archive file
-        directly and may overwrite existing metadata in the same format.
+        Serializes metadata to XML and writes it to the archive. ComicInfo format includes
+        detailed page information (slower), while MetronInfo format is faster but less detailed.
 
         Args:
-            metadata: The metadata object containing the information to write. Must be a valid
-                     Metadata instance with appropriate fields populated. The object is not
-                     modified during the write operation.
-            metadata_format: The format in which to write the metadata. Supported formats:
-
-                - MetadataFormat.COMIC_INFO: Writes as ComicInfo.xml (ComicInfo format)
-                - MetadataFormat.METRON_INFO: Writes as MetronInfo.xml (MetronInfo format)
-                - MetadataFormat.UNKNOWN: Not supported, raises ComicMetadataError
+            metadata: Metadata object to write.
+            metadata_format: Format to use (COMIC_INFO or METRON_INFO).
 
         Returns:
-            bool: True if the metadata was successfully written to the archive,
-                  False if the operation failed due to read-only archive, I/O errors,
-                  or other issues.
+            bool: True if successful, False if failed (read-only archive, I/O errors).
 
         Raises:
-            ComicMetadataError: If the specified metadata format is not supported or
-                               if the metadata format is MetadataFormat.UNKNOWN.
-
-        Side Effects:
-            - Creates or overwrites the metadata file in the archive (ComicInfo.xml or MetronInfo.xml)
-            - Updates internal cache flags to reflect the presence of the new metadata
-            - Automatically applies archive information to metadata before writing
-            - Clears internal metadata cache after successful write
-            - For ComicInfo format: calculates and includes page sizes and dimensions
-            - For MetronInfo format: writes metadata without detailed page calculations
-
-        Prerequisites:
-            - The archive must be writable (not read-only)
-            - The archive must be a valid comic archive format (ZIP or RAR)
-            - The metadata object must be properly initialized
-
-        Automatic Processing:
-            The method automatically performs several operations before writing:
-
-            1. Validates archive write permissions
-            2. Applies current archive information to metadata via apply_archive_info_to_metadata()
-            3. For ComicInfo: calculates page sizes, dimensions, and other detailed information
-            4. For MetronInfo: synchronizes page count without expensive calculations
-            5. Serializes metadata to appropriate XML format
-            6. Updates internal cache state upon successful write
+            ComicMetadataError: If metadata format is not supported.
 
         Examples:
             >>> comic = Comic("example.cbz")
-            >>>
-            >>> # Basic metadata writing
             >>> metadata = Metadata()
             >>> metadata.series = "Amazing Spider-Man"
-            >>> metadata.issue = "1"
-            >>> success = comic.write_metadata(metadata, MetadataFormat.COMIC_INFO)
-            >>> if success:
-            ...     print("Metadata written successfully")
-            ... else:
-            ...     print("Failed to write metadata")
-
-            >>> # Read, modify, and write back metadata
-            >>> if comic.has_metadata(MetadataFormat.COMIC_INFO):
-            ...     metadata = comic.read_metadata(MetadataFormat.COMIC_INFO)
-            ...     metadata.title = "Updated Title"
-            ...     comic.write_metadata(metadata, MetadataFormat.COMIC_INFO)
-
-            >>> # Write metadata in multiple formats
-            >>> metadata = Metadata()
-            >>> metadata.series = "Batman"
-            >>> metadata.issue = "42"
-            >>>
-            >>> # Write as ComicInfo (with detailed page information)
             >>> comic.write_metadata(metadata, MetadataFormat.COMIC_INFO)
-            >>>
-            >>> # Write as MetronInfo (faster, less detailed)
-            >>> comic.write_metadata(metadata, MetadataFormat.METRON_INFO)
-
-            >>> # Error handling example
-            >>> try:
-            ...     success = comic.write_metadata(metadata, MetadataFormat.UNKNOWN)
-            ... except ComicMetadataError as e:
-            ...     print(f"Unsupported format: {e}")
-
-            >>> # Conditional writing based on archive type
-            >>> if comic.is_writable():
-            ...     success = comic.write_metadata(metadata, MetadataFormat.COMIC_INFO)
-            ...     if not success:
-            ...         print("Write failed despite writable archive")
-            ... else:
-            ...     print("Archive is read-only, cannot write metadata")
-
-        Format-Specific Behavior:
-            ComicInfo Format:
-
-            - Calculates and includes detailed page information (sizes, dimensions)
-            - Preserves existing ComicInfo structure when possible
-            - Includes page list with complete image metadata
-            - Slower due to page analysis but more complete
-
-            MetronInfo Format:
-
-            - Focuses on bibliographic information
-            - Skips expensive page size calculations
-            - Faster processing for large archives
-            - Suitable for metadata-only operations
-
-        Performance Considerations:
-            - ComicInfo writing is slower due to page analysis (calc_page_sizes=True)
-            - MetronInfo writing is faster (calc_page_sizes=False)
-            - Large archives may take significant time with ComicInfo format
-            - Consider format choice based on use case and performance requirements
-
-        Error Scenarios:
-            - Returns False if archive is read-only or write-protected
-            - Returns False if I/O errors occur during writing
-            - Returns False if XML serialization fails
-            - Raises ComicMetadataError for unsupported formats
-            - Logs detailed error information for debugging
-
-        Best Practices:
-            - Always check return value to verify successful write
-            - Use is_writable() to check permissions before writing
-            - Consider MetronInfo format for better performance on large archives
-            - Handle ComicMetadataError exceptions for unsupported formats
-            - Verify metadata completeness before writing
-
-        See Also:
-            - read_metadata(): Read existing metadata from archive
-            - has_metadata(): Check if metadata exists in specified format
-            - remove_metadata(): Remove metadata from archive
-            - apply_archive_info_to_metadata(): Synchronize metadata with archive
-            - is_writable(): Check if archive supports write operations
 
         """
         if not self.is_writable():
             logger.warning("Cannot write metadata to read-only archive: %s", self._path)
             return False
 
-        writers = {
-            MetadataFormat.COMIC_INFO: self._write_ci,
-            MetadataFormat.METRON_INFO: self._write_mi,
-        }
-
-        writer = writers.get(metadata_format)
+        writer = self._metadata_registry.get_writer(metadata_format)
         if writer is None:
             msg = f"Unsupported metadata format: {metadata_format}"
             raise ComicMetadataError(msg)
 
-        return writer(metadata)  # type: ignore
+        return writer(metadata)
 
     def _write_ci(self, metadata: Metadata | None) -> bool:
         """Write ComicInfo metadata to the archive.
@@ -965,9 +919,9 @@ class Comic:
             if write_success:
                 # Update appropriate cache flag
                 if filename == self._ci_xml_filename:
-                    self._has_ci = True
+                    self._cache.has_ci = True
                 elif filename == self._mi_xml_filename:
-                    self._has_mi = True
+                    self._cache.has_mi = True
 
             return self._successful_write(write_success, metadata)
 
@@ -1010,17 +964,23 @@ class Comic:
         return self._remove_metadata_files(metadata_format_list)
 
     def _metadata_present(self, metadata_format_filenames: list[str]) -> list[str]:
-        all_metadata_present = []
-        for filename in metadata_format_filenames:
-            # Find all metadata files (case-insensitive)
-            filename_lower = filename.lower()
-            metadata_files = [
-                path
-                for path in self._archiver.get_filename_list()
-                if Path(str(path)).name.lower() == filename_lower
-            ]
-            all_metadata_present.extend(metadata_files)
-        return all_metadata_present
+        """Find all metadata files present in the archive (case-insensitive).
+
+        Args:
+            metadata_format_filenames: List of metadata filenames to search for.
+
+        Returns:
+            List of actual file paths found in the archive matching the filenames.
+
+        """
+        archive_files_lower = {
+            Path(str(p)).name.lower(): str(p) for p in self._archiver.get_filename_list()
+        }
+        return [
+            archive_files_lower[filename.lower()]
+            for filename in metadata_format_filenames
+            if filename.lower() in archive_files_lower
+        ]
 
     def _remove_metadata_files(self, metadata_format_list: list[MetadataFormat]) -> bool:
         """Remove metadata files from the archive.
@@ -1032,18 +992,15 @@ class Comic:
             bool: True if successful, False otherwise.
 
         """
+        # Build list of filenames to remove and track formats being processed
+        formats_to_remove = set()
         metadata_format_filenames = []
-        ci_present = mi_present = False
+
         for fmt in metadata_format_list:
             filename = self._get_metadata_filename(fmt)
-            if filename is None:
-                continue
-            if fmt == MetadataFormat.METRON_INFO:
-                mi_present = True
-            elif fmt == MetadataFormat.COMIC_INFO:
-                ci_present = True
-
-            metadata_format_filenames.append(filename)
+            if filename is not None:
+                metadata_format_filenames.append(filename)
+                formats_to_remove.add(fmt)
 
         all_metadata_present = self._metadata_present(metadata_format_filenames)
 
@@ -1056,62 +1013,29 @@ class Comic:
             logger.exception("Error removing metadata from %s", self._path)
             return False
 
-        # Update cache flags
-        if write_success and mi_present:
-            self._has_mi = False
-        if write_success and ci_present:
-            self._has_ci = False
+        # Update cache flags for successfully removed formats
+        if write_success:
+            if MetadataFormat.METRON_INFO in formats_to_remove:
+                self._cache.has_mi = False
+            if MetadataFormat.COMIC_INFO in formats_to_remove:
+                self._cache.has_ci = False
 
         return self._successful_write(write_success, None)
 
     def remove_pages(self, pages_index: list[int]) -> bool:
-        """Remove pages from the comic archive.
+        """Remove pages from the comic archive by their indices (0-based).
 
-        This method removes specified pages from the comic archive by their index positions.
-        The operation modifies the archive file directly and cannot be undone. Page indices
-        are zero-based, where 0 represents the first page.
+        This is a destructive operation that cannot be undone. Metadata caches are
+        invalidated after successful removal.
 
         Args:
-            pages_index: A list of zero-based page indices to remove from the archive.
-                        Indices must be valid (0 <= index < total_pages). Duplicate
-                        indices are allowed but will only remove the page once.
+            pages_index: List of zero-based page indices to remove.
 
         Returns:
-            bool: True if all specified pages were successfully removed from the archive,
-                  False if the operation failed due to read-only archive, invalid indices,
-                  or other errors.
+            bool: True if successful, False if failed.
 
         Raises:
-            ValueError: If any page index is negative or exceeds the total number of pages.
-
-        Warning:
-            This operation is destructive and cannot be undone. It will:
-
-            - Permanently remove the specified pages from the archive
-            - Invalidate any existing metadata cache
-            - Reset ComicInfo and MetronInfo metadata flags
-            - Require the archive to be writable
-
-        Examples:
-            >>> comic = Comic("example.cbz")
-            >>> comic.get_number_of_pages()
-            10
-            >>> # Remove the first and last pages
-            >>> success = comic.remove_pages([0, 9])
-            >>> if success:
-            ...     print(f"Pages removed. New page count: {comic.get_number_of_pages()}")
-            ... else:
-            ...     print("Failed to remove pages")
-
-            >>> # Remove multiple pages (pages 2, 3, and 5 from original numbering)
-            >>> comic.remove_pages([2, 3, 5])
-
-        Note:
-            - The archive must be writable for this operation to succeed
-            - Page indices are validated before removal begins
-            - If any index is invalid, the entire operation fails
-            - After successful removal, page indices of remaining pages may change
-            - Metadata caches are automatically cleared after successful removal
+            ValueError: If any page index is negative or out of range.
 
         """
         if not pages_index:
@@ -1154,8 +1078,8 @@ class Comic:
 
             if write_success:
                 # Invalidate metadata cache since page structure changed
-                self._has_mi = False
-                self._has_ci = False
+                self._cache.has_mi = False
+                self._cache.has_ci = False
 
             return self._successful_write(write_success, None)
 
@@ -1178,36 +1102,36 @@ class Comic:
 
         """
         if write_success:
-            self._metadata = metadata
+            self._cache.metadata = metadata
         self._reset_cache()
         return write_success
 
-    def _has_metadata_file(self, has_attr: str, filename_attr: str) -> bool:
+    def _has_metadata_file(self, cache_attr: str, filename_attr: str) -> bool:
         """Check if a metadata file exists in the archive.
 
         Args:
-            has_attr: The attribute name for the cached result.
+            cache_attr: The cache attribute name for the cached result (e.g., 'has_ci').
             filename_attr: The attribute name for the filename.
 
         Returns:
             True if the metadata file exists, False otherwise.
 
         """
-        cached_result = getattr(self, has_attr)
+        cached_result = getattr(self._cache, cache_attr)
         if cached_result is not None:
             return cached_result
 
         if not self.seems_to_be_a_comic_archive():
-            setattr(self, has_attr, False)
+            setattr(self._cache, cache_attr, False)
             return False
 
-        return self._check_metadata_file_exists(has_attr, filename_attr)
+        return self._check_metadata_file_exists(cache_attr, filename_attr)
 
-    def _check_metadata_file_exists(self, has_attr: str, filename_attr: str) -> bool:
+    def _check_metadata_file_exists(self, cache_attr: str, filename_attr: str) -> bool:
         """Check if metadata file exists in archive.
 
         Args:
-            has_attr: The attribute name for caching the result.
+            cache_attr: The cache attribute name for caching the result.
             filename_attr: The attribute name for the filename.
 
         Returns:
@@ -1220,96 +1144,35 @@ class Comic:
                 Path(str(path)).name.lower() for path in self._archiver.get_filename_list()
             }
             result = target_filename in filenames
-            setattr(self, has_attr, result)
+            setattr(self._cache, cache_attr, result)
         except Exception:
             logger.exception("Error checking for metadata file in %s", self._path)
-            setattr(self, has_attr, False)
+            setattr(self._cache, cache_attr, False)
             return False
         else:
             return result
 
     def _has_comicinfo(self) -> bool:
         """Check if the archive contains ComicInfo metadata."""
-        return self._has_metadata_file("_has_ci", "_ci_xml_filename")
+        return self._has_metadata_file("has_ci", "_ci_xml_filename")
 
     def _has_metroninfo(self) -> bool:
         """Check if the archive contains MetronInfo metadata."""
-        return self._has_metadata_file("_has_mi", "_mi_xml_filename")
+        return self._has_metadata_file("has_mi", "_mi_xml_filename")
 
     def has_metadata(self, fmt: MetadataFormat) -> bool:
         """Check if the archive contains metadata in the specified format.
 
-        This method determines whether the comic archive contains metadata files
-        corresponding to the requested format. It performs a case-insensitive search
-        for the appropriate metadata file within the archive and caches the result
-        for improved performance on subsequent calls.
+        Performs case-insensitive search for metadata files. Results are cached.
 
         Args:
-            fmt: The metadata format to check for. Must be one of:
-                - MetadataFormat.COMIC_INFO: Checks for ComicInfo.xml (ComicInfo format)
-                - MetadataFormat.METRON_INFO: Checks for MetronInfo.xml (MetronInfo format)
-                - MetadataFormat.UNKNOWN: Always returns False
+            fmt: Metadata format to check (COMIC_INFO or METRON_INFO).
 
         Returns:
-            bool: True if the archive contains metadata in the specified format,
-                  False if no metadata is found, the format is unsupported, or
-                  the archive is not a valid comic archive.
-
-        Note:
-            - The method uses case-insensitive filename matching (e.g., "comicinfo.xml",
-              "COMICINFO.XML", and "ComicInfo.xml" are all considered matches)
-            - Results are cached internally to avoid repeated file system operations
-            - The archive must be a valid comic archive (ZIP or RAR with pages) for
-              metadata detection to work properly
-            - Returns False immediately if the archive doesn't seem to be a comic
-
-        Performance:
-            - First call performs file system lookup and caches result
-            - Subsequent calls return cached result for improved performance
-            - Cache is automatically cleared when archive contents are modified
-
-        Examples:
-            >>> comic = Comic("example.cbz")
-            >>>
-            >>> # Check for ComicInfo.xml metadata
-            >>> if comic.has_metadata(MetadataFormat.COMIC_INFO):
-            ...     print("Comic has ComicInfo metadata")
-            ...     metadata = comic.read_metadata(MetadataFormat.COMIC_INFO)
-            ... else:
-            ...     print("No ComicInfo metadata found")
-
-            >>> # Check for MetronInfo.xml metadata
-            >>> if comic.has_metadata(MetadataFormat.METRON_INFO):
-            ...     print("Comic has MetronInfo metadata")
-
-            >>> # Check what metadata formats are available
-            >>> formats = comic.get_metadata_formats()
-            >>> for fmt in formats:
-            ...     print(f"Found metadata: {fmt}")
-
-            >>> # Conditional metadata reading
-            >>> preferred_formats = [MetadataFormat.METRON_INFO, MetadataFormat.COMIC_INFO]
-            >>> for fmt in preferred_formats:
-            ...     if comic.has_metadata(fmt):
-            ...         metadata = comic.read_metadata(fmt)
-            ...         print(f"Using {fmt} metadata")
-            ...         break
-            ... else:
-            ...     print("No supported metadata found")
-
-        See Also:
-            - read_metadata(): Read metadata content from the archive
-            - get_metadata_formats(): Get all available metadata formats
-            - write_metadata(): Write metadata to the archive
-            - remove_metadata(): Remove metadata from the archive
+            bool: True if metadata exists, False otherwise.
 
         """
-        metadata_checkers = {
-            MetadataFormat.COMIC_INFO: self._has_comicinfo,
-            MetadataFormat.METRON_INFO: self._has_metroninfo,
-        }
-
-        checker = metadata_checkers.get(fmt)
+        checker = self._metadata_registry.get_checker(fmt)
         return checker() if checker else False
 
     def _apply_archive_info_to_metadata(
@@ -1404,129 +1267,17 @@ class Comic:
     def export_as_zip(self, zip_filename: Path) -> bool:
         """Export the comic archive to CBZ (ZIP) format.
 
-        This method creates a new ZIP-format comic archive containing all files from the
-        current comic archive. If the source is already in ZIP format, the method returns
-        True immediately without creating a duplicate. The operation preserves all content
-        including pages, metadata files, and any other files present in the original archive.
+        Converts RAR/CBR, CBT, or CB7 archives to ZIP/CBZ format. Returns True immediately
+        if already ZIP. Preserves all pages, metadata, and directory structure.
 
         Args:
-            zip_filename: The path where the new ZIP archive will be created. Must be a
-                         valid Path object pointing to the desired output location.
-                         - Parent directory must exist and be writable
-                         - File extension typically should be .cbz or .zip
-                         - Existing files at this path will be overwritten
+            zip_filename: Path where the ZIP archive will be created (overwrites if exists).
 
         Returns:
-            bool: True if the export operation was successful or if the source archive
-                  is already in ZIP format, False if the operation failed due to I/O
-                  errors, permission issues, or other problems.
+            bool: True if successful or already ZIP, False if failed.
 
-        Side Effects:
-            - Creates a new ZIP file at the specified path
-            - Overwrites any existing file at the target location
-            - Does not modify the original archive in any way
-            - May create temporary files during the conversion process
-
-        File Preservation:
-            The export operation preserves:
-
-            - All page images in their original format and quality
-            - All metadata files (ComicInfo.xml, MetronInfo.xml, etc.)
-            - Directory structure within the archive
-            - File timestamps and attributes where possible
-            - Any additional files present in the original archive
-
-        Format Conversion:
-            - RAR/CBR → ZIP/CBZ: Full conversion with file extraction and re-compression
-            - CBT -> ZIP/CBZ: Full conversion with file extraction and re-compression
-            - CB7 -> ZIP/CBZ: Full conversion with file extraction and re-compression
-            - ZIP/CBZ → ZIP/CBZ: Returns True immediately (no-op)
-            - Maintains compatibility with all comic reading applications
-            - Preserves metadata across format conversion
-
-        Examples:
-            >>> comic = Comic("example.cbr")  # RAR format
-            >>> output_path = Path("converted/example.cbz")
-            >>>
-            >>> # Basic export operation
-            >>> success = comic.export_as_zip(output_path)
-            >>> if success:
-            ...     print(f"Successfully exported to {output_path}")
-            ... else:
-            ...     print("Export failed")
-
-            >>> # Export with directory creation
-            >>> output_path = Path("exports/comics/my_comic.cbz")
-            >>> output_path.parent.mkdir(parents=True, exist_ok=True)
-            >>> success = comic.export_as_zip(output_path)
-
-            >>> # Batch conversion example
-            >>> for rar_file in Path("comics").glob("*.cbr"):
-            ...     comic = Comic(rar_file)
-            ...     zip_path = rar_file.with_suffix(".cbz")
-            ...     if comic.export_as_zip(zip_path):
-            ...         print(f"Converted: {rar_file.name} → {zip_path.name}")
-
-            >>> # Handle already-ZIP archives
-            >>> zip_comic = Comic("already_zip.cbz")
-            >>> result = zip_comic.export_as_zip(Path("copy.cbz"))
-            >>> # Returns True immediately, no actual copying occurs
-
-            >>> # Export with error handling
-            >>> try:
-            ...     output_path = Path("/readonly/location/comic.cbz")
-            ...     success = comic.export_as_zip(output_path)
-            ...     if not success:
-            ...         print("Export failed - check permissions and disk space")
-            ... except Exception as e:
-            ...     print(f"Unexpected error during export: {e}")
-
-        Performance Considerations:
-            - RAR/TAR to ZIP conversion requires extracting and re-compressing all files
-            - Processing time depends on archive size and compression settings
-            - Memory usage scales with the size of individual files being processed
-            - Large archives (>1GB) may require significant time and disk space
-            - ZIP to ZIP operations are nearly instantaneous (early return)
-
-        Error Scenarios:
-            Common reasons for failure (returns False):
-
-            - Insufficient disk space for the output file
-            - Permission denied on target directory or file
-            - Corrupted or unreadable source archive
-            - Invalid or inaccessible zip_filename path
-            - I/O errors during file extraction or compression
-            - Interrupted operation due to system issues
-
-        Disk Space Requirements:
-            - Temporary space: Up to 2x the size of the original archive
-            - Final space: Similar to original archive size (may vary due to compression)
-            - Ensure adequate free space before starting large conversions
-
-        Use Cases:
-            - Converting RAR/CBR/CBT/CB7 archives to more widely supported ZIP/CBZ format
-            - Creating backup copies in standardized format
-            - Preparing archives for systems that don't support RAR format
-            - Batch processing comic collections for format standardization
-            - Migrating archives to ZIP for better write support
-
-        Limitations:
-            - Cannot export archives that are corrupted or unreadable
-            - Requires sufficient disk space for temporary files
-            - May not preserve all extended file attributes or metadata
-            - Does not validate the integrity of the output archive
-            - Performance depends on compression algorithms and hardware
-
-        Best Practices:
-            - Verify sufficient disk space before conversion
-            - Test with small archives first when batch processing
-            - Keep backups of original archives until conversion is verified
-            - Use descriptive filenames to avoid confusion
-            - Consider the target audience's software compatibility
-
-        See Also:
-            - is_writable(): Check if the archive supports write operations
-            - seems_to_be_a_comic_archive(): Validate archive as comic format
+        Note:
+            Large archives may require significant time and disk space for conversion.
 
         """
         if self._path.suffix.lower() in {".cbz", ".zip"}:
@@ -1555,56 +1306,13 @@ class Comic:
         return {fmt for fmt, checker in format_checkers if checker(fmt)}
 
     def validate_metadata(self, metadata_format: MetadataFormat) -> SchemaVersion:
-        """Validate the metadata in the archive for the specified format and return its schema version.
-
-        This method performs XML validation on the metadata contained within the comic archive.
-        It first checks if the archive contains metadata in the requested format, then validates
-        the XML structure against the appropriate schema, and finally returns the detected
-        schema version.
-
-        The validation process includes:
-
-        1. Checking if the archive contains the specified metadata format
-        2. Reading the metadata XML file from the archive
-        3. Validating the XML structure and content
-        4. Determining the schema version used
+        """Validate metadata XML and return its schema version.
 
         Args:
-            metadata_format (MetadataFormat): The format of the metadata to validate.
-                Must be one of:
-                - MetadataFormat.COMIC_INFO: For ComicInfo.xml validation
-                - MetadataFormat.METRON_INFO: For MetronInfo.xml validation
+            metadata_format: Format to validate (COMIC_INFO or METRON_INFO).
 
         Returns:
-            SchemaVersion: The schema version of the validated metadata. Possible values:
-
-                - SchemaVersion.Unknown: If the metadata format is not supported,
-                  the archive doesn't contain the specified metadata format,
-                  the XML is invalid, or validation fails for any reason
-                - SchemaVersion.METRON_INFO_V1: If valid MetronInfo v1.0 schema is detected
-                - SchemaVersion.COMIC_INFO_V1: If valid ComicInfo v1.0 schema is detected
-                - SchemaVersion.COMIC_INFO_V2: If valid ComicInfo v2.0 schema is detected
-                - (Other schema versions as defined in SchemaVersion enum)
-
-        Examples:
-            >>> comic = Comic("example.cbz")
-            >>> schema_version = comic.validate_metadata(MetadataFormat.COMIC_INFO)
-            >>> if schema_version != SchemaVersion.Unknown:
-            ...     print(f"Valid ComicInfo metadata found with schema version: {schema_version}")
-            ... else:
-            ...     print("No valid ComicInfo metadata found")
-
-        Note:
-            - This method does not modify the archive or its metadata
-            - The validation is performed on the raw XML content
-            - If multiple metadata formats are present, each must be validated separately
-            - The method is safe to call multiple times as it doesn't cache results
-
-        See Also:
-            - has_metadata(): Check if metadata exists without validation
-            - read_metadata(): Read and parse metadata content
-            - get_metadata_formats(): Get all available metadata formats
-            - ValidateMetadata: The underlying validation class
+            SchemaVersion: Detected schema version, or SchemaVersion.Unknown if invalid/not found.
 
         """
         metadata_handlers = {
@@ -1644,69 +1352,12 @@ class Comic:
             return SchemaVersion.Unknown
 
     def is_valid_comic(self) -> bool:
-        """Perform a comprehensive validation of the comic archive.
+        """Perform comprehensive validation of the comic archive.
 
-        This method conducts a thorough validation to determine if the file represents
-        a valid comic book archive. It performs multiple checks to ensure the archive
-        is accessible, properly formatted, and contains comic book content.
-
-        The validation process includes three essential checks:
-
-        1. **File Existence**: Verifies the comic file exists on the filesystem
-        2. **Archive Validity**: Confirms the file is a valid ZIP or RAR archive
-        3. **Comic Content**: Ensures the archive contains at least one readable page/image
-
-        This method is particularly useful for:
-
-        - Batch processing comic libraries to identify corrupted files
-        - Validating comic files before performing operations
-        - Quality assurance in comic management applications
-        - Filtering out non-comic files from mixed directories
+        Checks file existence, archive validity, and comic content (at least one image).
 
         Returns:
-            bool: True if the comic archive passes all validation checks, False otherwise.
-                Returns False if any of the following conditions are met:
-
-                - The file path doesn't exist on the filesystem
-                - The file is not a valid ZIP or RAR archive
-                - The archive is valid but contains no readable image pages
-                - An exception occurs during validation (e.g., permission errors, corruption)
-
-        Examples:
-            >>> comic = Comic("my_comic.cbz")
-            >>> if comic.is_valid_comic():
-            ...     print(f"'{comic.name}' is a valid comic with {comic.get_number_of_pages()} pages")
-            ...     # Safe to perform operations like reading pages or metadata
-            ...     first_page = comic.get_page(0)
-            ... else:
-            ...     print(f"'{comic.name}' is not a valid comic archive")
-            ...     # Handle invalid comic (skip, log error, etc.)
-
-        Performance Notes:
-            - This method may be slower for large archives as it needs to scan for images
-            - Results are not cached, so repeated calls will re-validate
-            - Consider calling this method once and storing the result if needed multiple times
-            - The method performs minimal I/O operations but may access the archive contents
-
-        Common Failure Scenarios:
-            - **File not found**: The specified path doesn't exist
-            - **Corrupted archive**: The ZIP/RAR file is damaged or incomplete
-            - **Wrong file type**: The file has a comic extension but isn't actually an archive
-            - **Empty archive**: The archive exists but contains no image files
-            - **Permission issues**: Insufficient permissions to read the file
-            - **Unsupported format**: Archive uses unsupported compression methods
-
-        Note:
-            - This method does not validate metadata (use validate_metadata() for that)
-            - It only checks for the presence of image files, not their validity
-            - The method is safe to call and will not modify the archive
-            - Archive format detection is based on file content, not just file extension
-
-        See Also:
-            - is_archive_valid(): Check only archive format validity
-            - seems_to_be_a_comic_archive(): Check if archive contains comic content
-            - get_number_of_pages(): Get the count of readable pages
-            - validate_metadata(): Validate metadata content and schema
+            bool: True if valid comic archive, False otherwise.
 
         """
         try:
