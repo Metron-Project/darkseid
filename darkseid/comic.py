@@ -330,10 +330,6 @@ class Comic:
 
     def _initialize_attributes(self) -> None:
         """Initialize instance attributes and set up caching system."""
-        # Use constants for filenames
-        self._ci_xml_filename: str = COMIC_RACK_FILENAME
-        self._mi_xml_filename: str = METRON_INFO_FILENAME
-
         # Initialize cache and metadata format registry
         self._cache = ComicCache()
         self._metadata_registry = MetadataFormatRegistry(self)
@@ -864,7 +860,7 @@ class Comic:
         return self._write_metadata_format(
             metadata,
             ComicInfo(),
-            self._ci_xml_filename,
+            COMIC_RACK_FILENAME,
             self.read_raw_ci_metadata(),
             calc_page_sizes=True,
         )
@@ -885,7 +881,7 @@ class Comic:
         return self._write_metadata_format(
             metadata,
             MetronInfo(),
-            self._mi_xml_filename,
+            METRON_INFO_FILENAME,
             self.read_raw_mi_metadata(),
             calc_page_sizes=False,
         )
@@ -920,9 +916,9 @@ class Comic:
 
             if write_success:
                 # Update appropriate cache flag
-                if filename == self._ci_xml_filename:
+                if filename == COMIC_RACK_FILENAME:
                     self._cache.has_ci = True
-                elif filename == self._mi_xml_filename:
+                elif filename == METRON_INFO_FILENAME:
                     self._cache.has_mi = True
 
             return self._successful_write(write_success, metadata)
@@ -1108,12 +1104,12 @@ class Comic:
         self._reset_cache()
         return write_success
 
-    def _has_metadata_file(self, cache_attr: str, filename_attr: str) -> bool:
+    def _has_metadata_file(self, cache_attr: str, filename: str) -> bool:
         """Check if a metadata file exists in the archive.
 
         Args:
             cache_attr: The cache attribute name for the cached result (e.g., 'has_ci').
-            filename_attr: The attribute name for the filename.
+            filename: The metadata filename to check for.
 
         Returns:
             True if the metadata file exists, False otherwise.
@@ -1127,21 +1123,21 @@ class Comic:
             setattr(self._cache, cache_attr, False)
             return False
 
-        return self._check_metadata_file_exists(cache_attr, filename_attr)
+        return self._check_metadata_file_exists(cache_attr, filename)
 
-    def _check_metadata_file_exists(self, cache_attr: str, filename_attr: str) -> bool:
+    def _check_metadata_file_exists(self, cache_attr: str, filename: str) -> bool:
         """Check if metadata file exists in archive.
 
         Args:
             cache_attr: The cache attribute name for caching the result.
-            filename_attr: The attribute name for the filename.
+            filename: The metadata filename to check for.
 
         Returns:
             True if file exists, False otherwise.
 
         """
         try:
-            target_filename = getattr(self, filename_attr).lower()
+            target_filename = filename.lower()
             filenames = {
                 Path(str(path)).name.lower() for path in self._archiver.get_filename_list()
             }
@@ -1156,11 +1152,11 @@ class Comic:
 
     def _has_comicinfo(self) -> bool:
         """Check if the archive contains ComicInfo metadata."""
-        return self._has_metadata_file("has_ci", "_ci_xml_filename")
+        return self._has_metadata_file("has_ci", COMIC_RACK_FILENAME)
 
     def _has_metroninfo(self) -> bool:
         """Check if the archive contains MetronInfo metadata."""
-        return self._has_metadata_file("has_mi", "_mi_xml_filename")
+        return self._has_metadata_file("has_mi", METRON_INFO_FILENAME)
 
     def has_metadata(self, fmt: MetadataFormat) -> bool:
         """Check if the archive contains metadata in the specified format.
@@ -1318,8 +1314,8 @@ class Comic:
 
         """
         metadata_handlers = {
-            MetadataFormat.METRON_INFO: (self._has_metroninfo, self._mi_xml_filename),
-            MetadataFormat.COMIC_INFO: (self._has_comicinfo, self._ci_xml_filename),
+            MetadataFormat.METRON_INFO: (self._has_metroninfo, METRON_INFO_FILENAME),
+            MetadataFormat.COMIC_INFO: (self._has_comicinfo, COMIC_RACK_FILENAME),
         }
 
         if metadata_format not in metadata_handlers:
