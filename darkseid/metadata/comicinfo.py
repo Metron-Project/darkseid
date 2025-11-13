@@ -1,4 +1,3 @@
-# ruff: noqa: C901, PLR0912, PLR0915, TRY003, EM101
 """A class to encapsulate ComicRack's ComicInfo.xml data."""
 
 # Copyright 2012-2014 Anthony Beville
@@ -280,7 +279,7 @@ class ComicInfo(BaseMetadataHandler):
 
         return root
 
-    def _convert_metadata_to_xml(
+    def _convert_metadata_to_xml(  # noqa: C901, PLR0912, PLR0915
         self,
         md: Metadata,
         xml_bytes: bytes | None = None,
@@ -382,7 +381,7 @@ class ComicInfo(BaseMetadataHandler):
         ET.indent(root)
         return ET.ElementTree(root)
 
-    def _convert_xml_to_metadata(self, tree: ET.ElementTree) -> Metadata:
+    def _convert_xml_to_metadata(self, tree: ET.ElementTree) -> Metadata:  # noqa: C901, PLR0912, PLR0915
         """Convert an XML representation to a Metadata object.
 
         Args:
@@ -395,7 +394,8 @@ class ComicInfo(BaseMetadataHandler):
         root = tree.getroot()
 
         if root.tag != "ComicInfo":
-            raise ValueError("Metadata is not ComicInfo format")
+            msg = "Metadata is not ComicInfo format"
+            raise ValueError(msg)
 
         md = Metadata()
         md.series = Series(name=self._get_text_content(root, "Series"))
