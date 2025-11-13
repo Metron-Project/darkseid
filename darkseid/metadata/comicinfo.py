@@ -30,6 +30,9 @@ from darkseid.metadata.data_classes import (
 )
 from darkseid.utils import get_issue_id_from_note, list_to_string
 
+# Constants
+CREDIT_TAGS = frozenset({"Writer", "Penciller", "Inker", "Colorist", "Letterer", "Editor"})
+
 
 class ComicInfo(BaseMetadataHandler):
     """Handles the conversion between Metadata objects and ComicInfo XML representations.
@@ -123,9 +126,89 @@ class ComicInfo(BaseMetadataHandler):
     )
 
     @staticmethod
+    def _get_resource_list(resource: list[Basic] | list[Arc]) -> str | None:
+        """Convert a list of resources to a comma-separated string.
+
+        Args:
+            resource: List of Basic or Arc objects.
+
+        Returns:
+            Comma-separated string of resource names, or None if list is empty.
+
+        """
+        return list_to_string([i.name for i in resource]) if resource else None
+
+    @staticmethod
+    def _create_url_string(links: list[Links]) -> str:
+        """Create a comma-separated string of URLs from Links objects.
+
+        Args:
+            links: List of Links objects.
+
+        Returns:
+            Comma-separated string of URLs.
+
+        """
+        return ",".join(link.url for link in links)
+
+    def _parse_urls(self, txt: str | None) -> list[Links] | None:
+        """Parse URL string into list of Links objects.
+
+        Args:
+            txt: Comma or space-separated URL string.
+
+        Returns:
+            List of Links with first marked as primary, or None if no URLs.
+
+        """
+        if not txt:
+            return None
+        # ComicInfo schema states URL string can be separated by a comma or space
+        urls = self._split_string(txt, [",", " "])
+        # We're assuming the first link is the main source url.
+        return [Links(urls[0], primary=True)] + [Links(url) for url in urls[1:]]
+
+    @staticmethod
+    def _parse_note(note_txt: str | None) -> Notes | None:
+        """Parse note text into Notes object.
+
+        Args:
+            note_txt: The note text.
+
+        Returns:
+            Notes object or None if text is empty.
+
+        """
+        return Notes(comic_rack=note_txt) if note_txt else None
+
+    @staticmethod
+    def _parse_age_rating(age_text: str | None) -> AgeRatings | None:
+        """Parse age rating text into AgeRatings object.
+
+        Args:
+            age_text: The age rating text.
+
+        Returns:
+            AgeRatings object or None if text is empty.
+
+        """
+        return AgeRatings(comic_rack=age_text) if age_text else None
+
+    @staticmethod
     def _set_cover_date(
         tmp_year: int | None, tmp_month: int | None, tmp_day: int | None
     ) -> date | None:
+        """Set cover date from year, month, and day components.
+
+        Args:
+            tmp_year: Year value.
+            tmp_month: Month value.
+            tmp_day: Day value (optional).
+
+        Returns:
+            Date object or None if invalid.
+
+        """
         if tmp_year is None or tmp_month is None:
             return None
 
@@ -214,13 +297,7 @@ class ComicInfo(BaseMetadataHandler):
         """
         root = self._get_root(xml_bytes)
 
-        def get_resource_list(resource: list[Basic] | list[Arc]) -> str | None:
-            return list_to_string([i.name for i in resource]) if resource else None
-
-        def create_url_string(links: list[Links]) -> str:
-            return ",".join(link.url for link in links)
-
-        if stories_txt := get_resource_list(md.stories):
+        if stories_txt := self._get_resource_list(md.stories):
             self._set_element_text(root, "Title", stories_txt)
         if md.series is not None:
             self._set_element_text(root, "Series", md.series.name)
@@ -268,9 +345,9 @@ class ComicInfo(BaseMetadataHandler):
             self._set_element_text(root, "Publisher", md.publisher.name)
             if md.publisher.imprint:
                 self._set_element_text(root, "Imprint", md.publisher.imprint.name)
-        self._set_element_text(root, "Genre", get_resource_list(md.genres))
+        self._set_element_text(root, "Genre", self._get_resource_list(md.genres))
         if md.web_link:
-            self._set_element_text(root, "Web", create_url_string(md.web_link))
+            self._set_element_text(root, "Web", self._create_url_string(md.web_link))
         self._set_element_text(root, "PageCount", md.page_count)
         if md.series is not None:
             self._set_element_text(root, "LanguageISO", md.series.language)
@@ -278,11 +355,11 @@ class ComicInfo(BaseMetadataHandler):
             self._set_element_text(root, "Format", md.series.format)
         self._set_element_text(root, "BlackAndWhite", "Yes" if md.black_and_white else None)
         self._set_element_text(root, "Manga", self._validate_value(md.manga, self.ci_manga))
-        self._set_element_text(root, "Characters", get_resource_list(md.characters))
-        self._set_element_text(root, "Teams", get_resource_list(md.teams))
-        self._set_element_text(root, "Locations", get_resource_list(md.locations))
+        self._set_element_text(root, "Characters", self._get_resource_list(md.characters))
+        self._set_element_text(root, "Teams", self._get_resource_list(md.teams))
+        self._set_element_text(root, "Locations", self._get_resource_list(md.locations))
         self._set_element_text(root, "ScanInformation", md.scan_info)
-        self._set_element_text(root, "StoryArc", get_resource_list(md.story_arcs))
+        self._set_element_text(root, "StoryArc", self._get_resource_list(md.story_arcs))
         if md.age_rating is not None and md.age_rating.comic_rack:
             self._set_element_text(
                 root,
@@ -320,20 +397,6 @@ class ComicInfo(BaseMetadataHandler):
         if root.tag != "ComicInfo":
             raise ValueError("Metadata is not ComicInfo format")
 
-        def get_urls(txt: str) -> list[Links] | None:
-            if not txt:
-                return None
-            # ComicInfo schema states URL string can be separated by a comma or space
-            urls = self._split_string(txt, [",", " "])
-            # We're assuming the first link is the main source url.
-            return [Links(urls[0], primary=True)] + [Links(url) for url in urls[1:]]
-
-        def get_note(note_txt: str) -> Notes | None:
-            return Notes(comic_rack=note_txt) if note_txt else None
-
-        def get_age_rating(age_text: str) -> AgeRatings | None:
-            return AgeRatings(comic_rack=age_text) if age_text else None
-
         md = Metadata()
         md.series = Series(name=self._get_text_content(root, "Series"))
         md.stories = self._string_to_resource(self._get_text_content(root, "Title"))
@@ -346,7 +409,7 @@ class ComicInfo(BaseMetadataHandler):
         ).as_string()
         md.alternate_count = self._parse_int(self._get_text_content(root, "AlternateCount"))
         md.comments = self._get_text_content(root, "Summary")
-        md.notes = get_note(self._get_text_content(root, "Notes"))
+        md.notes = self._parse_note(self._get_text_content(root, "Notes"))
         if md.notes is not None and md.notes.comic_rack is not None:
             src = get_issue_id_from_note(md.notes.comic_rack)
             if src is not None:
@@ -364,7 +427,7 @@ class ComicInfo(BaseMetadataHandler):
         md.publisher = Publisher(pub, imprint=Basic(imprint) if imprint else None)
 
         md.genres = self._string_to_resource(self._get_text_content(root, "Genre"))
-        md.web_link = get_urls(self._get_text_content(root, "Web"))
+        md.web_link = self._parse_urls(self._get_text_content(root, "Web"))
         md.series.language = self._get_text_content(root, "LanguageISO")
         md.series.format = self._get_text_content(root, "Format")
         md.manga = self._get_text_content(root, "Manga")
@@ -375,7 +438,7 @@ class ComicInfo(BaseMetadataHandler):
         md.scan_info = self._get_text_content(root, "ScanInformation")
         md.story_arcs = self._string_to_arc(self._get_text_content(root, "StoryArc"))
         md.series_group = self._get_text_content(root, "SeriesGroup")
-        md.age_rating = get_age_rating(self._get_text_content(root, "AgeRating"))
+        md.age_rating = self._parse_age_rating(self._get_text_content(root, "AgeRating"))
 
         tmp = self._get_text_content(root, "BlackAndWhite")
         md.black_and_white = False
@@ -383,10 +446,7 @@ class ComicInfo(BaseMetadataHandler):
             md.black_and_white = True
         # Now extract the credit info
         for n in root:
-            if (
-                n.tag in ["Writer", "Penciller", "Inker", "Colorist", "Letterer", "Editor"]
-                and n.text is not None
-            ):
+            if n.tag in CREDIT_TAGS and n.text is not None:
                 for name in self._split_string(n.text, [";", ","]):
                     md.add_credit(Credit(name.strip(), [Role(n.tag)]))
 
@@ -421,7 +481,7 @@ class ComicInfo(BaseMetadataHandler):
         return [item.strip() for item in re.split(r',|"(.*?)"', string) if item and item.strip()]
 
     @staticmethod
-    def _string_to_resource(string: str) -> list[Basic] | None:
+    def _string_to_resource(string: str | None) -> list[Basic] | None:
         """Convert a string to a list of Basic objects.
 
         Args:
@@ -431,13 +491,12 @@ class ComicInfo(BaseMetadataHandler):
             The list of Basic objects created from the string, or None if the string is None.
 
         """
-        if string is not None:
-            res: list[str | Basic] = ComicInfo._clean_resource_list(string)
-            return [Basic(item) for item in res]
-        return None
+        if string is None:
+            return None
+        return [Basic(item) for item in ComicInfo._clean_resource_list(string)]
 
     @staticmethod
-    def _string_to_arc(string: str) -> list[Arc] | None:
+    def _string_to_arc(string: str | None) -> list[Arc] | None:
         """Convert a string to a list of Arc objects.
 
         Args:
@@ -447,7 +506,6 @@ class ComicInfo(BaseMetadataHandler):
             The list of Arc objects created from the string, or None if the string is None.
 
         """
-        if string is not None:
-            res: list[str | Arc] = ComicInfo._clean_resource_list(string)
-            return [Arc(item) for item in res]
-        return None
+        if string is None:
+            return None
+        return [Arc(item) for item in ComicInfo._clean_resource_list(string)]
