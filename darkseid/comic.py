@@ -815,18 +815,20 @@ class Comic:
     def write_metadata(self, metadata: Metadata, metadata_format: MetadataFormat) -> bool:
         """Write metadata to the comic archive in the specified format.
 
-        Serializes metadata to XML and writes it to the archive. ComicInfo format includes
-        detailed page information (slower), while MetronInfo format is faster but less detailed.
-
         Args:
             metadata: Metadata object to write.
-            metadata_format: Format to use (COMIC_INFO or METRON_INFO).
-
+            metadata_format: Format to use:
+                - COMIC_INFO: ComicRack reader standard format
+                - METRON_INFO: A new comic book metadata format
         Returns:
             bool: True if successful, False if failed (read-only archive, I/O errors).
 
         Raises:
             ComicMetadataError: If metadata format is not supported.
+
+        Note:
+            ComicInfo writes include page size calculations (slower for large archives).
+            MetronInfo writes skip page calculations (faster).
 
         Examples:
             >>> comic = Comic("example.cbz")
