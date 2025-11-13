@@ -40,6 +40,7 @@ if TYPE_CHECKING:
 EARLIEST_YEAR = 1900
 VOLUME_THRESHOLD = 1000
 DEFAULT_COUNTRY = "US"
+DEFAULT_SERIES_NAME = "None"  # Placeholder for Series initialization; actual name set from XML
 
 # Validation sets
 VALID_INFO_SOURCES = frozenset(
@@ -157,7 +158,9 @@ class MetronInfo(BaseMetadataHandler):
 
     def __init__(self) -> None:
         """Initialize the MetronInfo instance."""
-        self._schema_path = Path("darkseid") / "schemas" / "MetronInfo" / "v1" / "MetronInfo.xsd"
+        self._schema_path = (
+            Path(__file__).parent.parent / "schemas" / "MetronInfo" / "v1" / "MetronInfo.xsd"
+        )
 
     def metadata_from_string(self, xml_string: str) -> Metadata:
         """Convert an XML string to a Metadata object.
@@ -256,6 +259,19 @@ class MetronInfo(BaseMetadataHandler):
         if not isinstance(source, str):
             return False
         return source.strip().lower() in VALID_INFO_SOURCES
+
+    @staticmethod
+    def _build_id_attrib(id_: int | str | None) -> dict[str, str]:
+        """Build an attribute dictionary with an ID if present.
+
+        Args:
+            id_: The ID value to include.
+
+        Returns:
+            Dictionary with 'id' key if ID is present, empty dict otherwise.
+
+        """
+        return {"id": str(id_)} if id_ else {}
 
     @staticmethod
     def _normalize_age_rating(age_rating: AgeRatings | None) -> str | None:
@@ -363,8 +379,7 @@ class MetronInfo(BaseMetadataHandler):
 
         parent_node = self._get_or_create_element(root, "Arcs")
         for arc in arcs:
-            attributes = {"id": str(arc.id_)} if arc.id_ else {}
-            arc_node = ET.SubElement(parent_node, "Arc", attrib=attributes)
+            arc_node = ET.SubElement(parent_node, "Arc", attrib=self._build_id_attrib(arc.id_))
             ET.SubElement(arc_node, "Name").text = arc.name
             if arc.number:
                 ET.SubElement(arc_node, "Number").text = str(arc.number)
@@ -381,14 +396,14 @@ class MetronInfo(BaseMetadataHandler):
             return
 
         publisher_node = self._get_or_create_element(root, "Publisher")
-        if publisher.id_:
-            publisher_node.attrib = {"id": str(publisher.id_)}
+        publisher_node.attrib = self._build_id_attrib(publisher.id_)
 
         ET.SubElement(publisher_node, "Name").text = publisher.name
 
         if publisher.imprint:
-            imprint_attrib = {"id": str(publisher.imprint.id_)} if publisher.imprint.id_ else {}
-            imprint_node = ET.SubElement(publisher_node, "Imprint", imprint_attrib)
+            imprint_node = ET.SubElement(
+                publisher_node, "Imprint", self._build_id_attrib(publisher.imprint.id_)
+            )
             imprint_node.text = publisher.imprint.name
 
     def _add_series(self, root: ET.Element, series: Series | None) -> None:  # noqa: C901,PLR0912
@@ -405,12 +420,13 @@ class MetronInfo(BaseMetadataHandler):
         series_node = self._get_or_create_element(root, "Series")
 
         # Set attributes
-        if series.id_ or series.language:
-            series_node.attrib = {}
+        attrib = {}
         if series.id_:
-            series_node.attrib["id"] = str(series.id_)
+            attrib["id"] = str(series.id_)
         if series.language:
-            series_node.attrib["lang"] = series.language
+            attrib["lang"] = series.language
+        if attrib:
+            series_node.attrib = attrib
 
         # Add child elements
         ET.SubElement(series_node, "Name").text = series.name
@@ -551,16 +567,295 @@ class MetronInfo(BaseMetadataHandler):
             credit_node = ET.SubElement(parent_node, "Credit")
 
             # Add creator
-            creator_attrib = {"id": str(credit.id_)} if credit.id_ else {}
-            creator_node = ET.SubElement(credit_node, "Creator", attrib=creator_attrib)
+            creator_node = ET.SubElement(
+                credit_node, "Creator", attrib=self._build_id_attrib(credit.id_)
+            )
             creator_node.text = credit.person
 
             # Add roles
             roles_node = ET.SubElement(credit_node, "Roles")
             for role in credit.role:
-                role_attrib = {"id": str(role.id_)} if role.id_ else {}
-                role_node = ET.SubElement(roles_node, "Role", attrib=role_attrib)
+                role_node = ET.SubElement(
+                    roles_node, "Role", attrib=self._build_id_attrib(role.id_)
+                )
                 role_node.text = role.name if role.name.lower() in VALID_ROLES else "Other"
+
+    def _parse_gtin_element(self, gtin_element: ET.Element | None) -> GTIN | None:
+        """Parse GTIN element into GTIN object.
+
+        Args:
+            gtin_element: The GTIN XML element.
+
+        Returns:
+            GTIN object if data found, None otherwise.
+
+        """
+        if gtin_element is None:
+            return None
+
+        gtin = GTIN()
+        gtin_mapping = {"UPC": "upc", "ISBN": "isbn"}
+        found_data = False
+
+        for item in gtin_element:
+            if item.text and item.tag in gtin_mapping:
+                try:
+                    setattr(gtin, gtin_mapping[item.tag], int(item.text))
+                    found_data = True
+                except ValueError:
+                    continue
+
+        return gtin if found_data else None
+
+    def _parse_info_sources_element(
+        self, ids_element: ET.Element | None
+    ) -> list[InfoSources] | None:
+        """Parse IDS element into list of InfoSources.
+
+        Args:
+            ids_element: The IDS XML element.
+
+        Returns:
+            List of InfoSources if found, None otherwise.
+
+        """
+        if ids_element is None:
+            return None
+
+        sources = []
+        for child in ids_element.findall("ID"):
+            source_name = child.attrib.get("source")
+            if not self._is_valid_info_source(source_name) or not child.text:
+                continue
+
+            source_id = int(child.text) if child.text.isdigit() else child.text
+            is_primary = child.attrib.get("primary", "").lower() == "true"
+            sources.append(InfoSources(source_name, source_id, is_primary))
+
+        return sources or None
+
+    def _parse_basic_list_element(self, element: ET.Element | None) -> list[Basic]:
+        """Parse element containing Basic objects.
+
+        Args:
+            element: The XML element containing basic items.
+
+        Returns:
+            List of Basic objects.
+
+        """
+        if element is None:
+            return []
+        return [
+            Basic(item.text, self._get_id_from_attrib(item.attrib)) for item in element if item.text
+        ]
+
+    def _parse_prices_element(self, prices_element: ET.Element | None) -> list[Price]:
+        """Parse Prices element into list of Price objects.
+
+        Args:
+            prices_element: The Prices XML element.
+
+        Returns:
+            List of Price objects.
+
+        """
+        if prices_element is None:
+            return []
+
+        prices = []
+        for item in prices_element:
+            if item.text:
+                try:
+                    amount = Decimal(item.text)
+                    country = item.attrib.get("country", DEFAULT_COUNTRY)
+                    prices.append(Price(amount, country))
+                except (ValueError, TypeError):
+                    continue
+        return prices
+
+    def _parse_publisher_element(self, publisher_element: ET.Element | None) -> Publisher | None:
+        """Parse Publisher element into Publisher object.
+
+        Args:
+            publisher_element: The Publisher XML element.
+
+        Returns:
+            Publisher object if found, None otherwise.
+
+        """
+        if publisher_element is None:
+            return None
+
+        publisher_name = None
+        imprint = None
+
+        name_elem = publisher_element.find("Name")
+        if name_elem is not None:
+            publisher_name = name_elem.text
+
+        imprint_elem = publisher_element.find("Imprint")
+        if imprint_elem is not None and imprint_elem.text:
+            imprint = Basic(imprint_elem.text, self._get_id_from_attrib(imprint_elem.attrib))
+
+        publisher_id = self._get_id_from_attrib(publisher_element.attrib)
+        return Publisher(publisher_name, publisher_id, imprint)
+
+    def _parse_series_element(self, series_element: ET.Element | None) -> Series | None:
+        """Parse Series element into Series object.
+
+        Args:
+            series_element: The Series XML element.
+
+        Returns:
+            Series object if found, None otherwise.
+
+        """
+        if series_element is None:
+            return None
+
+        series = Series(DEFAULT_SERIES_NAME)
+        series.id_ = self._get_id_from_attrib(series_element.attrib)
+        series.language = series_element.attrib.get("lang")
+
+        # Define mapping for simple text elements
+        text_mappings = {"Name": "name", "SortName": "sort_name", "Format": "format"}
+
+        # Define mapping for integer elements
+        int_mappings = {
+            "Volume": "volume",
+            "StartYear": "start_year",
+            "IssueCount": "issue_count",
+            "VolumeCount": "volume_count",
+        }
+
+        for child in series_element:
+            if child.tag in text_mappings:
+                setattr(series, text_mappings[child.tag], child.text)
+            elif child.tag in int_mappings:
+                if parsed_int := self._parse_int(child.text):
+                    setattr(series, int_mappings[child.tag], parsed_int)
+            elif child.tag == "AlternativeNames":
+                alt_names = []
+                for name_elem in child.findall("AlternativeName"):
+                    if name_elem.text:
+                        alt_name = AlternativeNames(
+                            name_elem.text,
+                            self._get_id_from_attrib(name_elem.attrib),
+                            name_elem.attrib.get("lang"),
+                        )
+                        alt_names.append(alt_name)
+                series.alternative_names = alt_names
+
+        return series
+
+    def _parse_arcs_element(self, arcs_element: ET.Element | None) -> list[Arc]:
+        """Parse Arcs element into list of Arc objects.
+
+        Args:
+            arcs_element: The Arcs XML element.
+
+        Returns:
+            List of Arc objects.
+
+        """
+        if arcs_element is None:
+            return []
+
+        arcs = []
+        for arc_elem in arcs_element.findall("Arc"):
+            name_elem = arc_elem.find("Name")
+            if name_elem is None or not name_elem.text:
+                continue
+
+            arc_id = self._get_id_from_attrib(arc_elem.attrib)
+            number_elem = arc_elem.find("Number")
+            number = self._parse_int(number_elem.text) if number_elem is not None else None
+
+            arcs.append(Arc(name_elem.text, arc_id, number))
+
+        return arcs
+
+    def _parse_universes_element(self, universes_element: ET.Element | None) -> list[Universe]:
+        """Parse Universes element into list of Universe objects.
+
+        Args:
+            universes_element: The Universes XML element.
+
+        Returns:
+            List of Universe objects.
+
+        """
+        if universes_element is None:
+            return []
+
+        universes = []
+        for universe_elem in universes_element.findall("Universe"):
+            name_elem = universe_elem.find("Name")
+            if name_elem is None or not name_elem.text:
+                continue
+
+            universe_id = self._get_id_from_attrib(universe_elem.attrib)
+            designation_elem = universe_elem.find("Designation")
+            designation = designation_elem.text if designation_elem is not None else None
+
+            universes.append(Universe(name_elem.text, universe_id, designation))
+
+        return universes
+
+    def _parse_urls_element(self, urls_element: ET.Element | None) -> list[Links] | None:
+        """Parse URLs element into list of Links objects.
+
+        Args:
+            urls_element: The URLs XML element.
+
+        Returns:
+            List of Links if found, None otherwise.
+
+        """
+        if urls_element is None:
+            return None
+
+        links = []
+        for url_elem in urls_element.findall("URL"):
+            if url_elem.text:
+                is_primary = url_elem.attrib.get("primary", "").lower() == "true"
+                links.append(Links(url_elem.text, is_primary))
+
+        return links or None
+
+    def _parse_credits_element(self, credits_element: ET.Element | None) -> list[Credit] | None:
+        """Parse Credits element into list of Credit objects.
+
+        Args:
+            credits_element: The Credits XML element.
+
+        Returns:
+            List of Credit objects if found, None otherwise.
+
+        """
+        if credits_element is None:
+            return None
+
+        credits_ = []
+        for credit_elem in credits_element.findall("Credit"):
+            creator_elem = credit_elem.find("Creator")
+            if creator_elem is None or not creator_elem.text:
+                continue
+
+            # Parse roles
+            roles = []
+            roles_elem = credit_elem.find("Roles")
+            if roles_elem is not None:
+                for role_elem in roles_elem.findall("Role"):
+                    if role_elem.text:
+                        role_id = self._get_id_from_attrib(role_elem.attrib)
+                        roles.append(Role(role_elem.text, role_id))
+
+            creator_id = self._get_id_from_attrib(creator_elem.attrib)
+            credits_.append(Credit(creator_elem.text, roles, creator_id))
+
+        return credits_ or None
 
     def _convert_metadata_to_xml(  # noqa: C901,PLR0912
         self, metadata: Metadata, xml_bytes: bytes | None = None
@@ -638,7 +933,7 @@ class MetronInfo(BaseMetadataHandler):
         ET.indent(root)
         return ET.ElementTree(root)
 
-    def _convert_xml_to_metadata(self, tree: ET.ElementTree) -> Metadata:  # noqa: PLR0915, C901
+    def _convert_xml_to_metadata(self, tree: ET.ElementTree) -> Metadata:
         """Convert an XML ElementTree to a Metadata object.
 
         This method parses the provided XML ElementTree and converts it into a Metadata object representation.
@@ -682,217 +977,20 @@ class MetronInfo(BaseMetadataHandler):
             "Universes": root.find("Universes"),
         }
 
-        def parse_gtin(gtin_element: ET.Element) -> GTIN | None:
-            """Parse GTIN element into GTIN object."""
-            if gtin_element is None:
-                return None
-
-            gtin = GTIN()
-            gtin_mapping = {"UPC": "upc", "ISBN": "isbn"}
-            found_data = False
-
-            for item in gtin_element:
-                if item.text and item.tag in gtin_mapping:
-                    try:
-                        setattr(gtin, gtin_mapping[item.tag], int(item.text))
-                        found_data = True
-                    except ValueError:
-                        continue
-
-            return gtin if found_data else None
-
-        def parse_info_sources(ids_element: ET.Element) -> list[InfoSources] | None:
-            """Parse IDS element into list of InfoSources."""
-            if ids_element is None:
-                return None
-
-            sources = []
-            for child in ids_element.findall("ID"):
-                source_name = child.attrib.get("source")
-                if not MetronInfo._is_valid_info_source(source_name) or not child.text:
-                    continue
-
-                source_id = int(child.text) if child.text.isdigit() else child.text
-                is_primary = child.attrib.get("primary", "").lower() == "true"
-                sources.append(InfoSources(source_name, source_id, is_primary))
-
-            return sources or None
-
-        def parse_basic_list(element: ET.Element) -> list[Basic]:
-            """Parse element containing Basic objects."""
-            if element is None:
-                return []
-            return [
-                Basic(item.text, self._get_id_from_attrib(item.attrib))
-                for item in element
-                if item.text
-            ]
-
-        def parse_prices(prices_element: ET.Element) -> list[Price]:
-            """Parse Prices element into list of Price objects."""
-            if prices_element is None:
-                return []
-
-            prices = []
-            for item in prices_element:
-                if item.text:
-                    try:
-                        amount = Decimal(item.text)
-                        country = item.attrib.get("country", DEFAULT_COUNTRY)
-                        prices.append(Price(amount, country))
-                    except (ValueError, TypeError):
-                        continue
-            return prices
-
-        def parse_publisher(publisher_element: ET.Element) -> Publisher | None:
-            """Parse Publisher element into Publisher object."""
-            if publisher_element is None:
-                return None
-
-            publisher_name = None
-            imprint = None
-
-            name_elem = publisher_element.find("Name")
-            if name_elem is not None:
-                publisher_name = name_elem.text
-
-            imprint_elem = publisher_element.find("Imprint")
-            if imprint_elem is not None and imprint_elem.text:
-                imprint = Basic(imprint_elem.text, self._get_id_from_attrib(imprint_elem.attrib))
-
-            publisher_id = self._get_id_from_attrib(publisher_element.attrib)
-            return Publisher(publisher_name, publisher_id, imprint)
-
-        def parse_series(series_element: ET.Element) -> Series | None:
-            """Parse Series element into Series object."""
-            if series_element is None:
-                return None
-
-            series = Series("None")
-            series.id_ = self._get_id_from_attrib(series_element.attrib)
-            series.language = series_element.attrib.get("lang")
-
-            # Define mapping for simple text elements
-            text_mappings = {"Name": "name", "SortName": "sort_name", "Format": "format"}
-
-            # Define mapping for integer elements
-            int_mappings = {
-                "Volume": "volume",
-                "StartYear": "start_year",
-                "IssueCount": "issue_count",
-                "VolumeCount": "volume_count",
-            }
-
-            for child in series_element:
-                if child.tag in text_mappings:
-                    setattr(series, text_mappings[child.tag], child.text)
-                elif child.tag in int_mappings:
-                    if parsed_int := self._parse_int(child.text):
-                        setattr(series, int_mappings[child.tag], parsed_int)
-                elif child.tag == "AlternativeNames":
-                    alt_names = []
-                    for name_elem in child.findall("AlternativeName"):
-                        if name_elem.text:
-                            alt_name = AlternativeNames(
-                                name_elem.text,
-                                self._get_id_from_attrib(name_elem.attrib),
-                                name_elem.attrib.get("lang"),
-                            )
-                            alt_names.append(alt_name)
-                    series.alternative_names = alt_names
-
-            return series
-
-        def parse_arcs(arcs_element: ET.Element) -> list[Arc]:
-            """Parse Arcs element into list of Arc objects."""
-            if arcs_element is None:
-                return []
-
-            arcs = []
-            for arc_elem in arcs_element.findall("Arc"):
-                name_elem = arc_elem.find("Name")
-                if name_elem is None or not name_elem.text:
-                    continue
-
-                arc_id = self._get_id_from_attrib(arc_elem.attrib)
-                number_elem = arc_elem.find("Number")
-                number = self._parse_int(number_elem.text) if number_elem is not None else None
-
-                arcs.append(Arc(name_elem.text, arc_id, number))
-
-            return arcs
-
-        def parse_universes(universes_element: ET.Element) -> list[Universe]:
-            """Parse Universes element into list of Universe objects."""
-            if universes_element is None:
-                return []
-
-            universes = []
-            for universe_elem in universes_element.findall("Universe"):
-                name_elem = universe_elem.find("Name")
-                if name_elem is None or not name_elem.text:
-                    continue
-
-                universe_id = self._get_id_from_attrib(universe_elem.attrib)
-                designation_elem = universe_elem.find("Designation")
-                designation = designation_elem.text if designation_elem is not None else None
-
-                universes.append(Universe(name_elem.text, universe_id, designation))
-
-            return universes
-
-        def parse_urls(urls_element: ET.Element) -> list[Links] | None:
-            """Parse URLs element into list of Links objects."""
-            if urls_element is None:
-                return None
-
-            links = []
-            for url_elem in urls_element.findall("URL"):
-                if url_elem.text:
-                    is_primary = url_elem.attrib.get("primary", "").lower() == "true"
-                    links.append(Links(url_elem.text, is_primary))
-
-            return links or None
-
-        def parse_credits(credits_element: ET.Element) -> list[Credit] | None:
-            """Parse Credits element into list of Credit objects."""
-            if credits_element is None:
-                return None
-
-            credits_ = []
-            for credit_elem in credits_element.findall("Credit"):
-                creator_elem = credit_elem.find("Creator")
-                if creator_elem is None or not creator_elem.text:
-                    continue
-
-                # Parse roles
-                roles = []
-                roles_elem = credit_elem.find("Roles")
-                if roles_elem is not None:
-                    for role_elem in roles_elem.findall("Role"):
-                        if role_elem.text:
-                            role_id = self._get_id_from_attrib(role_elem.attrib)
-                            roles.append(Role(role_elem.text, role_id))
-
-                creator_id = self._get_id_from_attrib(creator_elem.attrib)
-                credits_.append(Credit(creator_elem.text, roles, creator_id))
-
-            return credits_ or None
-
         # Build the metadata object using parsed data
         md = Metadata()
-        md.info_source = parse_info_sources(element_cache["IDS"])
-        md.publisher = parse_publisher(element_cache["Publisher"])
-        md.series = parse_series(element_cache["Series"])
+        md.info_source = self._parse_info_sources_element(element_cache["IDS"])
+        md.publisher = self._parse_publisher_element(element_cache["Publisher"])
+        md.series = self._parse_series_element(element_cache["Series"])
         md.collection_title = self._get_text_content(root, "CollectionTitle")
 
         # Handle issue number with IssueString
         issue_number = self._get_text_content(root, "Number")
         md.issue = IssueString(issue_number).as_string() if issue_number else None
 
-        md.stories = parse_basic_list(element_cache["Stories"])
+        md.stories = self._parse_basic_list_element(element_cache["Stories"])
         md.comments = self._get_text_content(root, "Summary")
-        md.prices = parse_prices(element_cache["Prices"])
+        md.prices = self._parse_prices_element(element_cache["Prices"])
         md.cover_date = self._parse_date(self._get_text_content(root, "CoverDate"))
         md.store_date = self._parse_date(self._get_text_content(root, "StoreDate"))
         md.page_count = self._parse_int(self._get_text_content(root, "PageCount"))
@@ -901,15 +999,15 @@ class MetronInfo(BaseMetadataHandler):
         notes_elem = element_cache["Notes"]
         md.notes = Notes(notes_elem.text) if notes_elem is not None and notes_elem.text else None
 
-        md.genres = parse_basic_list(element_cache["Genres"])
-        md.tags = parse_basic_list(element_cache["Tags"])
-        md.story_arcs = parse_arcs(element_cache["Arcs"])
-        md.characters = parse_basic_list(element_cache["Characters"])
-        md.teams = parse_basic_list(element_cache["Teams"])
-        md.universes = parse_universes(element_cache["Universes"])
-        md.locations = parse_basic_list(element_cache["Locations"])
-        md.reprints = parse_basic_list(element_cache["Reprints"])
-        md.gtin = parse_gtin(element_cache["GTIN"])
+        md.genres = self._parse_basic_list_element(element_cache["Genres"])
+        md.tags = self._parse_basic_list_element(element_cache["Tags"])
+        md.story_arcs = self._parse_arcs_element(element_cache["Arcs"])
+        md.characters = self._parse_basic_list_element(element_cache["Characters"])
+        md.teams = self._parse_basic_list_element(element_cache["Teams"])
+        md.universes = self._parse_universes_element(element_cache["Universes"])
+        md.locations = self._parse_basic_list_element(element_cache["Locations"])
+        md.reprints = self._parse_basic_list_element(element_cache["Reprints"])
+        md.gtin = self._parse_gtin_element(element_cache["GTIN"])
 
         # Handle age rating
         age_rating_elem = element_cache["AgeRating"]
@@ -919,7 +1017,7 @@ class MetronInfo(BaseMetadataHandler):
             else None
         )
 
-        md.web_link = parse_urls(element_cache["URLs"])
+        md.web_link = self._parse_urls_element(element_cache["URLs"])
 
         # Handle last modified
         modified_elem = element_cache["LastModified"]
@@ -927,7 +1025,7 @@ class MetronInfo(BaseMetadataHandler):
             self._parse_datetime(modified_elem.text) if modified_elem is not None else None
         )
 
-        md.credits = parse_credits(element_cache["Credits"])
+        md.credits = self._parse_credits_element(element_cache["Credits"])
         md.is_empty = False
 
         return md
