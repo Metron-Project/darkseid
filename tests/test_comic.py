@@ -1112,17 +1112,17 @@ def test_reset_cache(sample_cbz_file):
 
         # Populate cache
         comic.get_number_of_pages()
-        assert comic._page_count is not None
+        assert comic._cache.page_count is not None
 
         # Reset cache
         comic._reset_cache()
 
         # Verify cache is cleared
-        assert comic._page_count is None
-        assert comic._page_list is None
-        assert comic._has_ci is None
-        assert comic._has_mi is None
-        assert comic._metadata is None
+        assert comic._cache.page_count is None
+        assert comic._cache.page_list is None
+        assert comic._cache.has_ci is None
+        assert comic._cache.has_mi is None
+        assert comic._cache.metadata is None
 
 
 # Test page validation
@@ -1174,13 +1174,13 @@ def test_validate_and_fix_page_list_mismatch(sample_cbz_file):
         comic = Comic(sample_cbz_file)
 
         # Create metadata with wrong page count
-        comic._metadata = Metadata()
-        comic._metadata.pages = [ImageMetadata()]  # Only 1 page in metadata
+        comic._cache.metadata = Metadata()
+        comic._cache.metadata.pages = [ImageMetadata()]  # Only 1 page in metadata
 
         comic._validate_and_fix_page_list()
 
         # Pages should be reset and default list created
-        assert len(comic._metadata.pages) == 2  # Should match actual page count
+        assert len(comic._cache.metadata.pages) == 2  # Should match actual page count
 
 
 def test_validate_and_fix_page_list_empty_pages(sample_cbz_file):
@@ -1193,10 +1193,10 @@ def test_validate_and_fix_page_list_empty_pages(sample_cbz_file):
         comic = Comic(sample_cbz_file)
 
         # Create metadata with empty pages
-        comic._metadata = Metadata()
-        comic._metadata.pages = []
+        comic._cache.metadata = Metadata()
+        comic._cache.metadata.pages = []
 
-        with patch.object(comic._metadata, "set_default_page_list") as mock_set_default:
+        with patch.object(comic._cache.metadata, "set_default_page_list") as mock_set_default:
             comic._validate_and_fix_page_list()
             mock_set_default.assert_called_once_with(2)
 
