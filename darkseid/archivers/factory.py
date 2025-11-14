@@ -20,8 +20,8 @@ Examples:
     >>> print(files)  # ['page_01.jpg', 'page_02.jpg', ...]
 
 Supported Formats:
-    - ZIP files (.zip, .cbz)
-    - RAR files (.rar, .cbr)
+    - ZIP files (.cbz)
+    - RAR files (.cbr)
     - Unknown formats (fallback handling)
 
 Note:
@@ -181,7 +181,7 @@ class UnknownArchiver(Archiver):
             bool: Always False, indicating that copying is not supported for unknown archive types.
 
         Examples:
-            >>> source = ZipArchiver(Path("source.zip"))
+            >>> source = ZipArchiver(Path("source.cbz"))
             >>> target = UnknownArchiver(Path("target.unknown"))
             >>> target.copy_from_archive(source)
             False
@@ -219,7 +219,7 @@ class ArchiverFactory:
         >>> from pathlib import Path
         >>>
         >>> # Create archiver for ZIP file
-        >>> zip_archiver = ArchiverFactory.create_archiver(Path("archive.zip"))
+        >>> zip_archiver = ArchiverFactory.create_archiver(Path("archive.cbz"))
         >>> print(zip_archiver.name())  # "Zip"
         >>>
         >>> # Create archiver for RAR file
@@ -338,16 +338,16 @@ class ArchiverFactory:
 
         Returns:
             list[str]: Sorted list of supported file extensions, including the dot
-                (e.g., ['.cbr', '.cbz', '.rar', '.zip']).
+                (e.g., ['.cbr', '.cbz', '.rar']).
 
         Examples:
             >>> extensions = ArchiverFactory.get_supported_extensions()
-            >>> print(extensions)  # ['.cbr', '.cbz', '.rar', '.zip']
+            >>> print(extensions)  # ['.cbr', '.cbz', '.rar'']
             >>>
             >>> # After registering new types
             >>> ArchiverFactory.register_archiver(".7z", SevenZipArchiver)
             >>> extensions = ArchiverFactory.get_supported_extensions()
-            >>> print(extensions)  # ['.7z', '.cbr', '.cbz', '.rar', '.zip']
+            >>> print(extensions)  # ['.cb7', '.cbr', '.cbz', '.rar'']
 
         """
         return sorted(cls._ARCHIVER_MAP.keys())
@@ -365,7 +365,7 @@ class ArchiverFactory:
         Examples:
             >>> from pathlib import Path
             >>>
-            >>> ArchiverFactory.is_supported(Path("archive.zip"))  # True
+            >>> ArchiverFactory.is_supported(Path("archive.cbz"))  # True
             >>> ArchiverFactory.is_supported(Path("archive.7z"))   # False
             >>>
             >>> # After registering .7z support
@@ -397,9 +397,7 @@ class ArchiverFactory:
 
         """
         base_map = {
-            ".zip": ZipArchiver,
             ".cbz": ZipArchiver,
-            ".rar": RarArchiver,
             ".cbr": RarArchiver,
             ".cbt": TarArchiver,
         }

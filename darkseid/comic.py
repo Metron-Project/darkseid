@@ -1272,7 +1272,7 @@ class Comic:
             Large archives may require significant time and disk space for conversion.
 
         """
-        if self._path.suffix.lower() in {".cbz", ".zip"}:
+        if self._path.suffix.lower() in {".cbz"}:
             logger.info("Archive %s is already in ZIP format", self._path)
             return True
 

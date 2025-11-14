@@ -284,7 +284,7 @@ class PdfArchiver(Archiver):
 
         Examples:
             >>> pdf_archive = PdfArchiver(Path("target.pdf"))
-            >>> zip_archive = ZipArchiver(Path("source.zip"))
+            >>> zip_archive = ZipArchiver(Path("source.cbz"))
             >>> success = pdf_archive.copy_from_archive(zip_archive)
             >>> print(f"Copy successful: {success}")  # Will print: Copy successful: False
 

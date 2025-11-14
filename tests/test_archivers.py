@@ -74,7 +74,7 @@ def sample_tar_path(temp_dir):
 @pytest.fixture
 def sample_zip_path(temp_dir):
     """Create a sample ZIP file for testing."""
-    zip_path = temp_dir / "test.zip"
+    zip_path = temp_dir / "test.cbz"
     with zipfile.ZipFile(zip_path, "w") as zf:
         zf.writestr("file1.txt", "content1")
         zf.writestr("file2.jpg", b"fake_image_data")
@@ -85,7 +85,7 @@ def sample_zip_path(temp_dir):
 @pytest.fixture
 def empty_zip_path(temp_dir):
     """Create an empty ZIP file for testing."""
-    zip_path = temp_dir / "empty.zip"
+    zip_path = temp_dir / "empty.cbz"
     with zipfile.ZipFile(zip_path, "w") as _:
         pass
     return zip_path
@@ -120,20 +120,18 @@ def sample_pdf_path(temp_dir):
 @pytest.fixture
 def nonexistent_path(temp_dir):
     """Return path to a nonexistent file."""
-    return temp_dir / "nonexistent.zip"
+    return temp_dir / "nonexistent.cbz"
 
 
 # Test data for parametrized tests
 ARCHIVE_TEST_DATA = [
-    ("zip", ZipArchiver, "test.zip"),
+    ("zip", ZipArchiver, "test.cbz"),
     ("tar", TarArchiver, "test.cbt"),
     ("seven_zip", SevenZipArchiver, "test.cb7"),
 ]
 
 FACTORY_EXTENSION_DATA = [
-    (".zip", ZipArchiver),
     (".cbz", ZipArchiver),
-    (".rar", RarArchiver),
     (".cbr", RarArchiver),
     (".cbt", TarArchiver),
     (".xyz", UnknownArchiver),
@@ -141,7 +139,7 @@ FACTORY_EXTENSION_DATA = [
 ]
 
 READ_WRITE_ARCHIVE_DATA = [
-    ("zip", ZipArchiver, "test.zip"),
+    ("zip", ZipArchiver, "test.cbz"),
     ("tar", TarArchiver, "test.cbt"),
     ("seven_zip", SevenZipArchiver, "test.cb7"),
 ]
@@ -157,7 +155,7 @@ FILE_TEST_DATA = [
 def test_archiver_is_abstract():
     """Test that Archiver cannot be instantiated directly."""
     with pytest.raises(TypeError):
-        Archiver(Path("test.zip"))
+        Archiver(Path("test.cbz"))
 
 
 @pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), ARCHIVE_TEST_DATA)
@@ -457,7 +455,7 @@ def test_copy_from_archive(temp_dir, archive_type, archiver_class, filename, req
 # Specific ZIP tests
 def test_zip_read_corrupted_archive(temp_dir):
     """Test reading from corrupted ZIP file raises ArchiverReadError."""
-    corrupted_path = temp_dir / "corrupted.zip"
+    corrupted_path = temp_dir / "corrupted.cbz"
     corrupted_path.write_text("not a zip file")
 
     archiver = ZipArchiver(corrupted_path)
@@ -467,7 +465,7 @@ def test_zip_read_corrupted_archive(temp_dir):
 
 def test_zip_write_file_image_compression(temp_dir):
     """Test that image files use stored compression."""
-    zip_path = temp_dir / "compression_test.zip"
+    zip_path = temp_dir / "compression_test.cbz"
     archiver = ZipArchiver(zip_path)
 
     # Write image file (should use ZIP_STORED)
@@ -488,7 +486,7 @@ def test_zip_get_filename_list_empty(empty_zip_path):
 
 def test_zip_get_filename_list_corrupted(temp_dir):
     """Test getting filename list from corrupted ZIP returns empty list."""
-    corrupted_path = temp_dir / "corrupted.zip"
+    corrupted_path = temp_dir / "corrupted.cbz"
     corrupted_path.write_text("not a zip file")
 
     archiver = ZipArchiver(corrupted_path)
@@ -680,7 +678,7 @@ def test_factory_create_archiver(temp_dir, extension, expected_class):
     assert archiver.path == path
 
 
-@pytest.mark.parametrize("extension", [".ZIP", ".CBZ", ".RAR", ".CBR"])
+@pytest.mark.parametrize("extension", [".CBZ", ".CBR"])
 def test_factory_case_insensitive(temp_dir, extension):
     """Test factory is case-insensitive for extensions."""
     path = temp_dir / f"test{extension}"
@@ -722,7 +720,7 @@ def test_factory_register_new_archiver(temp_dir):
 def test_factory_get_supported_extensions():
     """Test getting list of supported extensions."""
     extensions = ArchiverFactory.get_supported_extensions()
-    expected_extensions = [".zip", ".cbz", ".rar", ".cbr"]
+    expected_extensions = [".cbz", ".cbr"]
 
     for ext in expected_extensions:
         assert ext in extensions
@@ -732,13 +730,13 @@ def test_factory_get_supported_extensions():
 def test_zip_to_zip_copy_integration(temp_dir):
     """Integration test: copy from one ZIP to another."""
     # Create source ZIP
-    source_path = temp_dir / "source.zip"
+    source_path = temp_dir / "source.cbz"
     with zipfile.ZipFile(source_path, "w") as zf:
         zf.writestr("file1.txt", "content1")
         zf.writestr("file2.txt", "content2")
 
     # Create destination archiver
-    dest_path = temp_dir / "dest.zip"
+    dest_path = temp_dir / "dest.cbz"
     source_archiver = ZipArchiver(source_path)
     dest_archiver = ZipArchiver(dest_path)
 
@@ -756,7 +754,7 @@ def test_zip_to_zip_copy_integration(temp_dir):
 def test_factory_integration(temp_dir):
     """Integration test: use factory to create and operate on archives."""
     # Create test ZIP
-    zip_path = temp_dir / "test.zip"
+    zip_path = temp_dir / "test.cbz"
     with zipfile.ZipFile(zip_path, "w") as zf:
         zf.writestr("test.txt", "factory test")
 
@@ -796,7 +794,7 @@ def test_context_manager_integration(temp_dir, archive_type, archiver_class, fil
 # Edge Cases and Error Conditions
 def test_zip_write_to_readonly_file(temp_dir):
     """Test writing to read-only ZIP file."""
-    zip_path = temp_dir / "readonly.zip"
+    zip_path = temp_dir / "readonly.cbz"
     zip_path.touch()
     zip_path.chmod(0o444)  # Read-only
 
@@ -808,7 +806,7 @@ def test_zip_write_to_readonly_file(temp_dir):
 
 def test_zip_large_file_handling(temp_dir):
     """Test handling large files in ZIP archives."""
-    zip_path = temp_dir / "large.zip"
+    zip_path = temp_dir / "large.cbz"
     archiver = ZipArchiver(zip_path)
 
     # Create large content (1MB)
@@ -830,7 +828,7 @@ def test_zip_large_file_handling(temp_dir):
 )
 def test_archiver_with_unicode_filenames(temp_dir, filename, content):
     """Test handling Unicode filenames in archives."""
-    zip_path = temp_dir / "unicode.zip"
+    zip_path = temp_dir / "unicode.cbz"
     archiver = ZipArchiver(zip_path)
 
     result = archiver.write_file(filename, content)
@@ -850,7 +848,7 @@ def test_archiver_with_unicode_filenames(temp_dir, filename, content):
 )
 def test_archiver_empty_data_handling(temp_dir, data_type, data, expected):
     """Test handling empty data in archives."""
-    zip_path = temp_dir / "empty_data.zip"
+    zip_path = temp_dir / "empty_data.cbz"
     archiver = ZipArchiver(zip_path)
 
     filename = f"empty_{data_type}.txt"

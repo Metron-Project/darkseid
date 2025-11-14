@@ -14,7 +14,7 @@ Examples:
     >>> from darkseid.archivers.zip import ZipArchiver
     >>>
     >>> # Create or open an archive
-    >>> with ZipArchiver(Path("example.zip")) as archive:
+    >>> with ZipArchiver(Path("example.cbz")) as archive:
     ...     # Write files to the archive
     ...     archive.write_file("hello.txt", "Hello, World!")
     ...     archive.write_file("data.json", '{"key": "value"}')
@@ -29,8 +29,8 @@ Examples:
 
     Copying between archives:
 
-    >>> with ZipArchiver(Path("source.zip")) as source:
-    ...     with ZipArchiver(Path("destination.zip")) as dest:
+    >>> with ZipArchiver(Path("source.cbz")) as source:
+    ...     with ZipArchiver(Path("destination.cbz")) as dest:
     ...         dest.copy_from_archive(source)
 
 Attributes:
@@ -186,10 +186,10 @@ class Archiver(ABC):
             >>> from pathlib import Path
             >>>
             >>> # For existing archives
-            >>> archiver = MyArchiver(Path("existing.zip"))
+            >>> archiver = MyArchiver(Path("existing.cbz"))
             >>>
             >>> # For new archives to be created
-            >>> archiver = MyArchiver(Path("new_archive.zip"))
+            >>> archiver = MyArchiver(Path("new_archive.cbz"))
 
         """
         self._path = path
@@ -245,8 +245,8 @@ class Archiver(ABC):
             The Path object representing the archive file location.
 
         Examples:
-            >>> archiver = MyArchiver(Path("example.zip"))
-            >>> print(archiver.path)  # Output: example.zip
+            >>> archiver = MyArchiver(Path("example.cbz"))
+            >>> print(archiver.path)  # Output: example.cbz
 
         """
         return self._path
@@ -426,13 +426,13 @@ class Archiver(ABC):
 
         Examples:
             >>> # Copy from ZIP to 7Z
-            >>> with ZipArchiver(Path("source.zip")) as source:
+            >>> with ZipArchiver(Path("source.cbz")) as source:
             ...     with SevenZipArchiver(Path("destination.7z")) as dest:
             ...         success = dest.copy_from_archive(source)
             >>>
             >>> # Merge two archives
-            >>> with ZipArchiver(Path("archive1.zip")) as arch1:
-            ...     with ZipArchiver(Path("archive2.zip")) as arch2:
+            >>> with ZipArchiver(Path("archive1.cbz")) as arch1:
+            ...     with ZipArchiver(Path("archive2.cbz")) as arch2:
             ...         success = arch2.copy_from_archive(arch1)
 
         Note:
@@ -451,7 +451,7 @@ class Archiver(ABC):
         any necessary resources will be acquired.
 
         Examples:
-            >>> with MyArchiver(Path("archive.zip")) as archive:
+            >>> with MyArchiver(Path("archive.cbz")) as archive:
             ...     content = archive.read_file("file.txt")
             ...     # Archive is automatically closed when exiting the block
 
