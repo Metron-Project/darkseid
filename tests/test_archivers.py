@@ -892,15 +892,17 @@ def test_pdf_read_page_success(sample_pdf_path, page_file, page_index):
 
 @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
 def test_pdf_read_invalid_page_format(sample_pdf_path):
-    """Test reading with invalid page filename format raises error."""
+    """Test reading with invalid filenames raises appropriate errors."""
     archiver = PdfArchiver(sample_pdf_path)
 
-    with pytest.raises(ArchiverReadError, match="Invalid page filename format"):
+    # Files not matching page pattern are treated as embedded files
+    with pytest.raises(ArchiverReadError, match="Embedded file not found"):
         archiver.read_file("invalid.png")
 
-    with pytest.raises(ArchiverReadError, match="Invalid page filename format"):
+    with pytest.raises(ArchiverReadError, match="Embedded file not found"):
         archiver.read_file("page_001.jpg")
 
+    # Invalid page number in page pattern raises format error
     with pytest.raises(ArchiverReadError, match="Invalid page filename format"):
         archiver.read_file("page_abc.png")
 
@@ -933,26 +935,34 @@ def test_pdf_read_invalid_page_number(sample_pdf_path):
     ],
 )
 def test_pdf_readonly_operations(sample_pdf_path, operation):
-    """Test that PDF operations return False (read-only)."""
+    """Test that PDF page operations are blocked but metadata operations work."""
     archiver = PdfArchiver(sample_pdf_path)
 
-    result = True
+    result = None
 
     if operation == "write_file":
-        result = archiver.write_file("test.png", b"data")
+        # Page files should fail
+        result = archiver.write_file("page_001.png", b"data")
+        assert result is False, "Writing to page files should fail"
+        # But metadata files should succeed
+        result = archiver.write_file("ComicInfo.xml", b"<ComicInfo/>")
+        assert result is True, "Writing metadata files should succeed"
     elif operation == "remove_files":
+        # Page files should be protected (returns True but doesn't remove)
         result = archiver.remove_files(["page_001.png"])
+        assert result is True, "Remove returns True even for page files"
+        assert "page_001.png" in archiver.get_filename_list(), "Page should still exist"
     elif operation == "copy_from_archive":
+        # copy_from_archive is not supported for PDFs
         result = archiver.copy_from_archive(Mock())
-
-    assert result is False
+        assert result is False, "copy_from_archive should fail"
 
 
 @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
 def test_pdf_is_write_operation_expected(sample_pdf_path):
-    """Test that PDF archiver reports write operations not expected."""
+    """Test that PDF archiver supports write operations for metadata."""
     archiver = PdfArchiver(sample_pdf_path)
-    assert archiver.is_write_operation_expected() is False
+    assert archiver.is_write_operation_expected() is True
 
 
 @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
@@ -970,6 +980,125 @@ def test_pdf_test_invalid(temp_dir):
 
     archiver = PdfArchiver(invalid_pdf)
     assert archiver.test() is False
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_write_metadata(sample_pdf_path):
+    """Test writing metadata files to PDF."""
+    archiver = PdfArchiver(sample_pdf_path)
+
+    # Write ComicInfo.xml
+    xml_data = b"<ComicInfo><Title>Test</Title></ComicInfo>"
+    result = archiver.write_file("ComicInfo.xml", xml_data)
+    assert result is True, "Writing ComicInfo.xml should succeed"
+
+    # Verify it appears in file list
+    files = archiver.get_filename_list()
+    assert "ComicInfo.xml" in files, "ComicInfo.xml should be in file list"
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_read_metadata(sample_pdf_path):
+    """Test reading metadata files from PDF."""
+    archiver = PdfArchiver(sample_pdf_path)
+
+    # Write metadata
+    xml_data = b"<ComicInfo><Title>Test Comic</Title></ComicInfo>"
+    archiver.write_file("ComicInfo.xml", xml_data)
+
+    # Read it back
+    read_data = archiver.read_file("ComicInfo.xml")
+    assert read_data == xml_data, "Read data should match written data"
+    assert b"Test Comic" in read_data, "Should contain expected content"
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_update_metadata(sample_pdf_path):
+    """Test updating existing metadata in PDF."""
+    archiver = PdfArchiver(sample_pdf_path)
+
+    # Write initial metadata
+    initial_data = b"<ComicInfo><Title>Original</Title></ComicInfo>"
+    archiver.write_file("MetronInfo.xml", initial_data)
+
+    # Update with new data
+    updated_data = b"<ComicInfo><Title>Updated</Title></ComicInfo>"
+    result = archiver.write_file("MetronInfo.xml", updated_data)
+    assert result is True, "Update should succeed"
+
+    # Verify updated content
+    read_data = archiver.read_file("MetronInfo.xml")
+    assert read_data == updated_data, "Should have updated data"
+    assert b"Updated" in read_data, "Should contain new content"
+    assert b"Original" not in read_data, "Should not contain old content"
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_remove_metadata(sample_pdf_path):
+    """Test removing metadata files from PDF."""
+    archiver = PdfArchiver(sample_pdf_path)
+
+    # Write metadata files
+    archiver.write_file("ComicInfo.xml", b"<ComicInfo/>")
+    archiver.write_file("MetronInfo.xml", b"<MetronInfo/>")
+
+    # Verify both exist
+    files = archiver.get_filename_list()
+    assert "ComicInfo.xml" in files
+    assert "MetronInfo.xml" in files
+
+    # Remove one
+    result = archiver.remove_files(["MetronInfo.xml"])
+    assert result is True, "Remove should succeed"
+
+    # Verify it's gone
+    files = archiver.get_filename_list()
+    assert "MetronInfo.xml" not in files, "MetronInfo.xml should be removed"
+    assert "ComicInfo.xml" in files, "ComicInfo.xml should still exist"
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_metadata_persistence(sample_pdf_path):
+    """Test that metadata persists across archiver instances."""
+    # Write metadata with first instance
+    archiver1 = PdfArchiver(sample_pdf_path)
+    xml_data = b"<ComicInfo><Title>Persistent</Title></ComicInfo>"
+    archiver1.write_file("ComicInfo.xml", xml_data)
+
+    # Create new instance and verify data persists
+    archiver2 = PdfArchiver(sample_pdf_path)
+    files = archiver2.get_filename_list()
+    assert "ComicInfo.xml" in files, "Metadata should persist"
+
+    read_data = archiver2.read_file("ComicInfo.xml")
+    assert read_data == xml_data, "Data should be identical"
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_mixed_file_list(sample_pdf_path):
+    """Test that file list includes both pages and metadata."""
+    archiver = PdfArchiver(sample_pdf_path)
+
+    # Get initial page count
+    initial_files = archiver.get_filename_list()
+    page_count = len(initial_files)
+
+    # Add metadata
+    archiver.write_file("ComicInfo.xml", b"<ComicInfo/>")
+    archiver.write_file("MetronInfo.xml", b"<MetronInfo/>")
+
+    # Verify file list includes both pages and metadata
+    files = archiver.get_filename_list()
+    assert len(files) == page_count + 2, "Should have pages + 2 metadata files"
+
+    # Pages should come first
+    for i in range(page_count):
+        assert files[i].startswith("page_"), f"First {page_count} should be pages"
+
+    # Metadata should be sorted alphabetically after pages
+    metadata_files = files[page_count:]
+    assert "ComicInfo.xml" in metadata_files
+    assert "MetronInfo.xml" in metadata_files
 
 
 @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")

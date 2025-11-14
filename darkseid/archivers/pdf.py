@@ -1,20 +1,28 @@
 """PDF document implementation.
 
-This module provides a read-only interface for working with PDF documents.
-PDF files are treated as archives where each page is rendered as a PNG image.
+This module provides an interface for working with PDF documents as archives.
+PDF files are treated as archives where:
+- Each page is rendered as a PNG image (page_001.png, page_002.png, etc.)
+- Metadata files (ComicInfo.xml, MetronInfo.xml) can be embedded as attachments
+
 The implementation uses pymupdf (fitz) for PDF processing.
 
 Examples:
     >>> from pathlib import Path
     >>> archiver = PdfArchiver(Path("example.pdf"))
     >>> files = archiver.get_filename_list()
-    >>> # Returns: ['page_001.png', 'page_002.png', ...]
+    >>> # Returns: ['page_001.png', 'page_002.png', ..., 'ComicInfo.xml']
     >>> page_data = archiver.read_file("page_001.png")
     >>> # Returns PNG image data for first page
+    >>> metadata = archiver.read_file("ComicInfo.xml")
+    >>> # Returns ComicInfo XML data
+    >>> archiver.write_file("MetronInfo.xml", xml_data)
+    >>> # Embeds MetronInfo XML as attachment
 
 Note:
-    All write operations (write_file, remove_files, copy_from_archive) will
-    return False and log warnings since PDF archives are read-only.
+    Pages are read-only (virtual PNG files rendered from PDF pages).
+    Only embedded files (like ComicInfo.xml, MetronInfo.xml) can be written/removed.
+    copy_from_archive() is not supported for PDFs.
 
 """
 
@@ -41,21 +49,24 @@ logger = logging.getLogger(__name__)
 
 
 class PdfArchiver(Archiver):
-    """A read-only archiver for PDF files.
+    """An archiver for PDF files with support for embedded metadata.
 
-    This class provides an interface for reading pages from PDF documents.
-    Each page is treated as a separate PNG image file within the archive.
+    This class provides an interface for reading pages from PDF documents
+    and managing embedded metadata files. Each page is treated as a separate
+    PNG image file within the archive, and metadata files (like ComicInfo.xml
+    and MetronInfo.xml) can be embedded as PDF attachments.
+
     Pages are numbered sequentially with zero-padding (page_001.png, page_002.png, etc.).
 
     The implementation uses pymupdf (fitz) for PDF rendering and processing.
-    Write operations are not supported - PDFs are treated as read-only archives.
 
     Attributes:
         path (Path): The filesystem path to the PDF file.
 
     Note:
-        PDF files are read-only in this implementation. Each page is rendered
-        to PNG format at 150 DPI by default when read.
+        - PDF pages are read-only virtual files rendered at 150 DPI
+        - Metadata files can be embedded, read, and removed as PDF attachments
+        - copy_from_archive() is not supported for PDFs
 
     """
 
@@ -77,138 +88,244 @@ class PdfArchiver(Archiver):
         """Check if write operations are supported.
 
         Returns:
-            False: PDF files are always read-only in this implementation.
+            True: PDF files support writing embedded files (metadata).
 
         Note:
             This method is used by the parent class to determine if write
-            operations should be attempted. For PDF files, this always
-            returns False to prevent unnecessary operation attempts.
+            operations should be attempted. For PDF files, this returns True
+            to allow embedding metadata files like ComicInfo.xml and MetronInfo.xml.
+            Note that PDF pages themselves remain read-only virtual files.
 
         """
-        return False
+        return True
 
-    def read_file(self, archive_file: str) -> bytes:
-        """Read a page from the PDF as PNG image data.
+    def read_file(self, archive_file: str) -> bytes:  # noqa: PLR0915
+        """Read a file from the PDF (page or embedded file).
 
         Args:
-            archive_file: The virtual filename within the archive. Expected format
-                         is 'page_NNN.png' where NNN is a zero-padded page number.
-                         Page numbers start from 001.
+            archive_file: The filename within the archive. Can be:
+                         - Page file: 'page_NNN.png' (zero-padded page number, starts at 001)
+                         - Embedded file: e.g., 'ComicInfo.xml', 'MetronInfo.xml'
 
         Returns:
-            PNG image data for the requested page as bytes.
+            File data as bytes:
+                - For page files: PNG image data rendered at 150 DPI
+                - For embedded files: Raw file content
 
         Raises:
-            ArchiverReadError: If the page cannot be read due to:
+            ArchiverReadError: If the file cannot be read due to:
 
                 - Invalid page filename format
                 - Page number out of range
+                - File not found in archive
                 - Corrupt or invalid PDF file
                 - PDF processing errors
                 - Other I/O errors
 
         Examples:
             >>> archiver = PdfArchiver(Path("document.pdf"))
+            >>> # Read a page
             >>> image_data = archiver.read_file("page_001.png")
-            >>> with open("page1.png", "wb") as f:
-            ...     f.write(image_data)
+            >>> # Read embedded metadata
+            >>> metadata = archiver.read_file("ComicInfo.xml")
 
         """
-        # Extract page number from filename (e.g., "page_001.png" -> 0)
-        try:
-            if not archive_file.startswith("page_") or not archive_file.endswith(".png"):
+        # Check if this is a page file (virtual PNG) or an embedded file
+        if archive_file.startswith("page_") and archive_file.endswith(".png"):
+            # Handle page rendering
+            try:
+                page_str = archive_file[5:-4]  # Extract number from "page_NNN.png"
+                page_index = int(page_str) - 1  # Convert to 0-based index
+
+                if page_index < 0:
+                    msg = f"Invalid page number: {page_str}"
+                    raise ArchiverReadError(msg)
+
+            except ValueError as e:
                 msg = f"Invalid page filename format: {archive_file}"
-                raise ArchiverReadError(msg)
+                raise ArchiverReadError(msg) from e
 
-            page_str = archive_file[5:-4]  # Extract number from "page_NNN.png"
-            page_index = int(page_str) - 1  # Convert to 0-based index
+            try:
+                doc = fitz.open(self.path)
+                try:
+                    if page_index >= len(doc):
+                        msg = f"Page {page_index + 1} not found (document has {len(doc)} pages)"
+                        raise ArchiverReadError(msg)
 
-            if page_index < 0:
-                msg = f"Invalid page number: {page_str}"
-                raise ArchiverReadError(msg)
+                    page = doc[page_index]
+                    # Render page to PNG at 150 DPI (zoom factor of 2.0)
+                    # mat = fitz.Matrix(2.0, 2.0) produces 150 DPI for typical 72 DPI PDFs
+                    mat = fitz.Matrix(2.0, 2.0)
+                    pix = page.get_pixmap(matrix=mat)
+                    return pix.tobytes("png")
+                finally:
+                    doc.close()
 
-        except ValueError as e:
-            msg = f"Invalid page filename format: {archive_file}"
-            raise ArchiverReadError(msg) from e
+            except fitz.FileDataError as e:
+                self._handle_error("read", archive_file, e)
+                msg = f"Corrupt or invalid PDF file: {e}"
+                raise ArchiverReadError(msg) from e
+            except Exception as e:
+                self._handle_error("read", archive_file, e)
+                msg = f"Failed to read page from PDF: {e}"
+                raise ArchiverReadError(msg) from e
+        else:
+            # Handle embedded file reading
+            try:
+                doc = fitz.open(self.path)
+                try:
+                    # Check if the embedded file exists
+                    if archive_file not in doc.embfile_names():
+                        msg = f"Embedded file not found: {archive_file}"
+                        raise ArchiverReadError(msg)
+
+                    # Get the embedded file content
+                    return doc.embfile_get(archive_file)
+                finally:
+                    doc.close()
+
+            except fitz.FileDataError as e:
+                self._handle_error("read", archive_file, e)
+                msg = f"Corrupt or invalid PDF file: {e}"
+                raise ArchiverReadError(msg) from e
+            except Exception as e:
+                self._handle_error("read", archive_file, e)
+                msg = f"Failed to read embedded file from PDF: {e}"
+                raise ArchiverReadError(msg) from e
+
+    def write_file(self, archive_file: str, data: str | bytes) -> bool:
+        """Write an embedded file to the PDF.
+
+        Args:
+            archive_file: The filename for the embedded file (e.g., 'ComicInfo.xml').
+                         Cannot be a page file (page_NNN.png) as pages are read-only.
+            data: The data to embed (string or bytes).
+
+        Returns:
+            True if the file was successfully embedded, False otherwise.
+
+        Note:
+            - Only embedded files can be written (not PDF pages)
+            - If the embedded file already exists, it will be replaced
+            - String data is automatically encoded as UTF-8
+            - Commonly used for ComicInfo.xml and MetronInfo.xml metadata
+
+        Warning:
+            Attempting to write to a page file (page_NNN.png) will fail
+            and log a warning, as pages are read-only virtual files.
+
+        Examples:
+            >>> archiver = PdfArchiver(Path("comic.pdf"))
+            >>> xml_data = '<?xml version="1.0"?><ComicInfo>...</ComicInfo>'
+            >>> success = archiver.write_file("ComicInfo.xml", xml_data)
+
+        """
+        # Prevent writing to page files (they are virtual/read-only)
+        if archive_file.startswith("page_") and archive_file.endswith(".png"):
+            logger.warning("Cannot write to virtual page file: %s", archive_file)
+            return False
+
+        # Convert string data to bytes if needed
+        if isinstance(data, str):
+            data = data.encode("utf-8")
 
         try:
             doc = fitz.open(self.path)
             try:
-                if page_index >= len(doc):
-                    msg = f"Page {page_index + 1} not found (document has {len(doc)} pages)"
-                    raise ArchiverReadError(msg)
+                # Remove existing embedded file if present
+                if archive_file in doc.embfile_names():
+                    doc.embfile_del(archive_file)
 
-                page = doc[page_index]
-                # Render page to PNG at 150 DPI (zoom factor of 2.0)
-                # mat = fitz.Matrix(2.0, 2.0) produces 150 DPI for typical 72 DPI PDFs
-                mat = fitz.Matrix(2.0, 2.0)
-                pix = page.get_pixmap(matrix=mat)
-                return pix.tobytes("png")
+                # Add the new embedded file
+                doc.embfile_add(archive_file, data)
+
+                # Save the document (incremental save to preserve existing content)
+                doc.save(doc.name, incremental=True, encryption=fitz.PDF_ENCRYPT_KEEP)
             finally:
                 doc.close()
 
-        except fitz.FileDataError as e:
-            self._handle_error("read", archive_file, e)
-            msg = f"Corrupt or invalid PDF file: {e}"
-            raise ArchiverReadError(msg) from e
+            return True  # noqa: TRY300
+
         except Exception as e:
-            self._handle_error("read", archive_file, e)
-            msg = f"Failed to read page from PDF: {e}"
-            raise ArchiverReadError(msg) from e
-
-    def write_file(self, archive_file: str, data: str | bytes) -> bool:  # noqa: ARG002
-        """Attempt to write data to the PDF.
-
-        Args:
-            archive_file: The virtual filename within the archive.
-            data: The data to write (string or bytes).
-
-        Returns:
-            False: PDF files are read-only, so this operation always fails.
-
-        Note:
-            This method logs a warning and returns False immediately.
-            No actual write operation is attempted since PDFs are treated
-            as read-only archives in this implementation.
-
-        Warning:
-            A warning will be logged indicating that the write operation
-            was attempted on a read-only PDF archive.
-
-        """
-        logger.warning("Cannot write to PDF archive: %s", archive_file)
-        return False
+            self._handle_error("write", archive_file, e)
+            logger.warning("Failed to write embedded file to PDF: %s", e)
+            return False
 
     def remove_files(self, filename_list: list[str]) -> bool:
-        """Attempt to remove files from the PDF.
+        """Remove embedded files from the PDF.
 
         Args:
-            filename_list: A list of filenames to remove from the archive.
+            filename_list: A list of filenames to remove. Only embedded files
+                          can be removed (not page files like page_NNN.png).
 
         Returns:
-            False: PDF files are read-only, so this operation always fails.
+            True if all existing embedded files were successfully removed,
+                False if any error occurred. Returns True if the list is empty
+                or contains only non-existent files.
 
         Note:
-            This method logs a warning and returns False immediately.
-            No actual removal operations are attempted since PDFs are treated
-            as read-only archives in this implementation.
+            - Only embedded files can be removed (page files are read-only)
+            - Non-existent files are silently ignored
+            - Page files (page_NNN.png) are skipped with a warning
+            - All removals are performed in a single transaction
 
-        Warning:
-            A warning will be logged indicating that the bulk remove operation
-            was attempted on a read-only PDF archive, including the list of
-            files that were requested to be removed.
+        Examples:
+            >>> archiver = PdfArchiver(Path("comic.pdf"))
+            >>> archiver.remove_files(["ComicInfo.xml", "MetronInfo.xml"])
+            >>> # Removes both metadata files if they exist
 
         """
-        logger.warning("Cannot remove files from PDF archive: %s", filename_list)
-        return False
+        if not filename_list:
+            return True
+
+        # Filter out page files (they can't be removed)
+        embedded_files_to_remove = [
+            f for f in filename_list if not (f.startswith("page_") and f.endswith(".png"))
+        ]
+
+        # Warn about any page files
+        page_files = [f for f in filename_list if f.startswith("page_") and f.endswith(".png")]
+        if page_files:
+            logger.warning("Cannot remove virtual page files: %s", page_files)
+
+        if not embedded_files_to_remove:
+            return True
+
+        try:
+            doc = fitz.open(self.path)
+            try:
+                # Get list of existing embedded files
+                existing_embedded = set(doc.embfile_names())
+
+                # Only remove files that actually exist
+                files_to_remove = [f for f in embedded_files_to_remove if f in existing_embedded]
+
+                if not files_to_remove:
+                    return True
+
+                # Remove each embedded file
+                for filename in files_to_remove:
+                    doc.embfile_del(filename)
+
+                # Save the document (incremental save to preserve existing content)
+                doc.save(doc.name, incremental=True, encryption=fitz.PDF_ENCRYPT_KEEP)
+            finally:
+                doc.close()
+
+            return True  # noqa: TRY300
+
+        except Exception as e:
+            self._handle_error("remove_multiple", str(embedded_files_to_remove), e)
+            logger.warning("Failed to remove embedded files from PDF: %s", e)
+            return False
 
     def get_filename_list(self) -> list[str]:
-        """Get a list of all pages in the PDF as virtual filenames.
+        """Get a list of all files in the PDF (pages and embedded files).
 
         Returns:
-            A list of virtual filenames representing each page in the PDF.
-                Filenames follow the format 'page_NNN.png' where NNN is a
-                zero-padded page number starting from 001.
+            A list of filenames including:
+                - Virtual page files: 'page_NNN.png' (zero-padded, starting from 001)
+                - Embedded files: e.g., 'ComicInfo.xml', 'MetronInfo.xml'
 
         Raises:
             ArchiverReadError: If the PDF cannot be read due to:
@@ -219,13 +336,14 @@ class PdfArchiver(Archiver):
 
         Examples:
             >>> archiver = PdfArchiver(Path("document.pdf"))
-            >>> pages = archiver.get_filename_list()
-            >>> print(f"PDF contains {len(pages)} pages:")
-            >>> # Output: ['page_001.png', 'page_002.png', 'page_003.png']
+            >>> files = archiver.get_filename_list()
+            >>> print(files)
+            >>> # Output: ['page_001.png', 'page_002.png', 'ComicInfo.xml']
 
         Note:
-            The returned list represents virtual files - the PNG images are
-            generated on-demand when read_file() is called.
+            - Page PNG files are virtual and generated on-demand when read
+            - Embedded files are actual PDF attachments
+            - The list is sorted with pages first, then embedded files alphabetically
 
         """
         try:
@@ -233,7 +351,13 @@ class PdfArchiver(Archiver):
             try:
                 page_count = len(doc)
                 # Generate page filenames with zero-padding (page_001.png, page_002.png, etc.)
-                return [f"page_{i + 1:03d}.png" for i in range(page_count)]
+                page_files = [f"page_{i + 1:03d}.png" for i in range(page_count)]
+
+                # Get embedded file names
+                embedded_files = sorted(doc.embfile_names())
+
+                # Return pages first, then embedded files
+                return page_files + embedded_files
             finally:
                 doc.close()
 
@@ -270,17 +394,21 @@ class PdfArchiver(Archiver):
             other_archive: The source archive to copy files from.
 
         Returns:
-            False: PDF files are read-only, so this operation always fails.
+            False: This operation is not supported for PDF archives.
 
         Note:
             This method logs a warning and returns False immediately.
-            No actual copy operation is attempted since PDFs are treated
-            as read-only archives in this implementation.
+            Copying entire archives to PDF is not supported because:
+            - PDF pages cannot be replaced with image files
+            - PDFs maintain their original page structure
+            - Only embedded metadata files can be written individually
+
+            To add metadata to a PDF, use write_file() instead:
+                >>> pdf.write_file("ComicInfo.xml", xml_data)
 
         Warning:
             A warning will be logged indicating that the copy operation
-            was attempted on a read-only PDF archive, including the path
-            of the source archive.
+            was attempted on a PDF archive.
 
         Examples:
             >>> pdf_archive = PdfArchiver(Path("target.pdf"))
