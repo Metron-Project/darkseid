@@ -39,6 +39,6 @@ jobs:
           fi
         shell: bash
       - name: Install project
-        run: uv sync --group test --extra 7zip  --extra pillow
+        run: uv sync --group test --extra 7zip  --extra pillow --extra pdf
       - name: Run tests
         run: uv run pytest
