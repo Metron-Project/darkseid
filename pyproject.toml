@@ -51,6 +51,7 @@ Homepage = "https://github.com/Metron-Project/darkseid"
 [project.optional-dependencies]
 7zip = ["py7zr>=1.0.0"]
 pillow = ["pillow>=11.3.0"]
+pdf = ["pymupdf>=1.26.6"]
 
 [dependency-groups]
 dev = [
