@@ -245,7 +245,7 @@ class RarArchiver(Archiver):
 
         Examples:
             >>> rar_archive = RarArchiver(Path("target.rar"))
-            >>> zip_archive = ZipArchiver(Path("source.zip"))
+            >>> zip_archive = ZipArchiver(Path("source.cbz"))
             >>> success = rar_archive.copy_from_archive(zip_archive)
             >>> print(f"Copy successful: {success}")  # Will print: Copy successful: False
 

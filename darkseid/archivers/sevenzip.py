@@ -542,7 +542,7 @@ class SevenZipArchiver(Archiver):
 
         Examples:
             >>> seven_zip_archive = SevenZipArchiver(Path("target.cb7"))
-            >>> zip_archive = ZipArchiver(Path("source.zip"))
+            >>> zip_archive = ZipArchiver(Path("source.cbz"))
             >>> result = seven_zip_archive.copy_from_archive(zip_archive)
             >>> print(f"Copy successful: {result}")  # Will print: Copy successful: False
 

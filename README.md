@@ -21,6 +21,7 @@ The optional dependencies are:
 - **7zip**: Provides support for reading/writing to CB7 files.
 - **pillow**: Provides support for getting page information that is used with
   ComicInfo.xml metadata.
+- **pdf**: Provides support for reading/writing metadata in PDF comics and exporting them to CBZ format. The pymupdf dependency includes pre-built wheels for most platforms. On some platforms (e.g., Linux ARM, Windows), installation may require libstdc++ and C/C++ build tools to compile libmupdf. See the [pymupdf documentation](https://pymupdf.readthedocs.io/) for details.
 
 ## Example
 

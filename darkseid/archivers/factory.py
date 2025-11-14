@@ -20,8 +20,8 @@ Examples:
     >>> print(files)  # ['page_01.jpg', 'page_02.jpg', ...]
 
 Supported Formats:
-    - ZIP files (.zip, .cbz)
-    - RAR files (.rar, .cbr)
+    - ZIP files (.cbz)
+    - RAR files (.cbr)
     - Unknown formats (fallback handling)
 
 Note:
@@ -34,9 +34,17 @@ from pathlib import Path
 from typing import ClassVar, Protocol, runtime_checkable
 
 from darkseid.archivers.archiver import Archiver
+from darkseid.archivers.pdf import PYMUPDF_AVAILABLE
 from darkseid.archivers.rar import RarArchiver
+from darkseid.archivers.sevenzip import PY7ZR_AVAILABLE
 from darkseid.archivers.tar import TarArchiver
 from darkseid.archivers.zip import ZipArchiver
+
+if PYMUPDF_AVAILABLE:
+    from darkseid.archivers.pdf import PdfArchiver
+
+if PY7ZR_AVAILABLE:
+    from darkseid.archivers.sevenzip import SevenZipArchiver
 
 
 @runtime_checkable
@@ -173,7 +181,7 @@ class UnknownArchiver(Archiver):
             bool: Always False, indicating that copying is not supported for unknown archive types.
 
         Examples:
-            >>> source = ZipArchiver(Path("source.zip"))
+            >>> source = ZipArchiver(Path("source.cbz"))
             >>> target = UnknownArchiver(Path("target.unknown"))
             >>> target.copy_from_archive(source)
             False
@@ -211,7 +219,7 @@ class ArchiverFactory:
         >>> from pathlib import Path
         >>>
         >>> # Create archiver for ZIP file
-        >>> zip_archiver = ArchiverFactory.create_archiver(Path("archive.zip"))
+        >>> zip_archiver = ArchiverFactory.create_archiver(Path("archive.cbz"))
         >>> print(zip_archiver.name())  # "Zip"
         >>>
         >>> # Create archiver for RAR file
@@ -231,13 +239,19 @@ class ArchiverFactory:
 
     """
 
+    # Build the archiver map with optional dependencies
     _ARCHIVER_MAP: ClassVar[dict[str, type[Archiver]]] = {
-        ".zip": ZipArchiver,
         ".cbz": ZipArchiver,  # Comic book ZIP format
-        ".rar": RarArchiver,
         ".cbr": RarArchiver,  # Comic book RAR format
         ".cbt": TarArchiver,  # Comic book TAR format
     }
+
+    # Register optional archivers at class definition time
+    if PYMUPDF_AVAILABLE:
+        _ARCHIVER_MAP[".pdf"] = PdfArchiver  # PDF document format
+
+    if PY7ZR_AVAILABLE:
+        _ARCHIVER_MAP[".cb7"] = SevenZipArchiver  # 7Zip support
 
     @classmethod
     def create_archiver(cls, path: Path) -> Archiver:
@@ -324,16 +338,16 @@ class ArchiverFactory:
 
         Returns:
             list[str]: Sorted list of supported file extensions, including the dot
-                (e.g., ['.cbr', '.cbz', '.rar', '.zip']).
+                (e.g., ['.cbr', '.cbz', '.rar']).
 
         Examples:
             >>> extensions = ArchiverFactory.get_supported_extensions()
-            >>> print(extensions)  # ['.cbr', '.cbz', '.rar', '.zip']
+            >>> print(extensions)  # ['.cbr', '.cbz', '.rar'']
             >>>
             >>> # After registering new types
             >>> ArchiverFactory.register_archiver(".7z", SevenZipArchiver)
             >>> extensions = ArchiverFactory.get_supported_extensions()
-            >>> print(extensions)  # ['.7z', '.cbr', '.cbz', '.rar', '.zip']
+            >>> print(extensions)  # ['.cb7', '.cbr', '.cbz', '.rar'']
 
         """
         return sorted(cls._ARCHIVER_MAP.keys())
@@ -351,7 +365,7 @@ class ArchiverFactory:
         Examples:
             >>> from pathlib import Path
             >>>
-            >>> ArchiverFactory.is_supported(Path("archive.zip"))  # True
+            >>> ArchiverFactory.is_supported(Path("archive.cbz"))  # True
             >>> ArchiverFactory.is_supported(Path("archive.7z"))   # False
             >>>
             >>> # After registering .7z support
@@ -382,9 +396,14 @@ class ArchiverFactory:
             >>> len(ArchiverFactory.get_supported_extensions())  # 4
 
         """
-        cls._ARCHIVER_MAP = {
-            ".zip": ZipArchiver,
+        base_map = {
             ".cbz": ZipArchiver,
-            ".rar": RarArchiver,
             ".cbr": RarArchiver,
+            ".cbt": TarArchiver,
         }
+        # Add optional archivers if their dependencies are available
+        if PYMUPDF_AVAILABLE:
+            base_map[".pdf"] = PdfArchiver
+        if PY7ZR_AVAILABLE:
+            base_map[".cb7"] = SevenZipArchiver
+        cls._ARCHIVER_MAP = base_map

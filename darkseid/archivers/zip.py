@@ -9,7 +9,7 @@ Examples:
     Basic usage of the ZipArchiver:
 
     >>> from pathlib import Path
-    >>> archiver = ZipArchiver(Path("example.zip"))
+    >>> archiver = ZipArchiver(Path("example.cbz"))
     >>> content = archiver.read_file("readme.txt")
     >>> archiver.write_file("new_file.txt", "Hello, World!")
     >>> files = archiver.get_filename_list()
@@ -56,7 +56,7 @@ class ZipArchiver(Archiver):
         path (Path): Path to the ZIP archive file
 
     Examples:
-        >>> archiver = ZipArchiver(Path("my_archive.zip"))
+        >>> archiver = ZipArchiver(Path("my_archive.cbz"))
         >>> archiver.write_file("config.json", '{"version": "1.0"}')
         >>> data = archiver.read_file("config.json")
         >>> archiver.remove_files(["old_config.json"])
@@ -130,7 +130,7 @@ class ZipArchiver(Archiver):
                 - File not found in archive (KeyError)
 
         Examples:
-            >>> archiver = ZipArchiver(Path("docs.zip"))
+            >>> archiver = ZipArchiver(Path("docs.cbz"))
             >>> content = archiver.read_file("readme.txt")
             >>> text = content.decode('utf-8')
 
@@ -179,7 +179,7 @@ class ZipArchiver(Archiver):
             - Existing files are replaced, not appended to
 
         Examples:
-            >>> archiver = ZipArchiver(Path("data.zip"))
+            >>> archiver = ZipArchiver(Path("data.cbz"))
             >>> # Write text content
             >>> archiver.write_file("note.txt", "Hello, World!")
             >>> # Write binary content
@@ -235,7 +235,7 @@ class ZipArchiver(Archiver):
             - The archive is repacked once after all removals
 
         Examples:
-            >>> archiver = ZipArchiver(Path("batch_cleanup.zip"))
+            >>> archiver = ZipArchiver(Path("batch_cleanup.cbz"))
             >>> files_to_remove = ["temp1.txt", "temp2.txt", "cache.dat"]
             >>> success = archiver.remove_files(files_to_remove)
             >>> if success:
@@ -287,7 +287,7 @@ class ZipArchiver(Archiver):
             - Returns empty list on any error (corrupt archive, file not found, etc.)
 
         Examples:
-            >>> archiver = ZipArchiver(Path("project.zip"))
+            >>> archiver = ZipArchiver(Path("project.cbz"))
             >>> files = archiver.get_filename_list()
             >>> for file in files:
             ...     print(f"Found: {file}")
@@ -355,7 +355,7 @@ class ZipArchiver(Archiver):
 
         Examples:
             >>> source = RarArchiver(Path("source.rar"))
-            >>> target = ZipArchiver(Path("target.zip"))
+            >>> target = ZipArchiver(Path("target.cbz"))
             >>> success = target.copy_from_archive(source)
             >>> if success:
             ...     print("Archive converted successfully")
