@@ -15,7 +15,8 @@ import re
 from enum import Enum
 from pathlib import Path
 
-from darkseid.archivers import PY7ZR_AVAILABLE
+from darkseid.archivers.pdf import PYMUPDF_AVAILABLE
+from darkseid.archivers.sevenzip import PY7ZR_AVAILABLE
 
 
 # TODO: Change to StrEnum when Python-3.10 support dropped
@@ -109,6 +110,8 @@ def get_recursive_filelist(path_list: list[Path]) -> list[Path]:
     comic_extensions = ["*.cbz", "*.cbr", "*.cbt"]
     if PY7ZR_AVAILABLE:
         comic_extensions += ["*.cb7"]
+    if PYMUPDF_AVAILABLE:
+        comic_extensions += ["*.pdf"]
     filelist: list[Path] = []
 
     for path_item in path_list:

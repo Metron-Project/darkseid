@@ -45,15 +45,11 @@ except ImportError:
 
 
 from darkseid.archivers import ArchiverFactory, ArchiverReadError
-from darkseid.archivers.sevenzip import PY7ZR_AVAILABLE
 from darkseid.archivers.zip import ZipArchiver
 from darkseid.metadata.comicinfo import ComicInfo
 from darkseid.metadata.data_classes import ImageMetadata, Metadata
 from darkseid.metadata.metroninfo import MetronInfo
 from darkseid.validate import SchemaVersion, ValidateMetadata, ValidationError
-
-if PY7ZR_AVAILABLE:
-    from darkseid.archivers.sevenzip import SevenZipArchiver
 
 if TYPE_CHECKING:
     from darkseid.archivers.archiver import Archiver
@@ -318,8 +314,6 @@ class Comic:
             ComicArchiveError: If no suitable archiver can be created for the file.
 
         """
-        if PY7ZR_AVAILABLE:
-            ArchiverFactory.register_archiver(".cb7", SevenZipArchiver)
         try:
             self._archiver: Archiver = ArchiverFactory.create_archiver(self._path)
         except Exception as e:

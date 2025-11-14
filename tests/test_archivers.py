@@ -22,6 +22,12 @@ from darkseid.archivers import (
     ZipArchiver,
 )
 from darkseid.archivers.archiver import Archiver, ArchiverReadError
+from darkseid.archivers.pdf import PYMUPDF_AVAILABLE
+
+if PYMUPDF_AVAILABLE:
+    import fitz
+
+    from darkseid.archivers import PdfArchiver
 
 
 # Test data and fixtures
@@ -89,6 +95,26 @@ def empty_zip_path(temp_dir):
 def sample_rar_path(temp_dir):
     """Create a mock RAR file path."""
     return temp_dir / "test.rar"
+
+
+@pytest.fixture
+def sample_pdf_path(temp_dir):
+    """Create a sample PDF file for testing."""
+    if not PYMUPDF_AVAILABLE:
+        pytest.skip("pymupdf not available")
+
+    pdf_path = temp_dir / "test.pdf"
+    doc = fitz.open()  # Create new PDF
+
+    # Add 3 pages with some content
+    for i in range(3):
+        page = doc.new_page(width=595, height=842)  # A4 size
+        # Add some text to make the pages different
+        page.insert_text((100, 100), f"Page {i + 1}", fontsize=20)
+
+    doc.save(pdf_path)
+    doc.close()
+    return pdf_path
 
 
 @pytest.fixture
@@ -833,3 +859,147 @@ def test_archiver_empty_data_handling(temp_dir, data_type, data, expected):
 
     content = archiver.read_file(filename)
     assert content == expected
+
+
+# PDF Archiver Tests
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_get_filename_list(sample_pdf_path):
+    """Test getting filename list from PDF returns page filenames."""
+    archiver = PdfArchiver(sample_pdf_path)
+    files = archiver.get_filename_list()
+
+    # Should return 3 pages with zero-padded names
+    expected = ["page_001.png", "page_002.png", "page_003.png"]
+    assert files == expected
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+@pytest.mark.parametrize(
+    ("page_file", "page_index"),
+    [
+        ("page_001.png", 0),
+        ("page_002.png", 1),
+        ("page_003.png", 2),
+    ],
+)
+def test_pdf_read_page_success(sample_pdf_path, page_file, page_index):
+    """Test reading pages from PDF as PNG images."""
+    archiver = PdfArchiver(sample_pdf_path)
+    content = archiver.read_file(page_file)
+
+    # Verify we got PNG data
+    assert content.startswith(b"\x89PNG")  # PNG magic bytes
+    assert len(content) > 0
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_read_invalid_page_format(sample_pdf_path):
+    """Test reading with invalid page filename format raises error."""
+    archiver = PdfArchiver(sample_pdf_path)
+
+    with pytest.raises(ArchiverReadError, match="Invalid page filename format"):
+        archiver.read_file("invalid.png")
+
+    with pytest.raises(ArchiverReadError, match="Invalid page filename format"):
+        archiver.read_file("page_001.jpg")
+
+    with pytest.raises(ArchiverReadError, match="Invalid page filename format"):
+        archiver.read_file("page_abc.png")
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_read_page_out_of_range(sample_pdf_path):
+    """Test reading non-existent page raises error."""
+    archiver = PdfArchiver(sample_pdf_path)
+
+    with pytest.raises(ArchiverReadError, match="Page 999 not found"):
+        archiver.read_file("page_999.png")
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_read_invalid_page_number(sample_pdf_path):
+    """Test reading with invalid page numbers raises error."""
+    archiver = PdfArchiver(sample_pdf_path)
+
+    with pytest.raises(ArchiverReadError, match="Invalid page number"):
+        archiver.read_file("page_000.png")
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+@pytest.mark.parametrize(
+    "operation",
+    [
+        "write_file",
+        "remove_files",
+        "copy_from_archive",
+    ],
+)
+def test_pdf_readonly_operations(sample_pdf_path, operation):
+    """Test that PDF operations return False (read-only)."""
+    archiver = PdfArchiver(sample_pdf_path)
+
+    result = True
+
+    if operation == "write_file":
+        result = archiver.write_file("test.png", b"data")
+    elif operation == "remove_files":
+        result = archiver.remove_files(["page_001.png"])
+    elif operation == "copy_from_archive":
+        result = archiver.copy_from_archive(Mock())
+
+    assert result is False
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_is_write_operation_expected(sample_pdf_path):
+    """Test that PDF archiver reports write operations not expected."""
+    archiver = PdfArchiver(sample_pdf_path)
+    assert archiver.is_write_operation_expected() is False
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_test_valid(sample_pdf_path):
+    """Test that valid PDF returns True for test()."""
+    archiver = PdfArchiver(sample_pdf_path)
+    assert archiver.test() is True
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_test_invalid(temp_dir):
+    """Test that invalid PDF returns False for test()."""
+    invalid_pdf = temp_dir / "invalid.pdf"
+    invalid_pdf.write_text("not a pdf")
+
+    archiver = PdfArchiver(invalid_pdf)
+    assert archiver.test() is False
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_context_manager(sample_pdf_path):
+    """Test PDF archiver works as context manager."""
+    with PdfArchiver(sample_pdf_path) as archiver:
+        files = archiver.get_filename_list()
+        assert len(files) == 3
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_factory_registration(temp_dir):
+    """Test that factory creates PdfArchiver for .pdf extension."""
+    pdf_path = temp_dir / "test.pdf"
+    archiver = ArchiverFactory.create_archiver(pdf_path)
+    assert isinstance(archiver, PdfArchiver)
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_exists(sample_pdf_path):
+    """Test checking if page exists in PDF."""
+    archiver = PdfArchiver(sample_pdf_path)
+
+    # Pages that exist
+    assert archiver.exists("page_001.png") is True
+    assert archiver.exists("page_002.png") is True
+    assert archiver.exists("page_003.png") is True
+
+    # Page that doesn't exist
+    assert archiver.exists("page_999.png") is False
+    assert archiver.exists("nonexistent.png") is False
