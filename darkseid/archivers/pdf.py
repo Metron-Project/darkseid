@@ -29,8 +29,8 @@ Note:
 from __future__ import annotations
 
 import logging
-from contextlib import suppress
-from typing import TYPE_CHECKING
+from contextlib import contextmanager, suppress
+from typing import TYPE_CHECKING, Any
 
 try:
     import fitz  # pymupdf
@@ -41,6 +41,7 @@ except ImportError:
     fitz = None
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
     from pathlib import Path
 
 from darkseid.archivers.archiver import Archiver, ArchiverReadError
@@ -69,6 +70,11 @@ class PdfArchiver(Archiver):
         - copy_from_archive() is not supported for PDFs
 
     """
+
+    # Constants for page rendering
+    PAGE_DPI = 150
+    PAGE_ZOOM_FACTOR = 2.0  # Produces 150 DPI for typical 72 DPI PDFs
+    PAGE_NUMBER_PADDING = 3  # Zero-padding width (e.g., 001, 002)
 
     def __init__(self, path: Path) -> None:
         """Initialize a PdfArchiver with the provided path.
@@ -99,7 +105,146 @@ class PdfArchiver(Archiver):
         """
         return True
 
-    def read_file(self, archive_file: str) -> bytes:  # noqa: PLR0915
+    @staticmethod
+    def _is_page_file(filename: str) -> bool:
+        """Check if a filename represents a virtual page file.
+
+        Args:
+            filename: The filename to check.
+
+        Returns:
+            True if the filename matches the page file pattern (page_NNN.png).
+
+        """
+        return filename.startswith("page_") and filename.endswith(".png")
+
+    @contextmanager
+    def _open_pdf(self) -> Generator:
+        """Context manager for safely opening and closing PDF documents.
+
+        Yields:
+            fitz.Document: The opened PDF document.
+
+        Note:
+            This ensures the PDF is properly closed even if an exception occurs.
+
+        """
+        doc = fitz.open(self.path)
+        try:
+            yield doc
+        finally:
+            doc.close()
+
+    def _parse_page_number(self, archive_file: str) -> int:
+        """Parse page number from filename like 'page_001.png'.
+
+        Args:
+            archive_file: The page filename (e.g., 'page_001.png').
+
+        Returns:
+            Zero-based page index.
+
+        Raises:
+            ArchiverReadError: If the filename format is invalid or page number is negative.
+
+        """
+        try:
+            page_str = archive_file[5:-4]  # Extract number from "page_NNN.png"
+            page_index = int(page_str) - 1
+            if page_index < 0:
+                msg = f"Invalid page number: {page_str}"
+                raise ArchiverReadError(msg)
+            return page_index  # noqa: TRY300
+        except ValueError as e:
+            msg = f"Invalid page filename format: {archive_file}"
+            raise ArchiverReadError(msg) from e
+
+    def _save_pdf(self, doc: Any) -> None:
+        """Save PDF with incremental updates.
+
+        Args:
+            doc: The PDF document to save.
+
+        Note:
+            Uses incremental save to preserve existing content and maintain
+            existing encryption settings.
+
+        """
+        doc.save(doc.name, incremental=True, encryption=fitz.PDF_ENCRYPT_KEEP)
+
+    def _read_page(self, archive_file: str) -> bytes:
+        """Read and render a page as PNG.
+
+        Args:
+            archive_file: The page filename (e.g., 'page_001.png').
+
+        Returns:
+            PNG image data rendered at PAGE_DPI resolution.
+
+        Raises:
+            ArchiverReadError: If the page cannot be read or rendered.
+
+        """
+        page_index = self._parse_page_number(archive_file)
+
+        try:
+            with self._open_pdf() as doc:
+                if page_index >= len(doc):
+                    msg = f"Page {page_index + 1} not found (document has {len(doc)} pages)"
+                    raise ArchiverReadError(msg)  # noqa: TRY301
+
+                page = doc[page_index]
+                # Render page to PNG at configured DPI
+                mat = fitz.Matrix(self.PAGE_ZOOM_FACTOR, self.PAGE_ZOOM_FACTOR)
+                pix = page.get_pixmap(matrix=mat)
+                return pix.tobytes("png")
+
+        except fitz.FileDataError as e:
+            self._handle_error("read", archive_file, e)
+            msg = f"Corrupt or invalid PDF file: {e}"
+            raise ArchiverReadError(msg) from e
+        except ArchiverReadError:
+            raise
+        except Exception as e:
+            self._handle_error("read", archive_file, e)
+            msg = f"Failed to read page from PDF: {e}"
+            raise ArchiverReadError(msg) from e
+
+    def _read_embedded_file(self, archive_file: str) -> bytes:
+        """Read an embedded file from the PDF.
+
+        Args:
+            archive_file: The embedded filename (e.g., 'ComicInfo.xml').
+
+        Returns:
+            The embedded file content as bytes.
+
+        Raises:
+            ArchiverReadError: If the file cannot be read.
+
+        """
+        try:
+            with self._open_pdf() as doc:
+                # Check if the embedded file exists
+                if archive_file not in doc.embfile_names():
+                    msg = f"Embedded file not found: {archive_file}"
+                    raise ArchiverReadError(msg)  # noqa: TRY301
+
+                # Get the embedded file content
+                return doc.embfile_get(archive_file)
+
+        except fitz.FileDataError as e:
+            self._handle_error("read", archive_file, e)
+            msg = f"Corrupt or invalid PDF file: {e}"
+            raise ArchiverReadError(msg) from e
+        except ArchiverReadError:
+            raise
+        except Exception as e:
+            self._handle_error("read", archive_file, e)
+            msg = f"Failed to read embedded file from PDF: {e}"
+            raise ArchiverReadError(msg) from e
+
+    def read_file(self, archive_file: str) -> bytes:
         """Read a file from the PDF (page or embedded file).
 
         Args:
@@ -109,7 +254,7 @@ class PdfArchiver(Archiver):
 
         Returns:
             File data as bytes:
-                - For page files: PNG image data rendered at 150 DPI
+                - For page files: PNG image data rendered at PAGE_DPI resolution
                 - For embedded files: Raw file content
 
         Raises:
@@ -130,68 +275,9 @@ class PdfArchiver(Archiver):
             >>> metadata = archiver.read_file("ComicInfo.xml")
 
         """
-        # Check if this is a page file (virtual PNG) or an embedded file
-        if archive_file.startswith("page_") and archive_file.endswith(".png"):
-            # Handle page rendering
-            try:
-                page_str = archive_file[5:-4]  # Extract number from "page_NNN.png"
-                page_index = int(page_str) - 1  # Convert to 0-based index
-
-                if page_index < 0:
-                    msg = f"Invalid page number: {page_str}"
-                    raise ArchiverReadError(msg)
-
-            except ValueError as e:
-                msg = f"Invalid page filename format: {archive_file}"
-                raise ArchiverReadError(msg) from e
-
-            try:
-                doc = fitz.open(self.path)
-                try:
-                    if page_index >= len(doc):
-                        msg = f"Page {page_index + 1} not found (document has {len(doc)} pages)"
-                        raise ArchiverReadError(msg)
-
-                    page = doc[page_index]
-                    # Render page to PNG at 150 DPI (zoom factor of 2.0)
-                    # mat = fitz.Matrix(2.0, 2.0) produces 150 DPI for typical 72 DPI PDFs
-                    mat = fitz.Matrix(2.0, 2.0)
-                    pix = page.get_pixmap(matrix=mat)
-                    return pix.tobytes("png")
-                finally:
-                    doc.close()
-
-            except fitz.FileDataError as e:
-                self._handle_error("read", archive_file, e)
-                msg = f"Corrupt or invalid PDF file: {e}"
-                raise ArchiverReadError(msg) from e
-            except Exception as e:
-                self._handle_error("read", archive_file, e)
-                msg = f"Failed to read page from PDF: {e}"
-                raise ArchiverReadError(msg) from e
-        else:
-            # Handle embedded file reading
-            try:
-                doc = fitz.open(self.path)
-                try:
-                    # Check if the embedded file exists
-                    if archive_file not in doc.embfile_names():
-                        msg = f"Embedded file not found: {archive_file}"
-                        raise ArchiverReadError(msg)
-
-                    # Get the embedded file content
-                    return doc.embfile_get(archive_file)
-                finally:
-                    doc.close()
-
-            except fitz.FileDataError as e:
-                self._handle_error("read", archive_file, e)
-                msg = f"Corrupt or invalid PDF file: {e}"
-                raise ArchiverReadError(msg) from e
-            except Exception as e:
-                self._handle_error("read", archive_file, e)
-                msg = f"Failed to read embedded file from PDF: {e}"
-                raise ArchiverReadError(msg) from e
+        if self._is_page_file(archive_file):
+            return self._read_page(archive_file)
+        return self._read_embedded_file(archive_file)
 
     def write_file(self, archive_file: str, data: str | bytes) -> bool:
         """Write an embedded file to the PDF.
@@ -221,7 +307,7 @@ class PdfArchiver(Archiver):
 
         """
         # Prevent writing to page files (they are virtual/read-only)
-        if archive_file.startswith("page_") and archive_file.endswith(".png"):
+        if self._is_page_file(archive_file):
             logger.warning("Cannot write to virtual page file: %s", archive_file)
             return False
 
@@ -230,8 +316,7 @@ class PdfArchiver(Archiver):
             data = data.encode("utf-8")
 
         try:
-            doc = fitz.open(self.path)
-            try:
+            with self._open_pdf() as doc:
                 # Remove existing embedded file if present
                 if archive_file in doc.embfile_names():
                     doc.embfile_del(archive_file)
@@ -239,10 +324,8 @@ class PdfArchiver(Archiver):
                 # Add the new embedded file
                 doc.embfile_add(archive_file, data)
 
-                # Save the document (incremental save to preserve existing content)
-                doc.save(doc.name, incremental=True, encryption=fitz.PDF_ENCRYPT_KEEP)
-            finally:
-                doc.close()
+                # Save the document
+                self._save_pdf(doc)
 
             return True  # noqa: TRY300
 
@@ -279,12 +362,10 @@ class PdfArchiver(Archiver):
             return True
 
         # Filter out page files (they can't be removed)
-        embedded_files_to_remove = [
-            f for f in filename_list if not (f.startswith("page_") and f.endswith(".png"))
-        ]
+        embedded_files_to_remove = [f for f in filename_list if not self._is_page_file(f)]
 
         # Warn about any page files
-        page_files = [f for f in filename_list if f.startswith("page_") and f.endswith(".png")]
+        page_files = [f for f in filename_list if self._is_page_file(f)]
         if page_files:
             logger.warning("Cannot remove virtual page files: %s", page_files)
 
@@ -292,8 +373,7 @@ class PdfArchiver(Archiver):
             return True
 
         try:
-            doc = fitz.open(self.path)
-            try:
+            with self._open_pdf() as doc:
                 # Get list of existing embedded files
                 existing_embedded = set(doc.embfile_names())
 
@@ -307,10 +387,8 @@ class PdfArchiver(Archiver):
                 for filename in files_to_remove:
                     doc.embfile_del(filename)
 
-                # Save the document (incremental save to preserve existing content)
-                doc.save(doc.name, incremental=True, encryption=fitz.PDF_ENCRYPT_KEEP)
-            finally:
-                doc.close()
+                # Save the document
+                self._save_pdf(doc)
 
             return True  # noqa: TRY300
 
@@ -347,19 +425,18 @@ class PdfArchiver(Archiver):
 
         """
         try:
-            doc = fitz.open(self.path)
-            try:
+            with self._open_pdf() as doc:
                 page_count = len(doc)
                 # Generate page filenames with zero-padding (page_001.png, page_002.png, etc.)
-                page_files = [f"page_{i + 1:03d}.png" for i in range(page_count)]
+                page_files = [
+                    f"page_{i + 1:0{self.PAGE_NUMBER_PADDING}d}.png" for i in range(page_count)
+                ]
 
                 # Get embedded file names
                 embedded_files = sorted(doc.embfile_names())
 
                 # Return pages first, then embedded files
                 return page_files + embedded_files
-            finally:
-                doc.close()
 
         except fitz.FileDataError as e:
             self._handle_error("list", "", e)
@@ -382,8 +459,8 @@ class PdfArchiver(Archiver):
 
         """
         with suppress(Exception):
-            doc = fitz.open(self._path)
-            doc.close()
+            with self._open_pdf():
+                pass
             return True
         return False
 
