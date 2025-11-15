@@ -359,6 +359,8 @@ class ComicInfo(BaseMetadataHandler):
         self._set_element_text(root, "Locations", self._get_resource_list(md.locations))
         self._set_element_text(root, "ScanInformation", md.scan_info)
         self._set_element_text(root, "StoryArc", self._get_resource_list(md.story_arcs))
+        self._set_element_text(root, "Tags", self._get_resource_list(md.tags))
+        
         if md.age_rating is not None and md.age_rating.comic_rack:
             self._set_element_text(
                 root,
