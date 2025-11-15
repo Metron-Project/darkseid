@@ -25,7 +25,7 @@ from darkseid.archivers.archiver import Archiver, ArchiverReadError
 from darkseid.archivers.pdf import PYMUPDF_AVAILABLE
 
 if PYMUPDF_AVAILABLE:
-    import fitz
+    import pymupdf
 
     from darkseid.archivers import PdfArchiver
 
@@ -104,7 +104,7 @@ def sample_pdf_path(temp_dir):
         pytest.skip("pymupdf not available")
 
     pdf_path = temp_dir / "test.pdf"
-    doc = fitz.open()  # Create new PDF
+    doc = pymupdf.open()  # Create new PDF
 
     # Add 3 pages with some content
     for i in range(3):

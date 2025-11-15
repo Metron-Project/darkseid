@@ -5,7 +5,7 @@ PDF files are treated as archives where:
 - Each page is rendered as a PNG image (page_001.png, page_002.png, etc.)
 - Metadata files (ComicInfo.xml, MetronInfo.xml) can be embedded as attachments
 
-The implementation uses pymupdf (fitz) for PDF processing.
+The implementation uses pymupdf for PDF processing.
 
 Examples:
     >>> from pathlib import Path
@@ -33,12 +33,12 @@ from contextlib import contextmanager, suppress
 from typing import TYPE_CHECKING, Any
 
 try:
-    import fitz  # pymupdf
+    import pymupdf
 
     PYMUPDF_AVAILABLE = True
 except ImportError:
     PYMUPDF_AVAILABLE = False
-    fitz = None
+    pymupdf = None  # type: ignore[assignment]
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -59,7 +59,7 @@ class PdfArchiver(Archiver):
 
     Pages are numbered sequentially with zero-padding (page_001.png, page_002.png, etc.).
 
-    The implementation uses pymupdf (fitz) for PDF rendering and processing.
+    The implementation uses pymupdf for PDF rendering and processing.
 
     Attributes:
         path (Path): The filesystem path to the PDF file.
@@ -123,13 +123,13 @@ class PdfArchiver(Archiver):
         """Context manager for safely opening and closing PDF documents.
 
         Yields:
-            fitz.Document: The opened PDF document.
+            pymupdf.Document: The opened PDF document.
 
         Note:
             This ensures the PDF is properly closed even if an exception occurs.
 
         """
-        doc = fitz.open(self.path)
+        doc = pymupdf.open(self.path)
         try:
             yield doc
         finally:
@@ -170,7 +170,7 @@ class PdfArchiver(Archiver):
             existing encryption settings.
 
         """
-        doc.save(doc.name, incremental=True, encryption=fitz.PDF_ENCRYPT_KEEP)
+        doc.save(doc.name, incremental=True, encryption=pymupdf.PDF_ENCRYPT_KEEP)
 
     def _read_page(self, archive_file: str) -> bytes:
         """Read and render a page as PNG.
@@ -195,11 +195,11 @@ class PdfArchiver(Archiver):
 
                 page = doc[page_index]
                 # Render page to PNG at configured DPI
-                mat = fitz.Matrix(self.PAGE_ZOOM_FACTOR, self.PAGE_ZOOM_FACTOR)
+                mat = pymupdf.Matrix(self.PAGE_ZOOM_FACTOR, self.PAGE_ZOOM_FACTOR)
                 pix = page.get_pixmap(matrix=mat)
                 return pix.tobytes("png")
 
-        except fitz.FileDataError as e:
+        except pymupdf.FileDataError as e:
             self._handle_error("read", archive_file, e)
             msg = f"Corrupt or invalid PDF file: {e}"
             raise ArchiverReadError(msg) from e
@@ -233,7 +233,7 @@ class PdfArchiver(Archiver):
                 # Get the embedded file content
                 return doc.embfile_get(archive_file)
 
-        except fitz.FileDataError as e:
+        except pymupdf.FileDataError as e:
             self._handle_error("read", archive_file, e)
             msg = f"Corrupt or invalid PDF file: {e}"
             raise ArchiverReadError(msg) from e
@@ -438,7 +438,7 @@ class PdfArchiver(Archiver):
                 # Return pages first, then embedded files
                 return page_files + embedded_files
 
-        except fitz.FileDataError as e:
+        except pymupdf.FileDataError as e:
             self._handle_error("list", "", e)
             msg = f"Corrupt or invalid PDF file: {e}"
             raise ArchiverReadError(msg) from e
