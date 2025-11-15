@@ -408,6 +408,7 @@ class ComicInfo(BaseMetadataHandler):
             self._get_text_content(root, "AlternateNumber")
         ).as_string()
         md.alternate_count = self._parse_int(self._get_text_content(root, "AlternateCount"))
+        md.tags = self._string_to_resource(self._get_text_content(root, "Tags"))
         md.comments = self._get_text_content(root, "Summary")
         md.notes = self._parse_note(self._get_text_content(root, "Notes"))
         if md.notes is not None and md.notes.comic_rack is not None:
