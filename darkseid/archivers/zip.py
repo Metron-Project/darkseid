@@ -25,13 +25,14 @@ from typing import TYPE_CHECKING
 from zipfile import is_zipfile
 
 import rarfile
-from typing_extensions import Self
 from zipremove import ZIP_DEFLATED, ZIP_STORED, BadZipfile, ZipFile
 
 from darkseid.archivers.archiver import Archiver, ArchiverReadError
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from typing_extensions import Self
 
 logger = logging.getLogger(__name__)
 
