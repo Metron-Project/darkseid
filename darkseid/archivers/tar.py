@@ -43,12 +43,12 @@ import logging
 import tarfile
 from typing import TYPE_CHECKING
 
-from typing_extensions import Self
-
 from darkseid.archivers.archiver import Archiver, ArchiverReadError, ArchiverWriteError
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from typing_extensions import Self
 
 logger = logging.getLogger(__name__)
 
