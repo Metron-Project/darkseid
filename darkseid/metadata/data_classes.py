@@ -18,7 +18,11 @@ if TYPE_CHECKING:
     from decimal import Decimal
 
 
+import logging
+
 import pycountry
+
+logger = logging.getLogger(__name__)
 
 # Constants
 MAX_UPC = 17
@@ -497,9 +501,6 @@ class GTIN(Validations):
         Returns:
             Optional[int]: The validated UPC value, or None if the value is None or not an instance of int.
 
-        Raises:
-            ValueError: Raised when the length of the UPC value is greater than the maximum allowed length.
-
         """
         # sourcery skip: class-extract-method
         if value is None or not isinstance(value, int):
@@ -507,8 +508,8 @@ class GTIN(Validations):
 
         int_str = str(value)
         if len(int_str) > MAX_UPC:
-            msg = f"UPC has a length greater than {MAX_UPC}"
-            raise ValueError(msg)
+            logger.warning("UPC has a length greater than %s", MAX_UPC)
+            return None
 
         return value
 
@@ -527,17 +528,14 @@ class GTIN(Validations):
         Returns:
             Optional[int]: The validated ISBN value, or None if the value is None or not an instance of int.
 
-        Raises:
-            ValueError: Raised when the length of the ISBN value is greater than the maximum allowed length.
-
         """
         if value is None or not isinstance(value, int):
             return None
 
         int_str = str(value)
         if len(int_str) > MAX_ISBN:
-            msg = f"ISBN has a length greater than {MAX_ISBN}"
-            raise ValueError(msg)
+            logger.warning("ISBN has a length greater than %s", MAX_ISBN)
+            return None
 
         return value
 
