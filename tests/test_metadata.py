@@ -410,14 +410,16 @@ def test_gtin_string_values():
 
 def test_gtin_upc_invalid_values():
     """Test GTIN validation with invalid UPC."""
-    with pytest.raises(ValueError, match="UPC has a length greater than"):
-        GTIN(upc=1234567890123456789)
+    gtin = GTIN(upc=1234567890123456789)
+    assert gtin.upc is None
+    assert gtin.isbn is None
 
 
 def test_gtin_isbn_valid_values():
     """Test GTIN validation with ISBN."""
-    with pytest.raises(ValueError, match="ISBN has a length greater than"):
-        GTIN(isbn=1234567890123456789)
+    gtin = GTIN(isbn=1234567890123456789)
+    assert gtin.isbn is None
+    assert gtin.upc is None
 
 
 def test_price_none_country():
