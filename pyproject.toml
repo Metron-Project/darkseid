@@ -38,7 +38,7 @@ classifiers = [
 ]
 dependencies = [
   "natsort>=8.0.0,<9",
-  "pycountry>=24.6.1,<25",
+  "pycountry>=24.6.1",
   "defusedxml>=0.7.1,<0.8",
   "xmlschema>=4",
   "zipremove>=0.8.0",
