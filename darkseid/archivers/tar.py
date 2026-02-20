@@ -146,11 +146,11 @@ class TarArchiver(Archiver):
             return "bz2"
         if suffix == ".xz" and stem_suffix == "tar":
             return "xz"
-        if suffix in [".tgz"]:
+        if suffix == ".tgz":
             return "gz"
-        if suffix in [".tbz2"]:
+        if suffix == ".tbz2":
             return "bz2"
-        if suffix in [".txz"]:
+        if suffix == ".txz":
             return "xz"
         return ""  # Uncompressed TAR & .cbt
 

@@ -236,7 +236,7 @@ def test_is_zip_by_extension(temp_dir):
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_factory.return_value = Mock()
         comic = Comic(zip_path)
-        assert (comic.path.suffix.lower() in {".cbz"}) is True
+        assert (comic.path.suffix.lower() == ".cbz") is True
 
 
 def test_is_rar_by_extension(temp_dir):
@@ -247,7 +247,7 @@ def test_is_rar_by_extension(temp_dir):
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_factory.return_value = Mock()
         comic = Comic(rar_path)
-        assert (comic.path.suffix.lower() in {".cbr"}) is True
+        assert (comic.path.suffix.lower() == ".cbr") is True
 
 
 # Test writability
