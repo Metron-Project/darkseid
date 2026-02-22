@@ -511,6 +511,76 @@ def test_series_alternative_names():
     assert series.alternative_names[1].name == "L'Homme d'Acier"
 
 
+def test_community_rating_none():
+    """Test that None community_rating stays None."""
+    md = Metadata()
+    assert md.community_rating is None
+
+
+def test_community_rating_valid():
+    """Test valid community_rating values within range."""
+    md = Metadata(community_rating=Decimal("3.50"))
+    assert md.community_rating == Decimal("3.50")
+
+    md2 = Metadata(community_rating=Decimal("4.75"))
+    assert md2.community_rating == Decimal("4.75")
+
+
+def test_community_rating_boundary_values():
+    """Test community_rating at exact boundary values (0 and 5)."""
+    md_min = Metadata(community_rating=Decimal(0))
+    assert md_min.community_rating == Decimal("0.00")
+
+    md_max = Metadata(community_rating=Decimal(5))
+    assert md_max.community_rating == Decimal("5.00")
+
+
+def test_community_rating_quantized_to_two_decimal_places():
+    """Test that community_rating is rounded to 2 decimal places."""
+    md = Metadata(community_rating=Decimal("3.456"))
+    assert md.community_rating == Decimal("3.46")
+
+    md2 = Metadata(community_rating=Decimal("2.994"))
+    assert md2.community_rating == Decimal("2.99")
+
+
+def test_community_rating_below_range():
+    """Test that community_rating below 0 raises ValueError."""
+    with pytest.raises(ValueError, match="Community rating must be between 0 and 5"):
+        Metadata(community_rating=Decimal("-0.01"))
+
+
+def test_community_rating_above_range():
+    """Test that community_rating above 5 raises ValueError."""
+    with pytest.raises(ValueError, match="Community rating must be between 0 and 5"):
+        Metadata(community_rating=Decimal("5.01"))
+
+
+def test_community_rating_in_str():
+    """Test that community_rating appears in __str__ output."""
+    md = Metadata(community_rating=Decimal("4.50"))
+    result = str(md)
+    assert "Community Rating: 4.50" in result
+
+
+def test_metadata_overlay_community_rating():
+    """Test that overlay replaces community_rating with a non-None value."""
+    md1 = Metadata(community_rating=Decimal("3.00"))
+    md2 = Metadata(community_rating=Decimal("4.50"))
+
+    md1.overlay(md2)
+    assert md1.community_rating == Decimal("4.50")
+
+
+def test_metadata_overlay_community_rating_preserves_existing():
+    """Test that overlay leaves community_rating unchanged when the new value is None."""
+    md1 = Metadata(community_rating=Decimal("3.00"))
+    md2 = Metadata()  # community_rating is None
+
+    md1.overlay(md2)
+    assert md1.community_rating == Decimal("3.00")
+
+
 def test_metadata_comprehensive_str():
     """Test comprehensive string representation with many fields."""
     # Create a metadata object with many fields populated

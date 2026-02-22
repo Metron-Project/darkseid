@@ -11,11 +11,11 @@ possible, however lossy it might be
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
     from datetime import date, datetime
-    from decimal import Decimal
 
 
 import logging
@@ -560,6 +560,7 @@ class Metadata:
         genres (list[Basic]): The list of genres.
         comments (Optional[str]): The comments.
         critical_rating (Optional[str]): The critical rating.
+        community_rating (Optional[Decimal]): The community rating (0-5, up to 2 decimal places).
         country (Optional[str]): The country.
         alternate_series (Optional[str]): The alternate series.
         alternate_number (Optional[str]): The alternate number.
@@ -619,6 +620,7 @@ class Metadata:
     comments: str | None = None  # use same way as Summary in CIX
 
     critical_rating: str | None = None
+    community_rating: Decimal | None = None
     country: str | None = None
 
     alternate_series: str | None = None
@@ -672,6 +674,31 @@ class Metadata:
             if value and key != "is_empty":
                 self.is_empty = False
                 break
+        self.community_rating = self.validate_community_rating(self.community_rating)
+
+    @staticmethod
+    def validate_community_rating(value: Decimal | None) -> Decimal | None:
+        """Validate and normalise a community rating value.
+
+        Checks that the value is in the range 0-5 (inclusive) and rounds it to
+        2 decimal places, matching the ``Rating`` type defined in ComicInfo v2.
+
+        Args:
+            value: The rating value to validate, or ``None``.
+
+        Returns:
+            The validated value quantised to 2 decimal places, or ``None``.
+
+        Raises:
+            ValueError: If the value is outside the range 0-5.
+
+        """
+        if value is None:
+            return None
+        if not (Decimal(0) <= value <= Decimal(5)):
+            msg = f"Community rating must be between 0 and 5, got {value}"
+            raise ValueError(msg)
+        return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     def overlay(self: Metadata, new_md: Metadata) -> None:  # noqa: PLR0912
         """Overlays a metadata object on this one.
@@ -725,6 +752,7 @@ class Metadata:
             assign("genre", new_md.genres)
         assign("country", new_md.country)
         assign("critical_rating", new_md.critical_rating)
+        assign("community_rating", new_md.community_rating)
         assign("alternate_series", new_md.alternate_series)
         assign("alternate_number", new_md.alternate_number)
         assign("alternate_count", new_md.alternate_count)
@@ -1101,6 +1129,8 @@ class Metadata:
         tech_info = []
         if self.critical_rating:
             tech_info.append(f"Rating: {self.critical_rating}")
+        if self.community_rating is not None:
+            tech_info.append(f"Community Rating: {self.community_rating}")
         if self.country:
             tech_info.append(f"Country: {self.country}")
         if self.scan_info:

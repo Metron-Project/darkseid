@@ -5,6 +5,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timezone
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -176,6 +177,24 @@ class BaseMetadataHandler(ABC):
         """
         element = root.find(element_name)
         return element.text if element is not None else None
+
+    @staticmethod
+    def _parse_decimal(value: str | None) -> Decimal | None:
+        """Safely parse string to Decimal.
+
+        Args:
+            value: String value to parse.
+
+        Returns:
+            Decimal value or None if parsing fails.
+
+        """
+        if not value:
+            return None
+        try:
+            return Decimal(value)
+        except InvalidOperation:
+            return None
 
     @staticmethod
     def _parse_int(value: str | None) -> int | None:
