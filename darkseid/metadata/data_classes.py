@@ -621,6 +621,8 @@ class Metadata:
 
     critical_rating: str | None = None
     community_rating: Decimal | None = None
+    main_character_or_team: str | None = None
+    review: str | None = None
     country: str | None = None
 
     alternate_series: str | None = None
@@ -753,6 +755,8 @@ class Metadata:
         assign("country", new_md.country)
         assign("critical_rating", new_md.critical_rating)
         assign("community_rating", new_md.community_rating)
+        assign("main_character_or_team", new_md.main_character_or_team)
+        assign("review", new_md.review)
         assign("alternate_series", new_md.alternate_series)
         assign("alternate_number", new_md.alternate_number)
         assign("alternate_count", new_md.alternate_count)

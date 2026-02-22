@@ -380,6 +380,8 @@ class ComicInfo(BaseMetadataHandler):
 
         # CommunityRating comes after Pages in the schema
         self._set_element_text(root, "CommunityRating", md.community_rating)
+        self._set_element_text(root, "MainCharacterOrTeam", md.main_character_or_team)
+        self._set_element_text(root, "Review", md.review)
 
         ET.indent(root)
         return ET.ElementTree(root)
@@ -446,6 +448,8 @@ class ComicInfo(BaseMetadataHandler):
         md.series_group = self._get_text_content(root, "SeriesGroup")
         md.age_rating = self._parse_age_rating(self._get_text_content(root, "AgeRating"))
         md.community_rating = self._parse_decimal(self._get_text_content(root, "CommunityRating"))
+        md.main_character_or_team = self._get_text_content(root, "MainCharacterOrTeam")
+        md.review = self._get_text_content(root, "Review")
 
         tmp = self._get_text_content(root, "BlackAndWhite")
         md.black_and_white = False
