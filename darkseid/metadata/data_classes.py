@@ -546,7 +546,6 @@ class Metadata:
 
     Attributes:
         is_empty (bool): Indicates if the metadata is empty.
-        tag_origin (Optional[str]): The origin of the tag.
         info_source (Optional[list[InfoSources]]): The information source.
         series (Optional[Series]): The series information.
         issue (Optional[str]): The issue number.
@@ -559,9 +558,7 @@ class Metadata:
         gtin (Optional[GTIN]): The GTIN (Global Trade Item Number).
         genres (list[Basic]): The list of genres.
         comments (Optional[str]): The comments.
-        critical_rating (Optional[str]): The critical rating.
         community_rating (Optional[Decimal]): The community rating (0-5, up to 2 decimal places).
-        country (Optional[str]): The country.
         alternate_series (Optional[str]): The alternate series.
         alternate_number (Optional[str]): The alternate number.
         alternate_count (Optional[int]): The count of alternates.
@@ -604,7 +601,6 @@ class Metadata:
     """
 
     is_empty: bool = True
-    tag_origin: str | None = None
 
     info_source: list[InfoSources] | None = None
     series: Series | None = None
@@ -619,11 +615,9 @@ class Metadata:
     genres: list[Basic] = field(default_factory=list)
     comments: str | None = None  # use same way as Summary in CIX
 
-    critical_rating: str | None = None
     community_rating: Decimal | None = None
     main_character_or_team: str | None = None
     review: str | None = None
-    country: str | None = None
 
     alternate_series: str | None = None
     alternate_number: str | None = None
@@ -752,8 +746,6 @@ class Metadata:
         assign("gtin", new_md.gtin)
         if len(new_md.genres) > 0:
             assign("genre", new_md.genres)
-        assign("country", new_md.country)
-        assign("critical_rating", new_md.critical_rating)
         assign("community_rating", new_md.community_rating)
         assign("main_character_or_team", new_md.main_character_or_team)
         assign("review", new_md.review)
@@ -1131,12 +1123,8 @@ class Metadata:
 
         # Technical info
         tech_info = []
-        if self.critical_rating:
-            tech_info.append(f"Rating: {self.critical_rating}")
         if self.community_rating is not None:
             tech_info.append(f"Community Rating: {self.community_rating}")
-        if self.country:
-            tech_info.append(f"Country: {self.country}")
         if self.scan_info:
             tech_info.append(f"Scan: {self.scan_info}")
         if tech_info:
@@ -1151,9 +1139,6 @@ class Metadata:
                     source_str += " (Primary)"
                 source_strs.append(source_str)
             lines.append(f"{indent}Sources: {', '.join(source_strs)}")
-
-        if self.tag_origin:
-            lines.append(f"{indent}Tag Origin: {self.tag_origin}")
 
         # Web presence
         if self.web_link:
