@@ -11,11 +11,11 @@ possible, however lossy it might be
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
     from datetime import date, datetime
-    from decimal import Decimal
 
 
 import logging
@@ -546,7 +546,6 @@ class Metadata:
 
     Attributes:
         is_empty (bool): Indicates if the metadata is empty.
-        tag_origin (Optional[str]): The origin of the tag.
         info_source (Optional[list[InfoSources]]): The information source.
         series (Optional[Series]): The series information.
         issue (Optional[str]): The issue number.
@@ -559,8 +558,7 @@ class Metadata:
         gtin (Optional[GTIN]): The GTIN (Global Trade Item Number).
         genres (list[Basic]): The list of genres.
         comments (Optional[str]): The comments.
-        critical_rating (Optional[str]): The critical rating.
-        country (Optional[str]): The country.
+        community_rating (Optional[Decimal]): The community rating (0-5, up to 2 decimal places).
         alternate_series (Optional[str]): The alternate series.
         alternate_number (Optional[str]): The alternate number.
         alternate_count (Optional[int]): The count of alternates.
@@ -603,7 +601,6 @@ class Metadata:
     """
 
     is_empty: bool = True
-    tag_origin: str | None = None
 
     info_source: list[InfoSources] | None = None
     series: Series | None = None
@@ -618,8 +615,9 @@ class Metadata:
     genres: list[Basic] = field(default_factory=list)
     comments: str | None = None  # use same way as Summary in CIX
 
-    critical_rating: str | None = None
-    country: str | None = None
+    community_rating: Decimal | None = None
+    main_character_or_team: str | None = None
+    review: str | None = None
 
     alternate_series: str | None = None
     alternate_number: str | None = None
@@ -672,6 +670,31 @@ class Metadata:
             if value and key != "is_empty":
                 self.is_empty = False
                 break
+        self.community_rating = self.validate_community_rating(self.community_rating)
+
+    @staticmethod
+    def validate_community_rating(value: Decimal | None) -> Decimal | None:
+        """Validate and normalise a community rating value.
+
+        Checks that the value is in the range 0-5 (inclusive) and rounds it to
+        2 decimal places, matching the ``Rating`` type defined in ComicInfo v2.
+
+        Args:
+            value: The rating value to validate, or ``None``.
+
+        Returns:
+            The validated value quantised to 2 decimal places, or ``None``.
+
+        Raises:
+            ValueError: If the value is outside the range 0-5.
+
+        """
+        if value is None:
+            return None
+        if not (Decimal(0) <= value <= Decimal(5)):
+            msg = f"Community rating must be between 0 and 5, got {value}"
+            raise ValueError(msg)
+        return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     def overlay(self: Metadata, new_md: Metadata) -> None:  # noqa: PLR0912
         """Overlays a metadata object on this one.
@@ -723,8 +746,9 @@ class Metadata:
         assign("gtin", new_md.gtin)
         if len(new_md.genres) > 0:
             assign("genre", new_md.genres)
-        assign("country", new_md.country)
-        assign("critical_rating", new_md.critical_rating)
+        assign("community_rating", new_md.community_rating)
+        assign("main_character_or_team", new_md.main_character_or_team)
+        assign("review", new_md.review)
         assign("alternate_series", new_md.alternate_series)
         assign("alternate_number", new_md.alternate_number)
         assign("alternate_count", new_md.alternate_count)
@@ -1099,10 +1123,8 @@ class Metadata:
 
         # Technical info
         tech_info = []
-        if self.critical_rating:
-            tech_info.append(f"Rating: {self.critical_rating}")
-        if self.country:
-            tech_info.append(f"Country: {self.country}")
+        if self.community_rating is not None:
+            tech_info.append(f"Community Rating: {self.community_rating}")
         if self.scan_info:
             tech_info.append(f"Scan: {self.scan_info}")
         if tech_info:
@@ -1117,9 +1139,6 @@ class Metadata:
                     source_str += " (Primary)"
                 source_strs.append(source_str)
             lines.append(f"{indent}Sources: {', '.join(source_strs)}")
-
-        if self.tag_origin:
-            lines.append(f"{indent}Tag Origin: {self.tag_origin}")
 
         # Web presence
         if self.web_link:

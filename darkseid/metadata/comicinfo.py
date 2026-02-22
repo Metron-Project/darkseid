@@ -378,6 +378,11 @@ class ComicInfo(BaseMetadataHandler):
             page_node = ET.SubElement(pages_node, "Page")
             page_node.attrib = dict(sorted(page_dict.items()))
 
+        # CommunityRating comes after Pages in the schema
+        self._set_element_text(root, "CommunityRating", md.community_rating)
+        self._set_element_text(root, "MainCharacterOrTeam", md.main_character_or_team)
+        self._set_element_text(root, "Review", md.review)
+
         ET.indent(root)
         return ET.ElementTree(root)
 
@@ -392,6 +397,9 @@ class ComicInfo(BaseMetadataHandler):
 
         """
         root = tree.getroot()
+        if root is None:
+            msg = "XML tree has no root element"
+            raise ValueError(msg)
 
         if root.tag != "ComicInfo":
             msg = "Metadata is not ComicInfo format"
@@ -439,6 +447,9 @@ class ComicInfo(BaseMetadataHandler):
         md.story_arcs = self._string_to_arc(self._get_text_content(root, "StoryArc"))
         md.series_group = self._get_text_content(root, "SeriesGroup")
         md.age_rating = self._parse_age_rating(self._get_text_content(root, "AgeRating"))
+        md.community_rating = self._parse_decimal(self._get_text_content(root, "CommunityRating"))
+        md.main_character_or_team = self._get_text_content(root, "MainCharacterOrTeam")
+        md.review = self._get_text_content(root, "Review")
 
         tmp = self._get_text_content(root, "BlackAndWhite")
         md.black_and_white = False

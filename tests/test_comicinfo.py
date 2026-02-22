@@ -1,6 +1,7 @@
 """Tests for ComicInfo Tags."""
 
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -239,3 +240,158 @@ def test_read_from_file(test_meta_data: Metadata, tmp_path: Path) -> None:
     assert new_md.publisher.name == test_meta_data.publisher.name
     assert new_md.publisher.imprint.name == test_meta_data.publisher.imprint.name
     assert new_md.notes.comic_rack == "This is a test"
+
+
+def test_community_rating_write_and_read(tmp_path: Path) -> None:
+    """Test that community_rating is written to and read back from ComicInfo XML."""
+    tmp_file = tmp_path / "test-community-rating.xml"
+    md = Metadata(series=Series("Aquaman"), community_rating=Decimal("4.50"))
+
+    ci = ComicInfo()
+    ci.write_xml(tmp_file, md)
+    assert validate(tmp_file, CI_XSD) is True
+
+    new_md = ci.read_xml(tmp_file)
+    assert new_md.community_rating == Decimal("4.50")
+
+
+def test_community_rating_none_not_written(tmp_path: Path) -> None:
+    """Test that a None community_rating produces no CommunityRating element."""
+    tmp_file = tmp_path / "test-no-community-rating.xml"
+    md = Metadata(series=Series("Aquaman"))
+
+    ComicInfo().write_xml(tmp_file, md)
+    assert validate(tmp_file, CI_XSD) is True
+    assert "CommunityRating" not in tmp_file.read_text()
+
+
+def test_community_rating_boundary_values_roundtrip(tmp_path: Path) -> None:
+    """Test that boundary values 0 and 5 survive a write/read roundtrip."""
+    ci = ComicInfo()
+
+    for rating in (Decimal("0.00"), Decimal("5.00")):
+        tmp_file = tmp_path / f"test-rating-{rating}.xml"
+        md = Metadata(series=Series("Aquaman"), community_rating=rating)
+        ci.write_xml(tmp_file, md)
+        assert validate(tmp_file, CI_XSD) is True
+        new_md = ci.read_xml(tmp_file)
+        assert new_md.community_rating == rating
+
+
+def test_community_rating_in_xml_string() -> None:
+    """Test that community_rating appears correctly in the XML string output."""
+    md = Metadata(series=Series("Aquaman"), community_rating=Decimal("3.75"))
+    xml_str = ComicInfo().string_from_metadata(md)
+    assert "<CommunityRating>3.75</CommunityRating>" in xml_str
+
+
+def test_community_rating_parsed_from_xml_string() -> None:
+    """Test that community_rating is parsed correctly from an XML string."""
+    xml = (
+        '<?xml version="1.0" encoding="utf-8"?>'
+        "<ComicInfo>"
+        "<Series>Aquaman</Series>"
+        "<CommunityRating>2.50</CommunityRating>"
+        "</ComicInfo>"
+    )
+    md = ComicInfo().metadata_from_string(xml)
+    assert md.community_rating == Decimal("2.50")
+
+
+def test_invalid_community_rating_in_xml_string() -> None:
+    """Test that a non-numeric CommunityRating in XML is silently ignored."""
+    xml = (
+        '<?xml version="1.0" encoding="utf-8"?>'
+        "<ComicInfo>"
+        "<Series>Aquaman</Series>"
+        "<CommunityRating>not-a-number</CommunityRating>"
+        "</ComicInfo>"
+    )
+    md = ComicInfo().metadata_from_string(xml)
+    assert md.community_rating is None
+
+
+def test_main_character_or_team_write_and_read(tmp_path: Path) -> None:
+    """Test that main_character_or_team is written to and read back from ComicInfo XML."""
+    tmp_file = tmp_path / "test-main-character.xml"
+    md = Metadata(series=Series("Aquaman"), main_character_or_team="Aquaman")
+
+    ci = ComicInfo()
+    ci.write_xml(tmp_file, md)
+    assert validate(tmp_file, CI_XSD) is True
+
+    new_md = ci.read_xml(tmp_file)
+    assert new_md.main_character_or_team == "Aquaman"
+
+
+def test_main_character_or_team_none_not_written(tmp_path: Path) -> None:
+    """Test that a None main_character_or_team produces no MainCharacterOrTeam element."""
+    tmp_file = tmp_path / "test-no-main-character.xml"
+    md = Metadata(series=Series("Aquaman"))
+
+    ComicInfo().write_xml(tmp_file, md)
+    assert validate(tmp_file, CI_XSD) is True
+    assert "MainCharacterOrTeam" not in tmp_file.read_text()
+
+
+def test_main_character_or_team_in_xml_string() -> None:
+    """Test that main_character_or_team appears correctly in the XML string output."""
+    md = Metadata(series=Series("Aquaman"), main_character_or_team="Aquaman")
+    xml_str = ComicInfo().string_from_metadata(md)
+    assert "<MainCharacterOrTeam>Aquaman</MainCharacterOrTeam>" in xml_str
+
+
+def test_main_character_or_team_parsed_from_xml_string() -> None:
+    """Test that MainCharacterOrTeam is parsed correctly from an XML string."""
+    xml = (
+        '<?xml version="1.0" encoding="utf-8"?>'
+        "<ComicInfo>"
+        "<Series>Aquaman</Series>"
+        "<MainCharacterOrTeam>Aquaman</MainCharacterOrTeam>"
+        "</ComicInfo>"
+    )
+    md = ComicInfo().metadata_from_string(xml)
+    assert md.main_character_or_team == "Aquaman"
+
+
+def test_review_write_and_read(tmp_path: Path) -> None:
+    """Test that review is written to and read back from ComicInfo XML."""
+    tmp_file = tmp_path / "test-review.xml"
+    md = Metadata(series=Series("Aquaman"), review="A fantastic underwater adventure.")
+
+    ci = ComicInfo()
+    ci.write_xml(tmp_file, md)
+    assert validate(tmp_file, CI_XSD) is True
+
+    new_md = ci.read_xml(tmp_file)
+    assert new_md.review == "A fantastic underwater adventure."
+
+
+def test_review_none_not_written(tmp_path: Path) -> None:
+    """Test that a None review produces no Review element."""
+    tmp_file = tmp_path / "test-no-review.xml"
+    md = Metadata(series=Series("Aquaman"))
+
+    ComicInfo().write_xml(tmp_file, md)
+    assert validate(tmp_file, CI_XSD) is True
+    assert "Review" not in tmp_file.read_text()
+
+
+def test_review_in_xml_string() -> None:
+    """Test that review appears correctly in the XML string output."""
+    md = Metadata(series=Series("Aquaman"), review="A fantastic underwater adventure.")
+    xml_str = ComicInfo().string_from_metadata(md)
+    assert "<Review>A fantastic underwater adventure.</Review>" in xml_str
+
+
+def test_review_parsed_from_xml_string() -> None:
+    """Test that Review is parsed correctly from an XML string."""
+    xml = (
+        '<?xml version="1.0" encoding="utf-8"?>'
+        "<ComicInfo>"
+        "<Series>Aquaman</Series>"
+        "<Review>A fantastic underwater adventure.</Review>"
+        "</ComicInfo>"
+    )
+    md = ComicInfo().metadata_from_string(xml)
+    assert md.review == "A fantastic underwater adventure."
