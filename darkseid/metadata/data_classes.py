@@ -28,7 +28,9 @@ logger = logging.getLogger(__name__)
 MAX_UPC = 17
 MAX_ISBN = 13
 COUNTRY_LEN = 2
+CURRENCY_LEN = 3
 YEAR_LEN = 4
+
 # __str__ constants
 COMMENT_LEN = 50
 MAX_COMMENT_LEN = 100
@@ -36,6 +38,43 @@ MAX_NUMBER_OF_CHARACTERS = 5
 MAX_NUMBER_OF_LOCATIONS = 3
 MAX_NUMBER_OF_STORIES = 3
 MAX_NUMBER_OF_TAGS = 5
+
+_CURRENCY_TO_COUNTRY: dict[str, str] = {
+    "AUD": "AU",
+    "CAD": "CA",
+    "EUR": "DE",
+    "GBP": "GB",
+    "NZD": "NZ",
+    "USD": "US",
+}
+
+_COUNTRY_TO_CURRENCY: dict[str, str] = {v: k for k, v in _CURRENCY_TO_COUNTRY.items()}
+
+
+def currency_to_country(currency_code: str) -> str | None:
+    """Convert an ISO 4217 currency code to an ISO 3166-1 alpha-2 country code.
+
+    Args:
+        currency_code: ISO 4217 currency code (e.g., "USD").
+
+    Returns:
+        ISO 3166-1 alpha-2 country code, or None if not mapped.
+
+    """
+    return _CURRENCY_TO_COUNTRY.get(currency_code)
+
+
+def country_to_currency(country_code: str) -> str | None:
+    """Convert an ISO 3166-1 alpha-2 country code to an ISO 4217 currency code.
+
+    Args:
+        country_code: ISO 3166-1 alpha-2 country code (e.g., "US").
+
+    Returns:
+        ISO 4217 currency code, or None if not mapped.
+
+    """
+    return _COUNTRY_TO_CURRENCY.get(country_code)
 
 
 class Validations:
@@ -116,56 +155,45 @@ class Price(Validations):
 
     Attributes:
         amount (Decimal): The amount associated with the price.
-        country (str): The country associated with the price, defaults to "US".
+        currency (str): The ISO 4217 currency code, defaults to "USD".
 
     """
 
     amount: Decimal
-    country: str = field(default="US")
+    currency: str = field(default="USD")
 
     @staticmethod
-    def validate_country(value: str, **_: any) -> str:
-        """Validate a country value.
+    def validate_currency(value: str, **_: object) -> str:
+        """Validate an ISO 4217 currency code.
 
-        If the value is None, it returns the default country code "US". Otherwise, it strips
-        any leading or trailing whitespace from the value. If the value is empty after
-        stripping, it raises a ValueError.
-
-        If the length of the value is 2, it tries to find the country object using the alpha-2
-        code. Otherwise, it tries to look up the country object using the value. If the country
-        object is not found, it raises a ValueError.
+        If the value is None, it returns the default currency code "USD". Otherwise, it strips
+        any leading or trailing whitespace and uppercases the value. If the value is empty after
+        stripping, it raises a ValueError. The currency code is validated against pycountry's
+        ISO 4217 currency database.
 
         Args:
-            value (str): The country value to validate.
+            value (str): The currency code to validate.
             **_ (any): Additional keyword arguments (ignored).
 
         Returns:
-            str: The validated country code.
+            str: The validated ISO 4217 currency code.
 
         Raises:
-            ValueError: Raised when the country code cannot be found or when no value is given for the country.
+            ValueError: Raised when the currency code is invalid or no value is given.
 
         """
         if value is None:
-            return "US"
-        value = value.strip()
+            return "USD"
+        value = value.strip().upper()
         if not value:
-            msg = "No value given for country"
+            msg = "No value given for currency"
             raise ValueError(msg)
 
-        if len(value) == COUNTRY_LEN:
-            obj = pycountry.countries.get(alpha_2=value)
-        else:
-            try:
-                obj = pycountry.countries.lookup(value)
-            except LookupError as e:
-                msg = f"Couldn't find country for {value}"
-                raise ValueError(msg) from e
-
+        obj = pycountry.currencies.get(alpha_3=value)
         if obj is None:
-            msg = f"Couldn't get country code for {value}"
+            msg = f"Couldn't find currency for {value}"
             raise ValueError(msg)
-        return obj.alpha_2
+        return obj.alpha_3
 
 
 @dataclass
@@ -1011,7 +1039,7 @@ class Metadata:
 
         # Pricing and identification
         if self.prices:
-            price_strs = [f"${price.amount} ({price.country})" for price in self.prices]
+            price_strs = [f"${price.amount} ({price.currency})" for price in self.prices]
             lines.append(f"{indent}Prices: {', '.join(price_strs)}")
 
         if self.gtin:

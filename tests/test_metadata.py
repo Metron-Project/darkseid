@@ -422,21 +422,21 @@ def test_gtin_isbn_valid_values():
     assert gtin.upc is None
 
 
-def test_price_none_country():
-    """Test Price with None country."""
+def test_price_none_currency():
+    """Test Price with None currency."""
     price = Price(Decimal("2.99"), None)  # type: ignore
-    assert price.country == "US"  # Should default to US
+    assert price.currency == "USD"  # Should default to USD
 
 
-def test_price_whitespace_country():
-    """Test Price with whitespace-only country."""
-    with pytest.raises(ValueError, match="No value given for country"):
+def test_price_whitespace_currency():
+    """Test Price with whitespace-only currency."""
+    with pytest.raises(ValueError, match="No value given for currency"):
         Price(Decimal("2.99"), "   ")
 
 
-def test_price_with_bad_country():
-    """Test Price with bad country."""
-    with pytest.raises(ValueError, match="Couldn't find country for"):
+def test_price_with_bad_currency():
+    """Test Price with invalid currency code."""
+    with pytest.raises(ValueError, match="Couldn't find currency for"):
         Price(Decimal("2.99"), "xyz")
 
 
@@ -586,7 +586,7 @@ def test_metadata_comprehensive_str():
     # Create a metadata object with many fields populated
     series = Series("Superman", volume=1, start_year=1938)
     publisher = Publisher("DC Comics", imprint=Basic("Vertigo"))
-    prices = [Price(Decimal("2.99"), "US"), Price(Decimal("3.99"), "CA")]
+    prices = [Price(Decimal("2.99"), "USD"), Price(Decimal("3.99"), "CAD")]
     gtin = GTIN(upc=123456789012345, isbn=9781234567890)
     credits_ = [
         Credit("Jerry Siegel", [Role("Writer", primary=True)]),
@@ -641,7 +641,7 @@ def test_metadata_comprehensive_str():
     assert "Superman (v1) [1938]" in result
     assert "DC Comics (Vertigo)" in result
     assert "Cover: 1938-06-01 | Store: 1938-05-15" in result
-    assert "$2.99 (US), $3.99 (CA)" in result
+    assert "$2.99 (USD), $3.99 (CAD)" in result
     assert "22 pages | Color" in result
     assert "and 5 more" in result  # Character truncation
     assert "..." in result  # Comment truncation
