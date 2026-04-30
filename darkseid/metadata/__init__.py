@@ -20,6 +20,7 @@ from darkseid.metadata.data_classes import (
     Role,
     Series,
     Universe,
+    currency_to_country,
 )
 from darkseid.metadata.metroninfo import MetronInfo
 
@@ -45,4 +46,5 @@ __all__ = [
     "Series",
     "Universe",
     "XmlError",
+    "currency_to_country",
 ]

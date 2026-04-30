@@ -31,6 +31,8 @@ from darkseid.metadata.data_classes import (
     Role,
     Series,
     Universe,
+    country_to_currency,
+    currency_to_country,
 )
 
 if TYPE_CHECKING:
@@ -40,6 +42,7 @@ if TYPE_CHECKING:
 EARLIEST_YEAR = 1900
 VOLUME_THRESHOLD = 1000
 DEFAULT_COUNTRY = "US"
+DEFAULT_CURRENCY = "USD"
 DEFAULT_SERIES_NAME = "None"  # Placeholder for Series initialization; actual name set from XML
 
 # Validation sets
@@ -510,7 +513,8 @@ class MetronInfo(BaseMetadataHandler):
 
         price_node = self._get_or_create_element(root, "Prices")
         for price in prices:
-            child_node = ET.SubElement(price_node, "Price", attrib={"country": price.country})
+            country = currency_to_country(price.currency) or DEFAULT_COUNTRY
+            child_node = ET.SubElement(price_node, "Price", attrib={"country": country})
             child_node.text = str(price.amount)
 
     def _add_universes(self, root: ET.Element, universes: list[Universe]) -> None:
@@ -669,7 +673,8 @@ class MetronInfo(BaseMetadataHandler):
                 try:
                     amount = Decimal(item.text)
                     country = item.attrib.get("country", DEFAULT_COUNTRY)
-                    prices.append(Price(amount, country))
+                    currency = country_to_currency(country) or DEFAULT_CURRENCY
+                    prices.append(Price(amount, currency))
                 except (ValueError, TypeError):
                     continue
         return prices

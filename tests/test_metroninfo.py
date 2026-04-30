@@ -102,8 +102,8 @@ def complex_metadata():
 
     # Pricing and GTIN
     metadata.prices = [
-        Price(Decimal("0.12"), "US"),
-        Price(Decimal("0.15"), "CA"),
+        Price(Decimal("0.12"), "USD"),
+        Price(Decimal("0.15"), "CAD"),
     ]
     metadata.gtin = GTIN(isbn=1234567890123, upc=76194130593600111)
 
