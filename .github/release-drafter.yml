@@ -15,6 +15,7 @@ categories:
       - "chore"
       - "dependencies"
       - "documentation"
+      - "github_actions"
 exclude-labels:
   - "bot"
   - "dependabot"
