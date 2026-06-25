@@ -46,6 +46,7 @@ except ImportError:
 
 from darkseid.archivers import ArchiverFactory, ArchiverReadError
 from darkseid.archivers.zip import ZipArchiver
+from darkseid.constants import CBZ, PDF
 from darkseid.metadata.comicinfo import ComicInfo
 from darkseid.metadata.data_classes import ImageMetadata, Metadata
 from darkseid.metadata.metroninfo import MetronInfo
@@ -1188,7 +1189,7 @@ class Comic:
             return
 
         # Do not calculate page sizes for PDF files, as it can be very slow and resource-intensive.
-        if calc_page_sizes and self._path.suffix.lower() != ".pdf":
+        if calc_page_sizes and self._path.suffix.lower() != PDF:
             self._calculate_all_page_info(metadata)
 
     def _calculate_all_page_info(self, metadata: Metadata) -> None:
@@ -1273,7 +1274,7 @@ class Comic:
             Large archives may require significant time and disk space for conversion.
 
         """
-        if self._path.suffix.lower() == ".cbz":
+        if self._path.suffix.lower() == CBZ:
             logger.info("Archive %s is already in ZIP format", self._path)
             return True
 

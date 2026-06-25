@@ -1,42 +1,42 @@
-name-template: "v$RESOLVED_VERSION"
-tag-template: "v$RESOLVED_VERSION"
+name-template: v$RESOLVED_VERSION
+tag-template: v$RESOLVED_VERSION
 categories:
-  - title: "🚀 Features"
+  - title: 🚀 Features
     labels:
-      - "feature"
-      - "enhancement"
-  - title: "🐛 Bug Fixes"
+      - feature
+      - enhancement
+  - title: 🐛 Bug Fixes
     labels:
-      - "bug"
-      - "bugfix"
-  - title: "🧰 Maintenance"
+      - bug
+      - bugfix
+  - title: 🧰 Maintenance
     labels:
-      - "improvements"
-      - "chore"
-      - "dependencies"
-      - "documentation"
-      - "github_actions"
+      - improvements
+      - chore
+      - dependencies
+      - documentation
+      - github_actions
 exclude-labels:
-  - "bot"
-  - "dependabot"
-  - "ci"
+  - bot
+  - dependabot
+  - ci
 version-resolver:
   major:
     labels:
-      - "major"
+      - major
   minor:
     labels:
-      - "feature"
-      - "enhancement"
+      - feature
+      - enhancement
   patch:
     labels:
-      - "bug"
-      - "bugfix"
-      - "improvements"
-      - "chore"
-      - "dependencies"
-      - "documentation"
-      - "github_actions"
+      - bug
+      - bugfix
+      - improvements
+      - chore
+      - dependencies
+      - documentation
+      - github_actions
   default: patch
 change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
 change-title-escapes: '\<*_&'

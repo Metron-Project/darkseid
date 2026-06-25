@@ -17,6 +17,7 @@ from pathlib import Path
 
 from darkseid.archivers.pdf import PYMUPDF_AVAILABLE
 from darkseid.archivers.sevenzip import PY7ZR_AVAILABLE
+from darkseid.constants import CB7, CBR, CBT, CBZ, PDF
 
 
 # TODO: Change to StrEnum when Python-3.10 support dropped
@@ -107,11 +108,11 @@ def get_recursive_filelist(path_list: list[Path]) -> list[Path]:
         True
 
     """
-    comic_extensions = ["*.cbz", "*.cbr", "*.cbt"]
+    comic_extensions = [f"*{CBZ}", f"*{CBR}", f"*{CBT}"]
     if PY7ZR_AVAILABLE:
-        comic_extensions += ["*.cb7"]
+        comic_extensions += [f"*{CB7}"]
     if PYMUPDF_AVAILABLE:
-        comic_extensions += ["*.pdf"]
+        comic_extensions += [f"*{PDF}"]
     filelist: list[Path] = []
 
     for path_item in path_list:

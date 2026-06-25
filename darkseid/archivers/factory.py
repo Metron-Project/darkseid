@@ -39,6 +39,7 @@ from darkseid.archivers.rar import RarArchiver
 from darkseid.archivers.sevenzip import PY7ZR_AVAILABLE
 from darkseid.archivers.tar import TarArchiver
 from darkseid.archivers.zip import ZipArchiver
+from darkseid.constants import CB7, CBR, CBT, CBZ, PDF
 
 if PYMUPDF_AVAILABLE:
     from darkseid.archivers.pdf import PdfArchiver
@@ -241,17 +242,17 @@ class ArchiverFactory:
 
     # Build the archiver map with optional dependencies
     _ARCHIVER_MAP: ClassVar[dict[str, type[Archiver]]] = {
-        ".cbz": ZipArchiver,  # Comic book ZIP format
-        ".cbr": RarArchiver,  # Comic book RAR format
-        ".cbt": TarArchiver,  # Comic book TAR format
+        CBZ: ZipArchiver,
+        CBR: RarArchiver,
+        CBT: TarArchiver,
     }
 
     # Register optional archivers at class definition time
     if PYMUPDF_AVAILABLE:
-        _ARCHIVER_MAP[".pdf"] = PdfArchiver  # PDF document format
+        _ARCHIVER_MAP[PDF] = PdfArchiver
 
     if PY7ZR_AVAILABLE:
-        _ARCHIVER_MAP[".cb7"] = SevenZipArchiver  # 7Zip support
+        _ARCHIVER_MAP[CB7] = SevenZipArchiver
 
     @classmethod
     def create_archiver(cls, path: Path) -> Archiver:
@@ -397,13 +398,13 @@ class ArchiverFactory:
 
         """
         base_map = {
-            ".cbz": ZipArchiver,
-            ".cbr": RarArchiver,
-            ".cbt": TarArchiver,
+            CBZ: ZipArchiver,
+            CBR: RarArchiver,
+            CBT: TarArchiver,
         }
         # Add optional archivers if their dependencies are available
         if PYMUPDF_AVAILABLE:
-            base_map[".pdf"] = PdfArchiver
+            base_map[PDF] = PdfArchiver
         if PY7ZR_AVAILABLE:
-            base_map[".cb7"] = SevenZipArchiver
+            base_map[CB7] = SevenZipArchiver
         cls._ARCHIVER_MAP = base_map
