@@ -1187,7 +1187,8 @@ class Comic:
             )
             return
 
-        if calc_page_sizes:
+        # Do not calculate page sizes for PDF files, as it can be very slow and resource-intensive.
+        if calc_page_sizes and self._path.suffix.lower() != ".pdf":
             self._calculate_all_page_info(metadata)
 
     def _calculate_all_page_info(self, metadata: Metadata) -> None:

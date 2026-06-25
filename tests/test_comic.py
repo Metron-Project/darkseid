@@ -63,6 +63,14 @@ def sample_seven_zip_path(temp_dir):
 
 
 @pytest.fixture
+def sample_pdf_file(temp_dir):
+    """Create a sample PDF file for testing."""
+    pdf_path = temp_dir / "test_comic.pdf"
+    pdf_path.touch()
+    return pdf_path
+
+
+@pytest.fixture
 def sample_metadata():
     """Create sample metadata for testing."""
     metadata = Metadata()
@@ -970,6 +978,42 @@ def test_apply_archive_info_to_metadata_image_error(sample_cbz_file, sample_meta
 
             # Should still set image size
             assert page["ImageSize"] == "15"
+
+
+def test_apply_archive_info_skips_page_sizes_for_pdf(sample_pdf_file, sample_metadata):
+    """Test that page size calculation is skipped for PDF files."""
+    with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
+        mock_archiver = Mock()
+        mock_archiver.get_filename_list.return_value = ["page1.jpg"]
+        mock_factory.return_value = mock_archiver
+
+        comic = Comic(sample_pdf_file)
+
+        page = ImageMetadata()
+        page["Image"] = "0"
+        sample_metadata.pages = [page]
+
+        with patch.object(comic, "_calculate_all_page_info") as mock_calc:
+            comic._apply_archive_info_to_metadata(sample_metadata, calc_page_sizes=True)
+            mock_calc.assert_not_called()
+
+
+def test_apply_archive_info_calculates_page_sizes_for_non_pdf(sample_cbz_file, sample_metadata):
+    """Test that page size calculation runs for non-PDF files when requested."""
+    with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
+        mock_archiver = Mock()
+        mock_archiver.get_filename_list.return_value = ["page1.jpg"]
+        mock_factory.return_value = mock_archiver
+
+        comic = Comic(sample_cbz_file)
+
+        page = ImageMetadata()
+        page["Image"] = "0"
+        sample_metadata.pages = [page]
+
+        with patch.object(comic, "_calculate_all_page_info") as mock_calc:
+            comic._apply_archive_info_to_metadata(sample_metadata, calc_page_sizes=True)
+            mock_calc.assert_called_once_with(sample_metadata)
 
 
 # Test ZIP export
