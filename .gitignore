@@ -88,3 +88,5 @@ venv/
 venv.bak/
 .webassets-cache
 wheels/
+# Add any AI information files that should be ignored below
+CLAUDE.md
