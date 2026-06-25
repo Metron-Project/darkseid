@@ -5,6 +5,7 @@ build/
 .cache
 celerybeat.pid
 celerybeat-schedule
+CLAUDE.md
 *.cover
 .coverage
 .coverage.*
@@ -88,5 +89,3 @@ venv/
 venv.bak/
 .webassets-cache
 wheels/
-# Add any AI information files that should be ignored below
-CLAUDE.md
