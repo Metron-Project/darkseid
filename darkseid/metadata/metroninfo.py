@@ -193,7 +193,8 @@ class MetronInfo(BaseMetadataHandler):
 
         """
         tree = self._convert_metadata_to_xml(metadata, xml_bytes)
-        return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
+        root = self._require_root(tree)
+        return ET.tostring(root, encoding="utf-8", xml_declaration=True).decode()
 
     def write_xml(self, filename: Path, metadata: Metadata, xml_bytes: bytes | None = None) -> None:
         """Write a Metadata object to an XML file.
@@ -216,6 +217,13 @@ class MetronInfo(BaseMetadataHandler):
     def _validate_xml(self, tree: ET.ElementTree) -> None:
         """Validate XML against schema.
 
+        Validates the serialized bytes rather than the live tree object: the
+        `xmlschema` validator treats literal `xmlns:*` attributes on an in-memory
+        `ET.Element` as regular (disallowed) attributes rather than namespace
+        declarations, but correctly recognizes them as namespace declarations once
+        parsed from real XML bytes. This also guarantees the bytes that get
+        validated are the same bytes that get written.
+
         Args:
             tree: The XML tree to validate.
 
@@ -223,9 +231,11 @@ class MetronInfo(BaseMetadataHandler):
             XmlError: If validation fails.
 
         """
+        root = self._require_root(tree)
+        xml_bytes = ET.tostring(root, encoding="utf-8", xml_declaration=True)
         try:
             schema = XMLSchema11(self._schema_path)
-            schema.validate(tree)
+            schema.validate(xml_bytes)
         except XMLSchemaValidationError as e:
             msg = f"Failed to validate XML: {e!r}"
             raise XmlError(msg) from e
@@ -242,11 +252,45 @@ class MetronInfo(BaseMetadataHandler):
 
         """
         if not xml_bytes:
-            return ET.Element("MetronInfo")
-        try:
-            return ET.ElementTree(fromstring(xml_bytes)).getroot()
-        except ParseError:
-            return ET.Element("MetronInfo")
+            root = ET.Element("MetronInfo")
+        else:
+            try:
+                parsed_root = ET.ElementTree(fromstring(xml_bytes)).getroot()
+                root = ET.Element("MetronInfo") if parsed_root is None else parsed_root
+            except ParseError:
+                root = ET.Element("MetronInfo")
+
+        root.attrib["xmlns:metroninfo"] = (
+            "https://metron-project.github.io/docs/metroninfo/schemas/v1.0"
+        )
+        root.attrib["xmlns:xsd"] = "http://www.w3.org/2001/XMLSchema"
+        root.attrib["xmlns:xsi"] = "http://www.w3.org/2001/XMLSchema-instance"
+        root.attrib["xsi:schemaLocation"] = (
+            "https://metron-project.github.io/docs/metroninfo/schemas/v1.0 "
+            "https://raw.githubusercontent.com/Metron-Project/metroninfo/refs/heads/master/schema/v1.0/MetronInfo.xsd"
+        )
+
+        return root
+
+    @staticmethod
+    def _require_root(tree: ET.ElementTree) -> ET.Element:
+        """Return the tree's root element, raising if it is missing.
+
+        Args:
+            tree: The XML ElementTree to read the root from.
+
+        Returns:
+            The root XML element.
+
+        Raises:
+            XmlError: If the tree has no root element.
+
+        """
+        root = tree.getroot()
+        if root is None:
+            msg = "XML tree has no root element"
+            raise XmlError(msg)
+        return root
 
     @staticmethod
     def _is_valid_info_source(source: str | None) -> bool:
