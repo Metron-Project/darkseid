@@ -153,6 +153,51 @@ def test_get_root_malformed_xml(metron_info):
     assert result.tag == "MetronInfo"
 
 
+def test_get_root_no_duplicate_namespace_attributes(metron_info):
+    """Regression test for #238.
+
+    Merging metadata into an existing MetronInfo.xml that already declares the
+    namespaces (as any file previously written by darkseid would) must not
+    produce duplicate xmlns:xsi/xsi:schemaLocation attributes, since ElementTree
+    parses xsi:schemaLocation into Clark notation rather than the original
+    "xsi:schemaLocation" attribute name.
+    """
+    existing_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <MetronInfo xmlns:metroninfo="https://metron-project.github.io/docs/metroninfo/schemas/v1.0"
+                xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                xsi:schemaLocation="https://metron-project.github.io/docs/metroninfo/schemas/v1.0 https://raw.githubusercontent.com/Metron-Project/metroninfo/refs/heads/master/schema/v1.0/MetronInfo.xsd">
+        <Number>1</Number>
+    </MetronInfo>"""
+
+    root = metron_info._get_root(existing_xml)
+    serialized = ET.tostring(root, encoding="unicode")
+
+    assert serialized.count("xmlns:xsi=") == 1
+    assert serialized.count("xsi:schemaLocation=") == 1
+    assert serialized.count("xmlns:metroninfo=") == 1
+    assert serialized.count("xmlns:xsd=") == 1
+
+
+def test_string_from_metadata_merge_no_duplicate_namespace_attributes(
+    metron_info, complex_metadata
+):
+    """Regression test for #238.
+
+    Writing metadata a second time using bytes produced by a first write must
+    not introduce duplicate namespace declarations/attributes.
+    """
+    first_pass = metron_info.string_from_metadata(complex_metadata)
+    second_pass = metron_info.string_from_metadata(
+        complex_metadata, first_pass.encode("utf-8")
+    )
+
+    assert second_pass.count("xmlns:xsi=") == 1
+    assert second_pass.count("xsi:schemaLocation=") == 1
+    assert second_pass.count("xmlns:metroninfo=") == 1
+    assert second_pass.count("xmlns:xsd=") == 1
+
+
 # Enhanced info source validation tests
 @pytest.mark.parametrize(
     ("source", "expected", "description"),

@@ -260,6 +260,19 @@ class MetronInfo(BaseMetadataHandler):
             except ParseError:
                 root = ET.Element("MetronInfo")
 
+        # ElementTree parses namespaced attributes (e.g. xsi:schemaLocation) from
+        # existing XML into Clark notation ("{uri}local") rather than preserving
+        # the original "xsi:schemaLocation" key. Left in place, the attribute
+        # below would be added as a second, differently-keyed attribute, and
+        # ET.tostring() would auto-generate its own xmlns declaration for the
+        # Clark-notation one, producing duplicate xmlns:xsi/xsi:schemaLocation
+        # attributes in the serialized XML. Strip any such existing attribute
+        # for the XSI namespace before re-adding the canonical one below.
+        xsi_ns = "http://www.w3.org/2001/XMLSchema-instance"
+        root.attrib = {
+            key: value for key, value in root.attrib.items() if not key.startswith(f"{{{xsi_ns}}}")
+        }
+
         root.attrib["xmlns:metroninfo"] = (
             "https://metron-project.github.io/docs/metroninfo/schemas/v1.0"
         )
