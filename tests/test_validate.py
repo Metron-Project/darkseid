@@ -42,7 +42,12 @@ def mock_schema_path(tmp_path):
 # SchemaVersion enum tests
 def test_schema_version_enum_values():
     """Test that SchemaVersion enum has expected values."""
-    expected_values = ["METRON_INFO_V1", "COMIC_INFO_V2", "COMIC_INFO_V1", "UNKNOWN"]
+    expected_values = [
+        "METRON_INFO_V1_1",
+        "COMIC_INFO_V2",
+        "COMIC_INFO_V1",
+        "UNKNOWN",
+    ]
     actual_values = [version.name for version in SchemaVersion]
     assert actual_values == expected_values
 
@@ -51,7 +56,7 @@ def test_schema_version_string_representation():
     """Test SchemaVersion string representation."""
     assert str(SchemaVersion.COMIC_INFO_V1) == "Comic Info V1"
     assert str(SchemaVersion.COMIC_INFO_V2) == "Comic Info V2"
-    assert str(SchemaVersion.METRON_INFO_V1) == "Metron Info V1"
+    assert str(SchemaVersion.METRON_INFO_V1_1) == "Metron Info V1.1"
     assert str(SchemaVersion.UNKNOWN) == "Unknown"
 
 
@@ -122,15 +127,15 @@ def test_get_schema_path_comic_info_v1(mock_as_file, mock_files):
 
 @patch("darkseid.validate.files")
 @patch("darkseid.validate.as_file")
-def test_get_schema_path_metron_info_v1(mock_as_file, mock_files):
-    """Test _get_schema_path for MetronInfo v1."""
+def test_get_schema_path_metron_info_v1_1(mock_as_file, mock_files):
+    """Test _get_schema_path for MetronInfo v1.1."""
     mock_path = Mock()
     mock_files.return_value.joinpath.return_value = mock_path
     mock_as_file.return_value.__enter__.return_value = Path("/fake/path/MetronInfo.xsd")
 
-    result = ValidateMetadata._get_schema_path(SchemaVersion.METRON_INFO_V1)
+    result = ValidateMetadata._get_schema_path(SchemaVersion.METRON_INFO_V1_1)
 
-    mock_files.assert_called_once_with("darkseid.schemas.MetronInfo.v1")
+    mock_files.assert_called_once_with("darkseid.schemas.MetronInfo.v1_1")
     mock_files.return_value.joinpath.assert_called_once_with("MetronInfo.xsd")
     assert result == Path("/fake/path/MetronInfo.xsd")
 
@@ -215,10 +220,10 @@ def test_validate_first_schema_valid(valid_xml_bytes):
     validator = ValidateMetadata(valid_xml_bytes)
 
     with patch.object(validator, "_is_valid") as mock_is_valid:
-        mock_is_valid.side_effect = lambda schema: schema == SchemaVersion.METRON_INFO_V1
+        mock_is_valid.side_effect = lambda schema: schema == SchemaVersion.METRON_INFO_V1_1
 
         result = validator.validate()
-        assert result == SchemaVersion.METRON_INFO_V1
+        assert result == SchemaVersion.METRON_INFO_V1_1
 
 
 def test_validate_second_schema_valid(valid_xml_bytes):
@@ -247,7 +252,7 @@ def test_validate_all_returns_all_results(valid_xml_bytes):
     validator = ValidateMetadata(valid_xml_bytes)
 
     expected_results = {
-        SchemaVersion.METRON_INFO_V1: True,
+        SchemaVersion.METRON_INFO_V1_1: True,
         SchemaVersion.COMIC_INFO_V2: False,
         SchemaVersion.COMIC_INFO_V1: True,
     }
@@ -306,7 +311,7 @@ def test_get_validation_errors_no_errors(valid_xml_bytes):
     [
         (SchemaVersion.COMIC_INFO_V1, "darkseid.schemas.ComicInfo.v1", "ComicInfo.xsd"),
         (SchemaVersion.COMIC_INFO_V2, "darkseid.schemas.ComicInfo.v2", "ComicInfo.xsd"),
-        (SchemaVersion.METRON_INFO_V1, "darkseid.schemas.MetronInfo.v1", "MetronInfo.xsd"),
+        (SchemaVersion.METRON_INFO_V1_1, "darkseid.schemas.MetronInfo.v1_1", "MetronInfo.xsd"),
     ],
 )
 def test_schema_config_mapping(schema_version, expected_module, expected_file):
@@ -322,7 +327,7 @@ def test_schema_config_mapping(schema_version, expected_module, expected_file):
     [
         (SchemaVersion.COMIC_INFO_V1, XMLSchema10),
         (SchemaVersion.COMIC_INFO_V2, XMLSchema10),
-        (SchemaVersion.METRON_INFO_V1, XMLSchema11),
+        (SchemaVersion.METRON_INFO_V1_1, XMLSchema11),
     ],
 )
 def test_schema_class_mapping(schema_version, expected_class):
@@ -335,7 +340,7 @@ def test_schema_class_mapping(schema_version, expected_class):
 def test_validation_order_consistency():
     """Test that validation order is consistent with class definition."""
     expected_order = [
-        SchemaVersion.METRON_INFO_V1,
+        SchemaVersion.METRON_INFO_V1_1,
         SchemaVersion.COMIC_INFO_V2,
         SchemaVersion.COMIC_INFO_V1,
     ]

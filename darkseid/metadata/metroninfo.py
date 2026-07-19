@@ -162,7 +162,7 @@ class MetronInfo(BaseMetadataHandler):
     def __init__(self) -> None:
         """Initialize the MetronInfo instance."""
         self._schema_path = (
-            Path(__file__).parent.parent / "schemas" / "MetronInfo" / "v1" / "MetronInfo.xsd"
+            Path(__file__).parent.parent / "schemas" / "MetronInfo" / "v1_1" / "MetronInfo.xsd"
         )
 
     def metadata_from_string(self, xml_string: str) -> Metadata:
@@ -278,13 +278,13 @@ class MetronInfo(BaseMetadataHandler):
         }
 
         root.attrib["xmlns:metroninfo"] = (
-            "https://metron-project.github.io/docs/metroninfo/schemas/v1.0"
+            "https://metron-project.github.io/docs/metroninfo/schemas/v1.1"
         )
         root.attrib["xmlns:xsd"] = "http://www.w3.org/2001/XMLSchema"
         root.attrib["xmlns:xsi"] = "http://www.w3.org/2001/XMLSchema-instance"
         root.attrib["xsi:schemaLocation"] = (
-            "https://metron-project.github.io/docs/metroninfo/schemas/v1.0 "
-            "https://raw.githubusercontent.com/Metron-Project/metroninfo/refs/heads/master/schema/v1.0/MetronInfo.xsd"
+            "https://metron-project.github.io/docs/metroninfo/schemas/v1.1 "
+            "https://raw.githubusercontent.com/Metron-Project/metroninfo/refs/heads/master/schema/v1.1/MetronInfo.xsd"
         )
 
         return root
@@ -544,6 +544,25 @@ class MetronInfo(BaseMetadataHandler):
             child_node = ET.SubElement(id_node, "ID", attrib=attributes)
             child_node.text = str(source.id_)
 
+    def _add_community_rating(
+        self, root: ET.Element, rating: Decimal | None, rating_count: int | None
+    ) -> None:
+        """Add community rating information to XML.
+
+        Args:
+            root: Root element.
+            rating: Average community rating.
+            rating_count: Number of ratings contributing to the average.
+
+        """
+        if rating is None:
+            return
+
+        rating_node = self._get_or_create_element(root, "CommunityRating")
+        ET.SubElement(rating_node, "AverageRating").text = str(rating)
+        if rating_count:
+            ET.SubElement(rating_node, "RatingCount").text = str(rating_count)
+
     def _add_gtin(self, root: ET.Element, gtin: GTIN | None) -> None:
         """Add GTIN information to XML.
 
@@ -671,6 +690,29 @@ class MetronInfo(BaseMetadataHandler):
                     continue
 
         return gtin if found_data else None
+
+    def _parse_community_rating_element(
+        self, rating_element: ET.Element | None
+    ) -> tuple[Decimal | None, int | None]:
+        """Parse CommunityRating element into an average rating and rating count.
+
+        Args:
+            rating_element: The CommunityRating XML element.
+
+        Returns:
+            Tuple of (average rating, rating count), either of which may be None.
+
+        """
+        if rating_element is None:
+            return None, None
+
+        average_elem = rating_element.find("AverageRating")
+        rating = self._parse_decimal(average_elem.text) if average_elem is not None else None
+
+        count_elem = rating_element.find("RatingCount")
+        rating_count = self._parse_int(count_elem.text) if count_elem is not None else None
+
+        return rating, rating_count
 
     def _parse_info_sources_element(
         self, ids_element: ET.Element | None
@@ -945,6 +987,7 @@ class MetronInfo(BaseMetadataHandler):
         self._add_series(root, metadata.series)
         self._set_element_text(root, "CollectionTitle", metadata.collection_title)
         self._set_element_text(root, "Number", metadata.issue)
+        self._set_element_text(root, "AlternativeNumber", metadata.alternate_number)
 
         if metadata.stories:
             self._add_basic_children(root, "Stories", "Story", metadata.stories)
@@ -987,6 +1030,8 @@ class MetronInfo(BaseMetadataHandler):
             self._set_element_text(
                 root, "AgeRating", self._normalize_age_rating(metadata.age_rating)
             )
+
+        self._add_community_rating(root, metadata.community_rating, metadata.rating_count)
 
         if metadata.web_link:
             self._add_urls(root, metadata.web_link)
@@ -1033,6 +1078,7 @@ class MetronInfo(BaseMetadataHandler):
             "URLs": root.find("URLs"),
             "Notes": root.find("Notes"),
             "AgeRating": root.find("AgeRating"),
+            "CommunityRating": root.find("CommunityRating"),
             "Stories": root.find("Stories"),
             "Genres": root.find("Genres"),
             "Tags": root.find("Tags"),
@@ -1053,6 +1099,7 @@ class MetronInfo(BaseMetadataHandler):
         # Handle issue number with IssueString
         issue_number = self._get_text_content(root, "Number")
         md.issue = IssueString(issue_number).as_string() if issue_number else None
+        md.alternate_number = self._get_text_content(root, "AlternativeNumber")
 
         md.stories = self._parse_basic_list_element(element_cache["Stories"])
         md.comments = self._get_text_content(root, "Summary")
@@ -1081,6 +1128,10 @@ class MetronInfo(BaseMetadataHandler):
             AgeRatings(metron_info=age_rating_elem.text)
             if age_rating_elem is not None and age_rating_elem.text
             else None
+        )
+
+        md.community_rating, md.rating_count = self._parse_community_rating_element(
+            element_cache["CommunityRating"]
         )
 
         md.web_link = self._parse_urls_element(element_cache["URLs"])

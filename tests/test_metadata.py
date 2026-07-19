@@ -581,6 +581,44 @@ def test_metadata_overlay_community_rating_preserves_existing():
     assert md1.community_rating == Decimal("3.00")
 
 
+def test_rating_count_none():
+    """Test that None rating_count stays None."""
+    md = Metadata()
+    assert md.rating_count is None
+
+
+def test_rating_count_in_str():
+    """Test that rating_count is appended to the community rating in __str__ output."""
+    md = Metadata(community_rating=Decimal("4.50"), rating_count=150)
+    result = str(md)
+    assert "Community Rating: 4.50 (150 ratings)" in result
+
+
+def test_rating_count_omitted_from_str_without_community_rating():
+    """Test that rating_count alone doesn't produce a Community Rating line."""
+    md = Metadata(rating_count=150)
+    result = str(md)
+    assert "Community Rating" not in result
+
+
+def test_metadata_overlay_rating_count():
+    """Test that overlay replaces rating_count with a non-None value."""
+    md1 = Metadata(rating_count=10)
+    md2 = Metadata(rating_count=150)
+
+    md1.overlay(md2)
+    assert md1.rating_count == 150
+
+
+def test_metadata_overlay_rating_count_preserves_existing():
+    """Test that overlay leaves rating_count unchanged when the new value is None."""
+    md1 = Metadata(rating_count=10)
+    md2 = Metadata()  # rating_count is None
+
+    md1.overlay(md2)
+    assert md1.rating_count == 10
+
+
 def test_metadata_comprehensive_str():
     """Test comprehensive string representation with many fields."""
     # Create a metadata object with many fields populated

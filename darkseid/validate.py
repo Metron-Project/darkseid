@@ -5,6 +5,7 @@ from __future__ import annotations
 __all__ = ["SchemaVersion", "ValidateMetadata", "ValidationError"]
 
 import logging
+import re
 from contextlib import contextmanager
 from enum import Enum, auto, unique
 from importlib.resources import as_file, files
@@ -49,14 +50,15 @@ class SchemaVersion(Enum):
     for validation priority.
     """
 
-    METRON_INFO_V1 = auto()
+    METRON_INFO_V1_1 = auto()
     COMIC_INFO_V2 = auto()
     COMIC_INFO_V1 = auto()
     UNKNOWN = auto()
 
     def __str__(self) -> str:
         """Return a human-readable string representation."""
-        return self.name.replace("_", " ").title()
+        title = self.name.replace("_", " ").title()
+        return re.sub(r"(\d) (\d)", r"\1.\2", title)
 
 
 class ValidateMetadata:
@@ -80,8 +82,8 @@ class ValidateMetadata:
             "file_name": "ComicInfo.xsd",
             "schema_class": XMLSchema10,
         },
-        SchemaVersion.METRON_INFO_V1: {
-            "module_path": "darkseid.schemas.MetronInfo.v1",
+        SchemaVersion.METRON_INFO_V1_1: {
+            "module_path": "darkseid.schemas.MetronInfo.v1_1",
             "file_name": "MetronInfo.xsd",
             "schema_class": XMLSchema11,
         },
@@ -89,7 +91,7 @@ class ValidateMetadata:
 
     # Validation order: newest/most specific schemas first
     _VALIDATION_ORDER: ClassVar[list[SchemaVersion]] = [
-        SchemaVersion.METRON_INFO_V1,
+        SchemaVersion.METRON_INFO_V1_1,
         SchemaVersion.COMIC_INFO_V2,
         SchemaVersion.COMIC_INFO_V1,
     ]
