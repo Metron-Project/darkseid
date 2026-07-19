@@ -140,13 +140,10 @@ def test_read_xml_valid_file(handler, temp_xml_file):
     assert metadata.title == "Test Title"
 
 
-def test_read_xml_invalid_file_returns_empty_metadata(handler, invalid_xml_file):
-    """Test that reading an invalid XML file returns empty Metadata."""
-    metadata = handler.read_xml(invalid_xml_file)
-
-    assert isinstance(metadata, Metadata)
-    # Should return empty metadata when parse fails
-    assert not hasattr(metadata, "title") or metadata.title is None
+def test_read_xml_invalid_file_raises_xml_error(handler, invalid_xml_file):
+    """Test that reading an invalid XML file raises XmlError instead of silently swallowing it."""
+    with pytest.raises(XmlError):
+        handler.read_xml(invalid_xml_file)
 
 
 def test_read_xml_nonexistent_file(handler, tmp_path):

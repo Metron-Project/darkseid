@@ -7,11 +7,12 @@ from abc import ABC, abstractmethod
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from defusedxml.ElementTree import parse
 
-from darkseid.metadata.data_classes import Metadata
+if TYPE_CHECKING:
+    from darkseid.metadata.data_classes import Metadata
 
 
 class XmlError(Exception):
@@ -100,11 +101,15 @@ class BaseMetadataHandler(ABC):
         Returns:
             The resulting Metadata object.
 
+        Raises:
+            XmlError: If the XML file cannot be parsed.
+
         """
         try:
             tree = parse(filename)
-        except ET.ParseError:
-            return Metadata()
+        except ET.ParseError as e:
+            msg = f"Failed to parse XML file '{filename}': {e!r}"
+            raise XmlError(msg) from e
         return self._convert_xml_to_metadata(tree)
 
     @staticmethod

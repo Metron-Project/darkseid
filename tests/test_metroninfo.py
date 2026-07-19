@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from darkseid.metadata.base_handler import XmlError
 from darkseid.metadata.data_classes import (
     GTIN,
     AgeRatings,
@@ -188,9 +189,7 @@ def test_string_from_metadata_merge_no_duplicate_namespace_attributes(
     not introduce duplicate namespace declarations/attributes.
     """
     first_pass = metron_info.string_from_metadata(complex_metadata)
-    second_pass = metron_info.string_from_metadata(
-        complex_metadata, first_pass.encode("utf-8")
-    )
+    second_pass = metron_info.string_from_metadata(complex_metadata, first_pass.encode("utf-8"))
 
     assert second_pass.count("xmlns:xsi=") == 1
     assert second_pass.count("xsi:schemaLocation=") == 1
@@ -330,7 +329,7 @@ def test_metadata_from_string_with_unicode(metron_info):
 
 
 def test_metadata_from_string_malformed_xml(metron_info):
-    """Test parsing malformed XML."""
+    """Test parsing malformed XML raises XmlError instead of silently swallowing it."""
     malformed_xml = """
     <MetronInfo>
         <Series>
@@ -339,9 +338,8 @@ def test_metadata_from_string_malformed_xml(metron_info):
     </MetronInfo>
     """
 
-    # Should handle gracefully and return some metadata
-    result = metron_info.metadata_from_string(malformed_xml)
-    assert isinstance(result, Metadata)
+    with pytest.raises(XmlError):
+        metron_info.metadata_from_string(malformed_xml)
 
 
 def test_metadata_from_string_empty_elements(metron_info):
@@ -404,14 +402,13 @@ def test_read_xml_file_not_found(metron_info, tmp_path):
 
 
 def test_read_xml_invalid_xml_file(metron_info, tmp_path):
-    """Test reading file with invalid XML."""
+    """Test reading file with invalid XML raises XmlError instead of silently swallowing it."""
     invalid_xml_file = tmp_path / "invalid.xml"
     with Path.open(invalid_xml_file, "w") as f:
         f.write("This is not XML content")
 
-    # Should handle gracefully
-    result = metron_info.read_xml(invalid_xml_file)
-    assert isinstance(result, Metadata)
+    with pytest.raises(XmlError):
+        metron_info.read_xml(invalid_xml_file)
 
 
 def test_round_trip_xml_conversion(metron_info, complex_metadata, tmp_path):

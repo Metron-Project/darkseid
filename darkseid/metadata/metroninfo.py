@@ -174,11 +174,15 @@ class MetronInfo(BaseMetadataHandler):
         Returns:
             The resulting Metadata object.
 
+        Raises:
+            XmlError: If the XML string cannot be parsed.
+
         """
         try:
             tree = ET.ElementTree(fromstring(xml_string))
-        except ParseError:
-            return Metadata()
+        except ParseError as e:
+            msg = f"Failed to parse MetronInfo XML: {e!r}"
+            raise XmlError(msg) from e
         return self._convert_xml_to_metadata(tree)
 
     def string_from_metadata(self, metadata: Metadata, xml_bytes: bytes = b"") -> str:

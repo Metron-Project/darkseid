@@ -12,7 +12,7 @@ from typing import Any, ClassVar, cast
 from defusedxml.ElementTree import fromstring
 
 from darkseid.issue_string import IssueString
-from darkseid.metadata.base_handler import BaseMetadataHandler
+from darkseid.metadata.base_handler import BaseMetadataHandler, XmlError
 from darkseid.metadata.data_classes import (
     AgeRatings,
     Arc,
@@ -230,11 +230,15 @@ class ComicInfo(BaseMetadataHandler):
         Returns:
             The parsed Metadata object.
 
+        Raises:
+            XmlError: If the XML string cannot be parsed.
+
         """
         try:
             tree = ET.ElementTree(fromstring(xml_string))
-        except ET.ParseError:
-            return Metadata()
+        except ET.ParseError as e:
+            msg = f"Failed to parse ComicInfo XML: {e!r}"
+            raise XmlError(msg) from e
         return self._convert_xml_to_metadata(tree)
 
     def string_from_metadata(
