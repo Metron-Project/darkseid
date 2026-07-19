@@ -67,6 +67,9 @@ def complex_metadata():
         ],
     )
     metadata.issue = "1"
+    metadata.alternate_number = "1AU"
+    metadata.community_rating = Decimal("4.5")
+    metadata.rating_count = 150
     metadata.title = "With Great Power..."
     metadata.cover_date = date(1963, 8, 1)
     metadata.store_date = date(1963, 8, 10)
@@ -217,6 +220,65 @@ def test_age_rating_comprehensive(metron_info, rating_input, expected, descripti
     assert result == expected
 
 
+# Community rating (v1.1) tests
+def test_community_rating_without_count(metron_info):
+    """RatingCount should be omitted when no count is given."""
+    metadata = Metadata()
+    metadata.series = Series(name="Test Series")
+    metadata.community_rating = Decimal("3.5")
+
+    root = metron_info._convert_metadata_to_xml(metadata).getroot()
+
+    assert root.find("CommunityRating/AverageRating").text == "3.5"
+    assert root.find("CommunityRating/RatingCount") is None
+
+
+def test_community_rating_absent_when_no_rating(metron_info):
+    """CommunityRating element should not be written when there is no rating."""
+    metadata = Metadata()
+    metadata.series = Series(name="Test Series")
+    metadata.rating_count = 10  # A count with no average shouldn't produce the element.
+
+    root = metron_info._convert_metadata_to_xml(metadata).getroot()
+
+    assert root.find("CommunityRating") is None
+
+
+def test_community_rating_round_trip(metron_info):
+    """AverageRating and RatingCount survive a write/read round trip."""
+    xml_string = """
+    <MetronInfo>
+        <Series><Name>Test Series</Name></Series>
+        <CommunityRating>
+            <AverageRating>4.25</AverageRating>
+            <RatingCount>7</RatingCount>
+        </CommunityRating>
+    </MetronInfo>
+    """
+
+    result = metron_info.metadata_from_string(xml_string)
+
+    assert result.community_rating == Decimal("4.25")
+    assert result.rating_count == 7
+
+
+def test_community_rating_missing_rating_count(metron_info):
+    """AverageRating without RatingCount parses with rating_count as None."""
+    xml_string = """
+    <MetronInfo>
+        <Series><Name>Test Series</Name></Series>
+        <CommunityRating>
+            <AverageRating>4.25</AverageRating>
+        </CommunityRating>
+    </MetronInfo>
+    """
+
+    result = metron_info.metadata_from_string(xml_string)
+
+    assert result.community_rating == Decimal("4.25")
+    assert result.rating_count is None
+
+
 # XML Conversion Tests
 def test_convert_complex_metadata_to_xml(metron_info, complex_metadata):
     """Test XML conversion with complex metadata."""
@@ -231,6 +293,9 @@ def test_convert_complex_metadata_to_xml(metron_info, complex_metadata):
     assert root.find("Series") is not None
     assert root.find("Credits") is not None
     assert root.find("Prices") is not None
+    assert root.find("AlternativeNumber").text == "1AU"
+    assert root.find("CommunityRating/AverageRating").text == "4.5"
+    assert root.find("CommunityRating/RatingCount").text == "150"
 
     # Check for multiple items
     credits_ = root.find("Credits")
@@ -385,6 +450,9 @@ def test_round_trip_xml_conversion(metron_info, complex_metadata, tmp_path):
     assert len(result.credits) == len(complex_metadata.credits)
     assert len(result.characters) == len(complex_metadata.characters)
     assert result.cover_date == complex_metadata.cover_date
+    assert result.alternate_number == complex_metadata.alternate_number
+    assert result.community_rating == complex_metadata.community_rating
+    assert result.rating_count == complex_metadata.rating_count
 
 
 # Performance and edge case tests

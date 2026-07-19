@@ -587,6 +587,7 @@ class Metadata:
         genres (list[Basic]): The list of genres.
         comments (Optional[str]): The comments.
         community_rating (Optional[Decimal]): The community rating (0-5, up to 2 decimal places).
+        rating_count (Optional[int]): The number of ratings contributing to the community rating.
         alternate_series (Optional[str]): The alternate series.
         alternate_number (Optional[str]): The alternate number.
         alternate_count (Optional[int]): The count of alternates.
@@ -644,6 +645,7 @@ class Metadata:
     comments: str | None = None  # use same way as Summary in CIX
 
     community_rating: Decimal | None = None
+    rating_count: int | None = None
     main_character_or_team: str | None = None
     review: str | None = None
 
@@ -775,6 +777,7 @@ class Metadata:
         if len(new_md.genres) > 0:
             assign("genre", new_md.genres)
         assign("community_rating", new_md.community_rating)
+        assign("rating_count", new_md.rating_count)
         assign("main_character_or_team", new_md.main_character_or_team)
         assign("review", new_md.review)
         assign("alternate_series", new_md.alternate_series)
@@ -1152,7 +1155,10 @@ class Metadata:
         # Technical info
         tech_info = []
         if self.community_rating is not None:
-            tech_info.append(f"Community Rating: {self.community_rating}")
+            rating_display = f"Community Rating: {self.community_rating}"
+            if self.rating_count is not None:
+                rating_display += f" ({self.rating_count} ratings)"
+            tech_info.append(rating_display)
         if self.scan_info:
             tech_info.append(f"Scan: {self.scan_info}")
         if tech_info:
