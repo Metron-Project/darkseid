@@ -51,7 +51,6 @@ class SchemaVersion(Enum):
     """
 
     METRON_INFO_V1_1 = auto()
-    METRON_INFO_V1 = auto()
     COMIC_INFO_V2 = auto()
     COMIC_INFO_V1 = auto()
     UNKNOWN = auto()
@@ -88,17 +87,11 @@ class ValidateMetadata:
             "file_name": "MetronInfo.xsd",
             "schema_class": XMLSchema11,
         },
-        SchemaVersion.METRON_INFO_V1: {
-            "module_path": "darkseid.schemas.MetronInfo.v1_0",
-            "file_name": "MetronInfo.xsd",
-            "schema_class": XMLSchema11,
-        },
     }
 
     # Validation order: newest/most specific schemas first
     _VALIDATION_ORDER: ClassVar[list[SchemaVersion]] = [
         SchemaVersion.METRON_INFO_V1_1,
-        SchemaVersion.METRON_INFO_V1,
         SchemaVersion.COMIC_INFO_V2,
         SchemaVersion.COMIC_INFO_V1,
     ]
