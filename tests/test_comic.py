@@ -783,6 +783,57 @@ def test_remove_pages_exception(sample_cbz_file):
             assert result is False
 
 
+def test_can_remove_pages_cbz(sample_cbz_file):
+    """Test that zip archives support page removal."""
+    assert Comic(sample_cbz_file).can_remove_pages() is True
+
+
+def test_can_remove_pages_rar(temp_dir):
+    """Test that RAR archives don't support page removal."""
+    cbr_path = temp_dir / "test_comic.cbr"
+    cbr_path.touch()
+    assert Comic(cbr_path).can_remove_pages() is False
+
+
+def test_can_remove_pages_pdf(temp_dir):
+    """Test that PDFs don't support page removal even though they are writable."""
+    pymupdf = pytest.importorskip("pymupdf")
+    pdf_path = temp_dir / "test_comic.pdf"
+    doc = pymupdf.open()
+    doc.new_page()
+    doc.save(pdf_path)
+    doc.close()
+
+    comic = Comic(pdf_path)
+    assert comic.is_writable() is True
+    assert comic.can_remove_pages() is False
+
+
+def test_remove_pages_pdf_returns_false(temp_dir):
+    """Test that removing pages from a PDF fails and leaves the PDF unchanged."""
+    pymupdf = pytest.importorskip("pymupdf")
+    pdf_path = temp_dir / "test_comic.pdf"
+    doc = pymupdf.open()
+    doc.new_page()
+    doc.new_page()
+    doc.save(pdf_path)
+    doc.close()
+
+    comic = Comic(pdf_path)
+    before = comic.get_number_of_pages()
+
+    assert comic.remove_pages([1]) is False
+    assert comic.get_number_of_pages() == before
+
+
+def test_remove_pages_rar_returns_false(temp_dir):
+    """Test that removing pages from a RAR archive fails."""
+    cbr_path = temp_dir / "test_comic.cbr"
+    cbr_path.touch()
+
+    assert Comic(cbr_path).remove_pages([0]) is False
+
+
 # Test metadata detection
 def test_has_metadata_comic_rack(sample_cbz_file):
     """Test ComicInfo metadata detection."""

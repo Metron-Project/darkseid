@@ -472,6 +472,20 @@ class Comic:
         """
         return self._archiver.is_write_operation_expected() and os.access(self._path, os.W_OK)
 
+    def can_remove_pages(self) -> bool:
+        """Check if pages can be removed from this comic.
+
+        Returns:
+            bool: True if the archive is writable and its format supports page
+                removal (CBZ, CBT, CB7), False otherwise (e.g. CBR, PDF).
+
+        Note:
+            PDFs are writable so metadata can be embedded, but their pages can't
+            be removed, so is_writable() alone isn't enough to answer this.
+
+        """
+        return self._archiver.can_remove_pages() and self.is_writable()
+
     def seems_to_be_a_comic_archive(self) -> bool:
         """Determine if the file appears to be a comic book archive.
 
@@ -1035,8 +1049,8 @@ class Comic:
             logger.warning("No pages specified for removal")
             return False
 
-        if not self.is_writable():
-            logger.warning("Cannot remove pages from read-only archive: %s", self._path)
+        if not self.can_remove_pages():
+            logger.warning("Cannot remove pages from archive: %s", self._path)
             return False
 
         return self._remove_pages_by_index(pages_index)
