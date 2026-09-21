@@ -237,6 +237,20 @@ class Archiver(ABC):
         """
         return True  # Override in read-only implementations
 
+    def can_remove_pages(self) -> bool:
+        """Check if pages can be removed from this archive.
+
+        Returns:
+            True if page files can be removed (default: same as
+                is_write_operation_expected()), False otherwise.
+
+        Note:
+            Override this in archivers that accept writes but can't remove pages
+            (e.g. PDF, where pages are virtual and only metadata can be written).
+
+        """
+        return self.is_write_operation_expected()
+
     @property
     def path(self) -> Path:
         """Get the path associated with this archiver.

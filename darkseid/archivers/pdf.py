@@ -105,6 +105,15 @@ class PdfArchiver(Archiver):
         """
         return True
 
+    def can_remove_pages(self) -> bool:
+        """Check if pages can be removed from the PDF.
+
+        Returns:
+            False: PDF pages are virtual, read-only files and can't be removed.
+
+        """
+        return False
+
     @staticmethod
     def _is_page_file(filename: str) -> bool:
         """Check if a filename represents a virtual page file.
@@ -343,13 +352,14 @@ class PdfArchiver(Archiver):
 
         Returns:
             True if all existing embedded files were successfully removed,
-                False if any error occurred. Returns True if the list is empty
-                or contains only non-existent files.
+                False if any error occurred or any page file was requested.
+                Returns True if the list is empty or contains only non-existent files.
 
         Note:
             - Only embedded files can be removed (page files are read-only)
             - Non-existent files are silently ignored
-            - Page files (page_NNN.png) are skipped with a warning
+            - If any page file (page_NNN.png) is requested, a warning is logged and
+              nothing is removed
             - All removals are performed in a single transaction
 
         Examples:
@@ -361,16 +371,14 @@ class PdfArchiver(Archiver):
         if not filename_list:
             return True
 
-        # Filter out page files (they can't be removed)
-        embedded_files_to_remove = [f for f in filename_list if not self._is_page_file(f)]
-
-        # Warn about any page files
+        # Page files are virtual, so refuse the whole request rather than
+        # reporting success for a removal that can't happen.
         page_files = [f for f in filename_list if self._is_page_file(f)]
         if page_files:
             logger.warning("Cannot remove virtual page files: %s", page_files)
+            return False
 
-        if not embedded_files_to_remove:
-            return True
+        embedded_files_to_remove = filename_list
 
         try:
             with self._open_pdf() as doc:

@@ -948,14 +948,42 @@ def test_pdf_readonly_operations(sample_pdf_path, operation):
         result = archiver.write_file("ComicInfo.xml", b"<ComicInfo/>")
         assert result is True, "Writing metadata files should succeed"
     elif operation == "remove_files":
-        # Page files should be protected (returns True but doesn't remove)
+        # Page files should be protected (returns False and doesn't remove)
         result = archiver.remove_files(["page_001.png"])
-        assert result is True, "Remove returns True even for page files"
+        assert result is False, "Removing page files should fail"
         assert "page_001.png" in archiver.get_filename_list(), "Page should still exist"
     elif operation == "copy_from_archive":
         # copy_from_archive is not supported for PDFs
         result = archiver.copy_from_archive(Mock())
         assert result is False, "copy_from_archive should fail"
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_remove_files_mixed_pages_and_embedded(sample_pdf_path):
+    """Test that a request including page files removes nothing and returns False."""
+    archiver = PdfArchiver(sample_pdf_path)
+    assert archiver.write_file("ComicInfo.xml", b"<ComicInfo/>") is True
+
+    assert archiver.remove_files(["ComicInfo.xml", "page_001.png"]) is False
+    files = archiver.get_filename_list()
+    assert "ComicInfo.xml" in files
+    assert "page_001.png" in files
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_remove_embedded_files(sample_pdf_path):
+    """Test that embedded metadata files can still be removed from a PDF."""
+    archiver = PdfArchiver(sample_pdf_path)
+    assert archiver.write_file("ComicInfo.xml", b"<ComicInfo/>") is True
+
+    assert archiver.remove_files(["ComicInfo.xml"]) is True
+    assert "ComicInfo.xml" not in archiver.get_filename_list()
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_can_remove_pages(sample_pdf_path):
+    """Test that PDF archiver reports it can't remove pages."""
+    assert PdfArchiver(sample_pdf_path).can_remove_pages() is False
 
 
 @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
