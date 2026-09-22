@@ -425,7 +425,7 @@ class SevenZipArchiver(Archiver):
             # Read data for files to keep
             with py7zr.SevenZipFile(self._path, mode="r") as read_archive:
                 read_archive.extract(targets=files_to_keep, factory=factory)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - convert any py7zr failure to a bool result
             self._handle_error("open_for_read", str(self._path), e)
             return False
 
@@ -435,7 +435,7 @@ class SevenZipArchiver(Archiver):
                 for filename, data in factory.products.items():
                     content = data.read() if hasattr(data, "read") else data
                     write_archive.writestr(content, filename)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - convert any py7zr failure to a bool result
             self._handle_error("remove_files", str(filename_list), e)
             return False
         else:
@@ -486,7 +486,7 @@ class SevenZipArchiver(Archiver):
                 # Get file list from archive
                 file_list = [file_.filename for file_ in archive.list() if not file_.is_directory]
                 self._filename_list_cache = sorted(file_list)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - convert any py7zr failure to an empty list
             self._handle_error("get_filename_list", str(self._path), e)
             self._filename_list_cache = []
             return self._filename_list_cache

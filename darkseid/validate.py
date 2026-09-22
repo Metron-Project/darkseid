@@ -267,7 +267,7 @@ class ValidateMetadata:
                 schema.validate(BytesIO(self.xml))
             except XMLSchemaValidationError as e:
                 errors.append(str(e))
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - report any schema library failure as an error
                 errors.append(f"Unexpected validation error: {e}")
 
         return errors

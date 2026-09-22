@@ -345,7 +345,7 @@ class PdfArchiver(Archiver):
 
             return True  # noqa: TRY300
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - convert any pymupdf failure to a bool result
             self._handle_error("write", archive_file, e)
             logger.warning("Failed to write embedded file to PDF: %s", e)
             return False
@@ -407,7 +407,7 @@ class PdfArchiver(Archiver):
 
             return True  # noqa: TRY300
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - convert any pymupdf failure to a bool result
             self._handle_error("remove_multiple", str(embedded_files_to_remove), e)
             logger.warning("Failed to remove embedded files from PDF: %s", e)
             return False

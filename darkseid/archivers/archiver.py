@@ -495,7 +495,7 @@ class Archiver(ABC):
 
         """
 
-    def _handle_error(self, operation: str, filename: str, error: Exception) -> None:  # noqa: ARG002
+    def _handle_error(self, operation: str, filename: str, error: Exception) -> None:
         """Centralized error handling and logging.
 
         Provides consistent error handling across all archiver operations.
@@ -521,7 +521,9 @@ class Archiver(ABC):
             after calling this method.
 
         """
-        logger.exception("Error during %s operation on %s :: %s", operation, self.path, filename)
+        logger.error(
+            "Error during %s operation on %s :: %s", operation, self.path, filename, exc_info=error
+        )
 
     def exists(self, archive_file: str) -> bool:
         """Check if a file exists in the archive.
