@@ -237,7 +237,13 @@ class Comic:
         - Export capabilities (e.g., CBR to CBZ conversion / CBT to CBZ conversion)
 
     Thread Safety:
-        This class is not thread-safe. Each thread should use its own Comic instance.
+        A single Comic instance must not be shared across threads; each thread
+        should use its own instance. Read-only operations on separate instances
+        (one per thread) are safe to run concurrently, except for PDF comics,
+        which aren't safe for concurrent use at all (see PdfArchiver). Write
+        operations must not run concurrently with any other operation, read or
+        write, on the same underlying file, even from separate instances. See
+        darkseid.archivers.archiver.Archiver for the full contract.
 
     Performance Considerations:
         - Page lists and metadata are cached after first access

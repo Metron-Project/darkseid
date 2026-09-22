@@ -56,6 +56,9 @@ class ZipArchiver(Archiver):
     Attributes:
         path (Path): Path to the ZIP archive file
 
+    Thread Safety:
+        See darkseid.archivers.archiver.Archiver for the full contract.
+
     Examples:
         >>> archiver = ZipArchiver(Path("my_archive.cbz"))
         >>> archiver.write_file("config.json", '{"version": "1.0"}')
