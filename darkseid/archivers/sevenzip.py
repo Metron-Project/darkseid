@@ -91,8 +91,7 @@ class SevenZipArchiver(Archiver):
         - Use batch operations (remove_files) when possible
 
     Thread Safety:
-        This class is NOT thread-safe. Use separate instances for concurrent access
-        or implement external synchronization.
+        See darkseid.archivers.archiver.Archiver for the full contract.
 
     Error Handling:
         All operations can raise ArchiverReadError or ArchiverWriteError exceptions.

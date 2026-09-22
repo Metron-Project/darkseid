@@ -127,9 +127,14 @@ class Archiver(ABC):
         - Built-in file existence checking
 
     Thread Safety:
-        The base class does not provide thread safety guarantees.
-        Concrete implementations should document their thread safety
-        characteristics and implement appropriate locking if needed.
+        A single archiver instance must not be shared across threads.
+        Read-only operations on separate instances (each thread using its
+        own instance) are safe to run concurrently, with the exception of
+        PdfArchiver (see its docstring). Write operations must not run
+        concurrently with any other operation (read or write) on the same
+        underlying file, even from separate instances. Concrete
+        implementations should point back to this contract rather than
+        stating their own.
 
     Performance Considerations:
         - File operations are performed individually; batch operations

@@ -70,11 +70,12 @@ class TarArchiver(Archiver):
 
     Features:
 
-    - Thread-safe for reading operations (multiple readers)
-    - Write operations should be performed by a single thread
     - Automatic compression format detection
     - Efficient batch operations
     - Proper resource cleanup via context manager
+
+    Thread Safety:
+        See darkseid.archivers.archiver.Archiver for the full contract.
 
     Performance Notes:
         - Filename lists are cached to avoid repeated archive parsing

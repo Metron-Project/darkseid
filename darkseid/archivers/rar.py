@@ -52,6 +52,10 @@ class RarArchiver(Archiver):
         RAR files are read-only due to format limitations and licensing
         restrictions of the RAR compression algorithm.
 
+    Thread Safety:
+        See darkseid.archivers.archiver.Archiver for the full contract. Since
+        this archiver never writes, the write-exclusivity rule never applies.
+
     """
 
     def __init__(self, path: Path) -> None:

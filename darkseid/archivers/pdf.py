@@ -69,6 +69,13 @@ class PdfArchiver(Archiver):
         - Metadata files can be embedded, read, and removed as PDF attachments
         - copy_from_archive() is not supported for PDFs
 
+    Thread Safety:
+        This archiver is NOT safe for concurrent use, even from separate
+        instances on separate files. PyMuPDF (pymupdf) does not support
+        being called from multiple threads at once, so PdfArchiver must be
+        used from a single thread at a time. This is stricter than the
+        general contract in darkseid.archivers.archiver.Archiver.
+
     """
 
     # Constants for page rendering
