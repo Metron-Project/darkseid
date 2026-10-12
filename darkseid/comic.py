@@ -59,7 +59,7 @@ logger = logging.getLogger(__name__)
 
 # Constants
 SUPPORTED_IMAGE_EXTENSIONS: Final[frozenset[str]] = frozenset(
-    [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+    [".jpg", ".jpeg", ".png", ".gif", ".webp", ".jxl"]
 )
 COMIC_RACK_FILENAME: Final[str] = "ComicInfo.xml"
 METRON_INFO_FILENAME: Final[str] = "MetronInfo.xml"
@@ -593,7 +593,7 @@ class Comic:
                  a hidden file (doesn't start with '.').
 
         Note:
-            Supported formats: .jpg, .jpeg, .png, .gif, .webp
+            Supported formats: .jpg, .jpeg, .png, .gif, .webp, .jxl
             Hidden files (starting with '.') are excluded.
 
         """

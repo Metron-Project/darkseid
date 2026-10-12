@@ -35,7 +35,7 @@ Examples:
 
 Attributes:
     IMAGE_EXT_RE: A compiled regular expression pattern for matching common
-        image file extensions (jpeg, jpg, png, webp, gif). Case-insensitive.
+        image file extensions (jpeg, jpg, png, webp, gif, jxl). Case-insensitive.
 
 """
 
@@ -144,7 +144,7 @@ class Archiver(ABC):
 
     Attributes:
         IMAGE_EXT_RE: Compiled regex for matching image file extensions.
-            Matches: .jpg, .jpeg, .png, .webp, .gif (case-insensitive)
+            Matches: .jpg, .jpeg, .png, .webp, .gif, .jxl (case-insensitive)
 
     Examples:
         Implementing a concrete archiver:
@@ -162,7 +162,7 @@ class Archiver(ABC):
 
     """
 
-    IMAGE_EXT_RE = re.compile(r"\.(jpe?g|png|webp|gif)$", re.IGNORECASE)
+    IMAGE_EXT_RE = re.compile(r"\.(jpe?g|png|webp|gif|jxl)$", re.IGNORECASE)
 
     def __init__(self, path: Path) -> None:
         """Initialize an Archiver with the specified path.

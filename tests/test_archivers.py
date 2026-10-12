@@ -477,6 +477,17 @@ def test_zip_write_file_image_compression(temp_dir):
     assert result is True
 
 
+@pytest.mark.parametrize("filename", ["page.jpg", "page.webp", "page.jxl", "PAGE.JXL"])
+def test_zip_write_file_image_stored(temp_dir, filename):
+    """Test that supported image formats, including JPEG-XL, are stored uncompressed."""
+    zip_path = temp_dir / "stored_test.cbz"
+    archiver = ZipArchiver(zip_path)
+
+    assert archiver.write_file(filename, b"fake_image_data") is True
+    with zipfile.ZipFile(zip_path) as zf:
+        assert zf.getinfo(filename).compress_type == zipfile.ZIP_STORED
+
+
 def test_zip_get_filename_list_empty(empty_zip_path):
     """Test getting filename list from empty ZIP archive."""
     archiver = ZipArchiver(empty_zip_path)
