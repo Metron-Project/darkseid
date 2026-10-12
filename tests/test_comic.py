@@ -386,6 +386,8 @@ def test_get_page_name_invalid_index(sample_cbz_file):
         ("image.png", True),
         ("image.gif", True),
         ("image.webp", True),
+        ("image.jxl", True),
+        ("image.JXL", True),
         ("image.JPG", True),  # Case insensitive
         ("image.txt", False),
         (".hidden.jpg", False),  # Hidden files
@@ -396,6 +398,19 @@ def test_is_image(filename, expected):
     """Test image file detection."""
     path = Path(filename)
     assert Comic.is_image(path) == expected
+
+
+def test_jxl_pages_counted(tmp_path):
+    """Test that JPEG-XL pages are listed alongside other image formats."""
+    cbz_path = tmp_path / "jxl.cbz"
+    with zipfile.ZipFile(cbz_path, "w") as zf:
+        zf.writestr("page01.jxl", b"fake_jxl_data")
+        zf.writestr("page02.jpg", b"fake_jpg_data")
+        zf.writestr("notes.txt", "not a page")
+
+    comic = Comic(cbz_path)
+    assert comic.get_page_name_list() == ["page01.jxl", "page02.jpg"]
+    assert comic.get_number_of_pages() == 2
 
 
 # Test page list operations
@@ -1340,6 +1355,7 @@ def test_constants():
     assert ".png" in SUPPORTED_IMAGE_EXTENSIONS
     assert ".gif" in SUPPORTED_IMAGE_EXTENSIONS
     assert ".webp" in SUPPORTED_IMAGE_EXTENSIONS
+    assert ".jxl" in SUPPORTED_IMAGE_EXTENSIONS
 
     assert COMIC_RACK_FILENAME == "ComicInfo.xml"
     assert METRON_INFO_FILENAME == "MetronInfo.xml"
