@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -228,7 +228,7 @@ class BaseMetadataHandler(ABC):
         if not value:
             return None
         try:
-            return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=timezone.utc).date()
+            return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=UTC).date()
         except ValueError:
             return None
 

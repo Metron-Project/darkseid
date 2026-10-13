@@ -56,8 +56,7 @@ from darkseid.archivers import Archiver, ArchiverReadError, ArchiverWriteError
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from typing_extensions import Self
+    from typing import Self
 
 
 logger = logging.getLogger(__name__)

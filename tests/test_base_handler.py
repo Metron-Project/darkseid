@@ -2,7 +2,7 @@
 """Tests for BaseMetadataHandler class."""
 
 import xml.etree.ElementTree as ET
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
@@ -227,7 +227,7 @@ def test_set_element_text_no_op_when_none_and_not_exists():
 def test_set_datetime_element_new():
     """Test _set_datetime_element creating new element."""
     root = ET.Element("root")
-    dt = datetime(2023, 1, 15, 12, 30, 45, tzinfo=timezone.utc)
+    dt = datetime(2023, 1, 15, 12, 30, 45, tzinfo=UTC)
 
     BaseMetadataHandler._set_datetime_element(root, "date", dt)
 
@@ -341,13 +341,13 @@ def test_parse_date_wrong_format():
 def test_parse_datetime_valid():
     """Test _parse_datetime with valid datetime string."""
     result = BaseMetadataHandler._parse_datetime("2023-01-15T12:30:45+00:00")
-    assert result == datetime(2023, 1, 15, 12, 30, 45, tzinfo=timezone.utc)
+    assert result == datetime(2023, 1, 15, 12, 30, 45, tzinfo=UTC)
 
 
 def test_parse_datetime_with_timezone():
     """Test _parse_datetime with timezone info."""
     result = BaseMetadataHandler._parse_datetime("2023-01-15T12:30:45+00:00")
-    expected = datetime(2023, 1, 15, 12, 30, 45, tzinfo=timezone.utc)
+    expected = datetime(2023, 1, 15, 12, 30, 45, tzinfo=UTC)
     assert result == expected
 
 

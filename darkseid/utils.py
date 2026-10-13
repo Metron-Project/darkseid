@@ -12,7 +12,7 @@ __all__ = [
 ]
 
 import re
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from darkseid.archivers.pdf import PYMUPDF_AVAILABLE
@@ -20,8 +20,7 @@ from darkseid.archivers.sevenzip import PY7ZR_AVAILABLE
 from darkseid.constants import CB7, CBR, CBT, CBZ, PDF
 
 
-# TODO: Change to StrEnum when Python-3.10 support dropped
-class DataSources(str, Enum):
+class DataSources(StrEnum):
     """Enumeration for various comic data sources.
 
     This class defines a set of constants representing different sources of comic data.
