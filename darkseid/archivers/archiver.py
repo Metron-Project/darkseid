@@ -42,12 +42,17 @@ Attributes:
 from __future__ import annotations
 
 import logging
+import os
 import re
+import shutil
+import tempfile
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from collections.abc import Generator
 
 logger = logging.getLogger(__name__)
 
@@ -516,6 +521,43 @@ class Archiver(ABC):
             should override this method to perform proper cleanup.
 
         """
+
+    @contextmanager
+    def _atomic_replace(self) -> Generator[Path]:
+        """Yield a path to write a replacement archive to, then swap it into place.
+
+        When the archive already exists, the new archive is written to a temporary
+        file in the same directory and moved over the original with os.replace(),
+        so a failure part way through never leaves a truncated or partial archive.
+        Symlinks are followed so the link itself is preserved, and the original
+        file's permission bits are copied to the replacement.
+
+        When the archive doesn't exist yet, the target path is yielded directly
+        and removed again if writing fails.
+
+        Yields:
+            The path the caller should write the complete new archive to.
+
+        """
+        target = self._path.resolve()
+        if not target.exists():
+            try:
+                yield target
+            except BaseException:
+                target.unlink(missing_ok=True)
+                raise
+            return
+
+        fd, tmp_name = tempfile.mkstemp(dir=target.parent, prefix=f".{target.name}.", suffix=".tmp")
+        os.close(fd)
+        tmp_path = Path(tmp_name)
+        try:
+            yield tmp_path
+            shutil.copymode(target, tmp_path)
+            tmp_path.replace(target)
+        except BaseException:
+            tmp_path.unlink(missing_ok=True)
+            raise
 
     def _resolve_max_size(self, max_size: int | None) -> int:
         """Return the effective read size limit.

@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, ClassVar
 from xmlschema import XMLSchema10, XMLSchema11, XMLSchemaValidationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Generator
     from pathlib import Path
 
     from xmlschema import XMLSchemaBase
@@ -145,7 +145,7 @@ class ValidateMetadata:
             return None
 
     @contextmanager
-    def _get_schema(self, schema_version: SchemaVersion) -> Iterator[XMLSchemaBase | None]:
+    def _get_schema(self, schema_version: SchemaVersion) -> Generator[XMLSchemaBase | None]:
         """Context manager to get and cache schema instances.
 
         Args:
