@@ -79,13 +79,14 @@ class UnknownArchiver(Archiver):
 
     """
 
-    def read_file(self, archive_file: str) -> bytes:
+    def read_file(self, archive_file: str, max_size: int | None = None) -> bytes:
         """Read a file from the archive.
 
         This method is not implemented for unknown archive types and always raises NotImplementedError.
 
         Args:
             archive_file: The filename to read from the archive.
+            max_size: Unused; accepted for interface compatibility.
 
         Raises:
             NotImplementedError: Always raised for unknown archive types, indicating

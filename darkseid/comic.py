@@ -63,6 +63,8 @@ SUPPORTED_IMAGE_EXTENSIONS: Final[frozenset[str]] = frozenset(
 )
 COMIC_RACK_FILENAME: Final[str] = "ComicInfo.xml"
 METRON_INFO_FILENAME: Final[str] = "MetronInfo.xml"
+# Metadata XML is small; refuse anything larger to guard against decompression bombs.
+MAX_METADATA_SIZE: Final[int] = 10 * 1024 * 1024  # 10 MiB
 
 
 class MetadataFormat(Enum):
@@ -776,7 +778,7 @@ class Comic:
             return None
 
         try:
-            raw_bytes = self._archiver.read_file(filename)
+            raw_bytes = self._archiver.read_file(filename, max_size=MAX_METADATA_SIZE)
             return raw_bytes.decode("utf-8")
         except ArchiverReadError:
             logger.exception("Error reading raw metadata from %s", self._path)
@@ -1326,7 +1328,7 @@ class Comic:
             metadata_format: Format to validate (COMIC_INFO or METRON_INFO).
 
         Returns:
-            SchemaVersion: Detected schema version, or SchemaVersion.Unknown if invalid/not found.
+            SchemaVersion: Detected schema version, or SchemaVersion.UNKNOWN if invalid/not found.
 
         """
         metadata_handlers = {
@@ -1335,12 +1337,12 @@ class Comic:
         }
 
         if metadata_format not in metadata_handlers:
-            return SchemaVersion.Unknown
+            return SchemaVersion.UNKNOWN
 
         has_metadata_func, filename = metadata_handlers[metadata_format]
 
         if not has_metadata_func():
-            return SchemaVersion.Unknown
+            return SchemaVersion.UNKNOWN
 
         return self._validate_metadata_xml(metadata_format, filename)
 
@@ -1358,12 +1360,12 @@ class Comic:
 
         """
         try:
-            xml_bytes = self._archiver.read_file(filename)
+            xml_bytes = self._archiver.read_file(filename, max_size=MAX_METADATA_SIZE)
             vm = ValidateMetadata(xml_bytes)
             return vm.validate()
         except (ArchiverReadError, ValidationError):
             logger.exception("Error validating %s XML archive from %s", metadata_format, self._path)
-            return SchemaVersion.Unknown
+            return SchemaVersion.UNKNOWN
 
     def is_valid_comic(self) -> bool:
         """Perform comprehensive validation of the comic archive.

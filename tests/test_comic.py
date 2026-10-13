@@ -11,6 +11,7 @@ import pytest
 from PIL import Image
 from py7zr import py7zr
 
+from darkseid.archivers import ArchiverReadError
 from darkseid.comic import (
     COMIC_RACK_FILENAME,
     METRON_INFO_FILENAME,
@@ -22,6 +23,7 @@ from darkseid.comic import (
     MetadataFormat,
 )
 from darkseid.metadata.data_classes import ImageMetadata, Metadata
+from darkseid.validate import SchemaVersion
 
 
 # Fixtures
@@ -1416,3 +1418,28 @@ def test_full_workflow_write_and_remove_metadata(sample_cbz_file, sample_metadat
             with patch.object(comic, "has_metadata", return_value=True):
                 result = comic.remove_metadata([MetadataFormat.COMIC_INFO])
                 assert result is True
+
+
+def test_read_metadata_rejects_oversized_metadata(temp_dir, monkeypatch):
+    """Test oversized metadata files are refused instead of loaded into memory."""
+    monkeypatch.setattr("darkseid.comic.MAX_METADATA_SIZE", 1024)
+    cbz_path = temp_dir / "bomb.cbz"
+    with zipfile.ZipFile(cbz_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("page001.jpg", b"fake_image_data")
+        zf.writestr(
+            COMIC_RACK_FILENAME,
+            "<ComicInfo><Title>" + "A" * 4096 + "</Title></ComicInfo>",
+        )
+
+    comic = Comic(cbz_path)
+    assert comic.has_metadata(MetadataFormat.COMIC_INFO)
+    assert comic.read_raw_ci_metadata() is None
+    assert not comic.read_metadata(MetadataFormat.COMIC_INFO).stories
+    assert comic.validate_metadata(MetadataFormat.COMIC_INFO) == SchemaVersion.UNKNOWN
+
+
+def test_validate_metadata_unreadable_returns_unknown(sample_cbz_file):
+    """Test validate_metadata returns UNKNOWN when the metadata can't be read."""
+    comic = Comic(sample_cbz_file)
+    with patch.object(comic._archiver, "read_file", side_effect=ArchiverReadError("boom")):
+        assert comic.validate_metadata(MetadataFormat.COMIC_INFO) == SchemaVersion.UNKNOWN
