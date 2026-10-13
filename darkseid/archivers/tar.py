@@ -41,11 +41,13 @@ from __future__ import annotations
 import io
 import logging
 import tarfile
+import time
 from typing import TYPE_CHECKING
 
 from darkseid.archivers.archiver import Archiver, ArchiverReadError, ArchiverWriteError
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable
     from pathlib import Path
     from typing import Self
 
@@ -199,60 +201,94 @@ class TarArchiver(Archiver):
             msg = f"Failed to read file '{archive_file}': {e}"
             raise ArchiverReadError(msg) from e
 
+    @staticmethod
+    def _check_reached_end(tar: tarfile.TarFile) -> None:
+        """Raise if iterating the archive stopped before its end-of-archive marker.
+
+        tarfile silently stops iterating when it hits an invalid header after the
+        first member, which would drop every member after it from a rewrite.
+
+        Args:
+            tar: An archive opened for reading that has been fully iterated.
+
+        Raises:
+            tarfile.ReadError: If the block where iteration stopped isn't the end marker.
+
+        """
+        if tar.fileobj is None:
+            return
+        tar.fileobj.seek(tar.offset)
+        if tar.fileobj.read(tarfile.BLOCKSIZE).strip(b"\0"):
+            msg = f"Invalid header at offset {tar.offset}"
+            raise tarfile.ReadError(msg)
+
+    def _rewrite(self, exclude: Collection[str], new_files: Iterable[tuple[str, bytes]]) -> None:
+        """Rebuild the archive, keeping existing members and adding new files.
+
+        Existing regular files whose names aren't in exclude are streamed from the
+        current archive into a temporary file, followed by new_files. The temporary
+        file then atomically replaces the original, so members are never all held in
+        memory and a failure part way through leaves the original archive untouched.
+
+        Args:
+            exclude: Names of existing members to leave out of the new archive.
+            new_files: (name, data) pairs to append to the new archive.
+
+        Raises:
+            tarfile.TarError: If the existing archive can't be read in full or the new
+                one written.
+            OSError: If a file system operation fails.
+
+        """
+        has_existing = self._path.exists() and self._path.stat().st_size > 0
+        with (
+            self._atomic_replace() as out_path,
+            tarfile.open(out_path, mode=self._write_mode()) as out,
+        ):
+            if has_existing:
+                with tarfile.open(self._path, mode=self._read_mode()) as src:
+                    for member in src:
+                        if member.isfile() and member.name not in exclude:
+                            out.addfile(member, src.extractfile(member))
+                    self._check_reached_end(src)
+
+            for name, data in new_files:
+                tarinfo = tarfile.TarInfo(name=name)
+                tarinfo.size = len(data)
+                tarinfo.mtime = int(time.time())
+                out.addfile(tarinfo, io.BytesIO(data))
+
+        # Invalidate filename cache since the archive contents changed
+        self._filename_list_cache = None
+
     def write_file(self, archive_file: str, data: str | bytes) -> bool:
         """Write data to a file in the TAR archive.
+
+        The archive is rebuilt in a temporary file that replaces the original only
+        once it is complete, so the original is left untouched if the write fails.
 
         Args:
             archive_file: Path of the file within the archive.
             data: Data to write to the file.
 
         Returns:
-            True if the write operation was successful, False otherwise.
+            True if the write operation was successful.
 
         Raises:
-            ArchiverWriteError: If the write operation fails.
+            ArchiverWriteError: If the existing archive can't be read or the write fails.
 
         """
+        # Convert string to bytes if necessary
+        if isinstance(data, str):
+            data = data.encode("utf-8")
+
         try:
-            # Convert string to bytes if necessary
-            if isinstance(data, str):
-                data = data.encode("utf-8")
-
-            # For TAR files, we need to read existing files and rewrite the entire archive
-            existing_files = {}
-
-            # Read existing files if the archive exists
-            if self._path.exists():
-                try:
-                    with tarfile.open(self._path, mode=self._read_mode()) as tar:
-                        for member in tar.getmembers():
-                            if member.isfile() and member.name != archive_file:
-                                file_obj = tar.extractfile(member)
-                                if file_obj:
-                                    existing_files[member.name] = file_obj.read()
-                except (tarfile.TarError, OSError):
-                    # If we can't read existing files, start fresh
-                    existing_files = {}
-
-            # Create new archive with existing files plus the new one
-            with tarfile.open(self._path, mode=self._write_mode()) as tar:
-                # Add existing files
-                for filename, file_data in existing_files.items():
-                    tarinfo = tarfile.TarInfo(name=filename)
-                    tarinfo.size = len(file_data)
-                    tar.addfile(tarinfo, io.BytesIO(file_data))
-
-                # Add the new file
-                tarinfo = tarfile.TarInfo(name=archive_file)
-                tarinfo.size = len(data)
-                tar.addfile(tarinfo, io.BytesIO(data))
+            self._rewrite({archive_file}, [(archive_file, data)])
         except (tarfile.TarError, OSError) as e:
             self._handle_error("write", archive_file, e)
             msg = f"Failed to write file '{archive_file}': {e}"
             raise ArchiverWriteError(msg) from e
         else:
-            # Invalidate filename cache since the archive contents changed
-            self._filename_list_cache = None
             return True
 
     def remove_files(self, filename_list: list[str]) -> bool:
@@ -262,36 +298,19 @@ class TarArchiver(Archiver):
             filename_list: List of file paths to remove from the archive.
 
         Returns:
-            True if all files were successfully removed, False otherwise.
+            True if all files were successfully removed, False otherwise. The
+                original archive is left untouched on failure.
 
         """
+        if not self._path.exists():
+            return True  # No files to remove
+
         try:
-            if not self._path.exists():
-                return True  # No files to remove
-
-            files_to_remove = set(filename_list)
-            remaining_files = {}
-
-            # Read all files except those to remove
-            with tarfile.open(self._path, mode=self._read_mode()) as tar:
-                for member in tar.getmembers():
-                    if member.isfile() and member.name not in files_to_remove:
-                        file_obj = tar.extractfile(member)
-                        if file_obj:
-                            remaining_files[member.name] = file_obj.read()
-
-            # Recreate archive without the removed files
-            with tarfile.open(self._path, mode=self._write_mode()) as tar:
-                for filename, file_data in remaining_files.items():
-                    tarinfo = tarfile.TarInfo(name=filename)
-                    tarinfo.size = len(file_data)
-                    tar.addfile(tarinfo, io.BytesIO(file_data))
+            self._rewrite(set(filename_list), [])
         except (tarfile.TarError, OSError) as e:
             self._handle_error("remove_files", str(filename_list), e)
             return False
         else:
-            # Invalidate filename cache since the archive contents changed
-            self._filename_list_cache = None
             return True
 
     def get_filename_list(self) -> list[str]:
@@ -363,8 +382,11 @@ class TarArchiver(Archiver):
         else:
             return True
 
-    def copy_from_archive(self, other_archive: Archiver) -> bool:  # noqa: C901
+    def copy_from_archive(self, other_archive: Archiver) -> bool:
         """Copy files from another archive to this TAR archive.
+
+        Existing files in this archive are kept unless the source archive has a
+        file with the same name. Nothing is written if any file can't be copied.
 
         Args:
             other_archive: Source archive to copy files from.
@@ -374,45 +396,14 @@ class TarArchiver(Archiver):
 
         """
         try:
-            # Get list of files from source archive
             source_files = other_archive.get_filename_list()
             if not source_files:
                 return True  # Nothing to copy
 
-            # Read existing files from this archive
-            existing_files = {}
-            if self._path.exists():
-                try:
-                    with tarfile.open(self._path, mode=self._read_mode()) as tar:
-                        for member in tar.getmembers():
-                            if member.isfile():
-                                file_obj = tar.extractfile(member)
-                                if file_obj:
-                                    existing_files[member.name] = file_obj.read()
-                except (tarfile.TarError, OSError):
-                    # If we can't read existing files, start fresh
-                    existing_files = {}
-
-            # Create new archive with existing files plus copied files
-            with tarfile.open(self._path, mode=self._write_mode()) as tar:
-                # Add existing files first
-                for filename, file_data in existing_files.items():
-                    if filename not in source_files:  # Don't duplicate files
-                        tarinfo = tarfile.TarInfo(name=filename)
-                        tarinfo.size = len(file_data)
-                        tar.addfile(tarinfo, io.BytesIO(file_data))
-
-                # Add files from source archive
-                try:
-                    for filename in source_files:
-                        file_data = other_archive.read_file(filename)
-                        tarinfo = tarfile.TarInfo(name=filename)
-                        tarinfo.size = len(file_data)
-                        tar.addfile(tarinfo, io.BytesIO(file_data))
-                except Exception:
-                    logger.exception("Failed to copy file %s", filename)
-                    return False
-        except (tarfile.TarError, OSError) as e:
+            # Read source files lazily so only one is held in memory at a time
+            new_files = ((filename, other_archive.read_file(filename)) for filename in source_files)
+            self._rewrite(set(source_files), new_files)
+        except Exception as e:  # noqa: BLE001 - convert any source or TAR failure to a bool result
             self._handle_error("copy_from_archive", str(other_archive.path), e)
             return False
         else:

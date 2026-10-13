@@ -42,12 +42,17 @@ Attributes:
 from __future__ import annotations
 
 import logging
+import os
 import re
+import shutil
+import tempfile
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from collections.abc import Generator
 
 logger = logging.getLogger(__name__)
 
@@ -516,6 +521,87 @@ class Archiver(ABC):
             should override this method to perform proper cleanup.
 
         """
+
+    @contextmanager
+    def _atomic_replace(self) -> Generator[Path]:
+        """Yield a path to write a replacement archive to, then swap it into place.
+
+        When the archive already exists, the new archive is written to a temporary
+        file in the same directory and moved over the original with os.replace(),
+        so a failure part way through never leaves a truncated or partial archive.
+        Symlinks are followed so the link itself is preserved, and the original
+        file's permission bits are copied to the replacement.
+
+        The replacement is a new file, so it is owned by the user running the write
+        and doesn't keep the original's ACLs, extended attributes or hard links.
+
+        If a temporary file can't be created next to the archive (for example, the
+        directory isn't writable), the new archive is written to the system temp
+        directory instead and then copied over the original in place. Only that
+        final copy is non-atomic.
+
+        When the archive doesn't exist yet, the target path is yielded directly
+        and removed again if writing fails.
+
+        Yields:
+            The path the caller should write the complete new archive to.
+
+        """
+        target = self._path.resolve()
+        if not target.exists():
+            try:
+                yield target
+            except BaseException:
+                target.unlink(missing_ok=True)
+                raise
+            return
+
+        try:
+            fd, tmp_name = tempfile.mkstemp(
+                dir=target.parent, prefix=f".{target.name}.", suffix=".tmp"
+            )
+        except PermissionError:
+            logger.warning(
+                "Cannot create a temporary file in %s; rewriting %s in place",
+                target.parent,
+                target,
+            )
+            yield from self._replace_in_place(target)
+            return
+
+        os.close(fd)
+        tmp_path = Path(tmp_name)
+        try:
+            yield tmp_path
+            shutil.copymode(target, tmp_path)
+            tmp_path.replace(target)
+        except BaseException:
+            tmp_path.unlink(missing_ok=True)
+            raise
+
+    @staticmethod
+    def _replace_in_place(target: Path) -> Generator[Path]:
+        """Yield a temp path elsewhere, then copy its contents over target in place.
+
+        Used by _atomic_replace() when the archive's directory isn't writable. The
+        new archive is still built completely before the original is touched.
+
+        Args:
+            target: The existing archive file to overwrite.
+
+        Yields:
+            The path the caller should write the complete new archive to.
+
+        """
+        fd, tmp_name = tempfile.mkstemp(suffix=".tmp")
+        os.close(fd)
+        tmp_path = Path(tmp_name)
+        try:
+            yield tmp_path
+            with tmp_path.open("rb") as src, target.open("wb") as dst:
+                shutil.copyfileobj(src, dst)
+        finally:
+            tmp_path.unlink(missing_ok=True)
 
     def _resolve_max_size(self, max_size: int | None) -> int:
         """Return the effective read size limit.
