@@ -1,6 +1,6 @@
 # ruff: noqa: SLF001, ARG001
 import xml.etree.ElementTree as ET
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -126,7 +126,7 @@ def complex_metadata():
     metadata.black_and_white = False
     metadata.manga = None
     metadata.is_empty = False
-    metadata.modified = datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    metadata.modified = datetime(2023, 1, 1, 12, 0, 0, tzinfo=UTC)
 
     return metadata
 

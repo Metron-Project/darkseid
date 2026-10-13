@@ -1,6 +1,6 @@
 # ruff: noqa: SLF001
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
@@ -493,7 +493,7 @@ def test_image_metadata_structure():
 
 def test_metadata_modified_field():
     """Test metadata modified field."""
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     md = Metadata(modified=now)
     assert md.modified == now
 
@@ -643,7 +643,7 @@ def test_metadata_comprehensive_str():
         InfoSources("Metron", 1, primary=True),
         InfoSources("Comic Vine", 2, primary=False),
     ]
-    modified = datetime.now(tz=timezone.utc)
+    modified = datetime.now(tz=UTC)
 
     md = Metadata(
         info_source=info_source,
