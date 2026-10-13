@@ -109,7 +109,7 @@ class ZipArchiver(Archiver):
         # Clear caches to free memory
         self._filename_list_cache = None
 
-    def read_file(self, archive_file: str) -> bytes:
+    def read_file(self, archive_file: str, max_size: int | None = None) -> bytes:
         """Read the contents of a file from the ZIP archive.
 
         Opens the ZIP archive in read mode and extracts the specified file's
@@ -120,12 +120,15 @@ class ZipArchiver(Archiver):
             archive_file: Path of the file within the archive. Should use
                          forward slashes (/) as path separators regardless
                          of the host operating system.
+            max_size: Maximum uncompressed size in bytes to read. Defaults to
+                     MAX_READ_SIZE when None.
 
         Returns:
             File contents as bytes. For text files, you may need to decode
                 using the appropriate encoding (e.g., .decode('utf-8')).
 
         Raises:
+            ArchiverFileTooLargeError: If the file's uncompressed size exceeds max_size.
             ArchiverReadError: If the file cannot be read due to:
 
                 - Corrupt ZIP file (BadZipfile)
@@ -140,7 +143,10 @@ class ZipArchiver(Archiver):
         """
         try:
             with ZipFile(self.path, mode="r") as zf:
-                return zf.read(archive_file)
+                info = zf.getinfo(archive_file)
+                # zipfile never decompresses past the recorded file_size.
+                self._check_size(archive_file, info.file_size, self._resolve_max_size(max_size))
+                return zf.read(info)
         except BadZipfile as e:
             self._handle_error("read", archive_file, e)
             msg = f"Corrupt ZIP file: {e}"

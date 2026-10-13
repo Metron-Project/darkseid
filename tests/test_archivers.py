@@ -21,7 +21,7 @@ from darkseid.archivers import (
     UnknownArchiver,
     ZipArchiver,
 )
-from darkseid.archivers.archiver import Archiver, ArchiverReadError
+from darkseid.archivers.archiver import Archiver, ArchiverFileTooLargeError, ArchiverReadError
 from darkseid.archivers.pdf import PYMUPDF_AVAILABLE
 
 if PYMUPDF_AVAILABLE:
@@ -229,6 +229,45 @@ def test_read_nonexistent_file(temp_dir, archive_type, archiver_class, filename,
     archiver = archiver_class(archive_path)
     with pytest.raises(ArchiverReadError, match="File not found in archive"):
         archiver.read_file("nonexistent.txt")
+
+
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), ARCHIVE_TEST_DATA)
+def test_read_file_exceeds_max_size(temp_dir, archive_type, archiver_class, filename, request):
+    """Test reading a file larger than max_size raises ArchiverFileTooLargeError."""
+    archive_path = request.getfixturevalue(f"sample_{archive_type}_path")
+    archiver = archiver_class(archive_path)
+
+    # file2.jpg contains b"fake_image_data" (15 bytes)
+    with pytest.raises(ArchiverFileTooLargeError, match="exceeding the 14 byte read limit"):
+        archiver.read_file("file2.jpg", max_size=14)
+    assert archiver.read_file("file2.jpg", max_size=15) == b"fake_image_data"
+
+
+@pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), ARCHIVE_TEST_DATA)
+def test_read_file_uses_default_max_read_size(
+    temp_dir, archive_type, archiver_class, filename, request, monkeypatch
+):
+    """Test read_file falls back to MAX_READ_SIZE when max_size is not given."""
+    archive_path = request.getfixturevalue(f"sample_{archive_type}_path")
+    archiver = archiver_class(archive_path)
+    monkeypatch.setattr(archiver_class, "MAX_READ_SIZE", 10)
+
+    with pytest.raises(ArchiverFileTooLargeError):
+        archiver.read_file("file2.jpg")
+    assert archiver.read_file("file1.txt") == b"content1"
+
+
+def test_zip_read_file_rejects_bomb_before_decompressing(temp_dir):
+    """Test a highly compressed ZIP member is rejected using its declared size."""
+    zip_path = temp_dir / "bomb.cbz"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("ComicInfo.xml", b"A" * (5 * 1024 * 1024))
+
+    archiver = ZipArchiver(zip_path)
+    with patch("darkseid.archivers.zip.ZipFile.read") as mock_read:
+        with pytest.raises(ArchiverFileTooLargeError):
+            archiver.read_file("ComicInfo.xml", max_size=1024)
+        mock_read.assert_not_called()
 
 
 @pytest.mark.parametrize(("archive_type", "archiver_class", "filename"), READ_WRITE_ARCHIVE_DATA)
@@ -541,6 +580,7 @@ def test_tar_test(sample_tar_path):
 def test_rar_read_file_success(mock_rar_file, sample_rar_path, test_file, expected_content):
     """Test reading files from RAR archive."""
     mock_rf = Mock()
+    mock_rf.getinfo.return_value = Mock(file_size=len(expected_content))
     mock_rf.read.return_value = expected_content
     mock_rar_file.return_value.__enter__.return_value = mock_rf
 
@@ -548,7 +588,8 @@ def test_rar_read_file_success(mock_rar_file, sample_rar_path, test_file, expect
     content = archiver.read_file(test_file)
 
     assert content == expected_content
-    mock_rf.read.assert_called_once_with(test_file)
+    mock_rf.getinfo.assert_called_once_with(test_file)
+    mock_rf.read.assert_called_once_with(mock_rf.getinfo.return_value)
 
 
 @pytest.mark.parametrize(
@@ -574,7 +615,7 @@ def test_rar_read_file_errors(
 def test_rar_read_file_not_found(mock_rar_file, sample_rar_path):
     """Test RAR read error when file not found."""
     mock_rf = Mock()
-    mock_rf.read.side_effect = KeyError("File not found")
+    mock_rf.getinfo.side_effect = rarfile.NoRarEntry("File not found")
     mock_rar_file.return_value.__enter__.return_value = mock_rf
 
     archiver = RarArchiver(sample_rar_path)
@@ -586,6 +627,7 @@ def test_rar_read_file_not_found(mock_rar_file, sample_rar_path):
 def test_rar_read_file_unsupported_operation(mock_rar_file, sample_rar_path):
     """Test RAR read handles UnsupportedOperation (empty directories)."""
     mock_rf = Mock()
+    mock_rf.getinfo.return_value = Mock(file_size=0)
     mock_rf.read.side_effect = io.UnsupportedOperation("Unsupported")
     mock_rar_file.return_value.__enter__.return_value = mock_rf
 
@@ -593,6 +635,19 @@ def test_rar_read_file_unsupported_operation(mock_rar_file, sample_rar_path):
     content = archiver.read_file("empty_dir/")
 
     assert content == b""
+
+
+@patch("rarfile.RarFile")
+def test_rar_read_file_exceeds_max_size(mock_rar_file, sample_rar_path):
+    """Test RAR read rejects oversized files before reading them."""
+    mock_rf = Mock()
+    mock_rf.getinfo.return_value = Mock(file_size=2048)
+    mock_rar_file.return_value.__enter__.return_value = mock_rf
+
+    archiver = RarArchiver(sample_rar_path)
+    with pytest.raises(ArchiverFileTooLargeError):
+        archiver.read_file("ComicInfo.xml", max_size=1024)
+    mock_rf.read.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -701,7 +756,7 @@ def test_factory_register_new_archiver(temp_dir):
     """Test registering new archiver type with factory."""
 
     class MockArchiver(Archiver):
-        def read_file(self, archive_file: str) -> bytes:
+        def read_file(self, archive_file: str, max_size: int | None = None) -> bytes:
             return b"mock"
 
         def write_file(self, archive_file: str, data) -> bool:
@@ -1169,3 +1224,23 @@ def test_pdf_exists(sample_pdf_path):
     # Page that doesn't exist
     assert archiver.exists("page_999.png") is False
     assert archiver.exists("nonexistent.png") is False
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_read_embedded_file_exceeds_max_size(sample_pdf_path):
+    """Test reading an embedded file larger than max_size raises."""
+    archiver = PdfArchiver(sample_pdf_path)
+    xml_data = b"<ComicInfo><Title>" + b"A" * 2048 + b"</Title></ComicInfo>"
+    assert archiver.write_file("ComicInfo.xml", xml_data) is True
+
+    with pytest.raises(ArchiverFileTooLargeError):
+        archiver.read_file("ComicInfo.xml", max_size=1024)
+    assert archiver.read_file("ComicInfo.xml", max_size=len(xml_data)) == xml_data
+
+
+@pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="pymupdf not installed")
+def test_pdf_read_page_exceeds_max_size(sample_pdf_path):
+    """Test reading a rendered page larger than max_size raises."""
+    archiver = PdfArchiver(sample_pdf_path)
+    with pytest.raises(ArchiverFileTooLargeError):
+        archiver.read_file("page_001.png", max_size=10)

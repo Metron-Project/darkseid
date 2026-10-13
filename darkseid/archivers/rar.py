@@ -86,19 +86,22 @@ class RarArchiver(Archiver):
         """
         return False
 
-    def read_file(self, archive_file: str) -> bytes:
+    def read_file(self, archive_file: str, max_size: int | None = None) -> bytes:
         """Read the contents of a file from the RAR archive.
 
         Args:
             archive_file: The path of the file within the archive.
                          Should use forward slashes as path separators
                          regardless of the operating system.
+            max_size: Maximum uncompressed size in bytes to read. Defaults to
+                     MAX_READ_SIZE when None.
 
         Returns:
             The file contents as bytes. For text files, decode using
                 the appropriate encoding (e.g., content.decode('utf-8')).
 
         Raises:
+            ArchiverFileTooLargeError: If the file's uncompressed size exceeds max_size.
             ArchiverReadError: If the file cannot be read due to:
 
                 - RAR command execution failure (missing unrar tool)
@@ -115,7 +118,10 @@ class RarArchiver(Archiver):
         """
         try:
             with rarfile.RarFile(self.path) as rf:
-                return rf.read(archive_file)
+                info = rf.getinfo(archive_file)
+                # rarfile never reads past the recorded file_size.
+                self._check_size(archive_file, info.file_size, self._resolve_max_size(max_size))
+                return rf.read(info)
         except rarfile.RarCannotExec as e:
             self._handle_error("read", archive_file, e)
             msg = f"Cannot execute RAR command: {e}"
@@ -124,7 +130,7 @@ class RarArchiver(Archiver):
             self._handle_error("read", archive_file, e)
             msg = f"Corrupt RAR file: {e}"
             raise ArchiverReadError(msg) from e
-        except KeyError as e:
+        except (KeyError, rarfile.NoRarEntry) as e:
             msg = f"File not found in archive: {archive_file}"
             raise ArchiverReadError(msg) from e
         except io.UnsupportedOperation:

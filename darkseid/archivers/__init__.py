@@ -3,6 +3,7 @@
 from darkseid.archivers.archiver import (
     Archiver,
     ArchiverError,
+    ArchiverFileTooLargeError,
     ArchiverReadError,
     ArchiverWriteError,
 )
@@ -17,6 +18,7 @@ __all__ = [
     "Archiver",
     "ArchiverError",
     "ArchiverFactory",
+    "ArchiverFileTooLargeError",
     "ArchiverReadError",
     "ArchiverWriteError",
     "RarArchiver",

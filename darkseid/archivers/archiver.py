@@ -44,7 +44,7 @@ from __future__ import annotations
 import logging
 import re
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -83,6 +83,22 @@ class ArchiverReadError(ArchiverError):
         ...     content = archive.read_file("missing.txt")
         ... except ArchiverReadError as e:
         ...     print(f"Failed to read file: {e}")
+
+    """
+
+
+class ArchiverFileTooLargeError(ArchiverReadError):
+    """Raised when a file in the archive exceeds the allowed read size.
+
+    The size check uses the uncompressed size recorded in the archive, so
+    oversized files (e.g., decompression bombs) are rejected before any data
+    is decompressed into memory.
+
+    Examples:
+        >>> try:
+        ...     content = archive.read_file("ComicInfo.xml", max_size=1024)
+        ... except ArchiverFileTooLargeError as e:
+        ...     print(f"File too large: {e}")
 
     """
 
@@ -145,12 +161,14 @@ class Archiver(ABC):
     Attributes:
         IMAGE_EXT_RE: Compiled regex for matching image file extensions.
             Matches: .jpg, .jpeg, .png, .webp, .gif, .jxl (case-insensitive)
+        MAX_READ_SIZE: Default maximum uncompressed size, in bytes, that
+            read_file() will return for a single file.
 
     Examples:
         Implementing a concrete archiver:
 
         >>> class MyArchiver(Archiver):
-        ...     def read_file(self, archive_file: str) -> bytes:
+        ...     def read_file(self, archive_file: str, max_size: int | None = None) -> bytes:
         ...         # Implementation specific to your archive format
         ...         pass
         ...
@@ -163,6 +181,7 @@ class Archiver(ABC):
     """
 
     IMAGE_EXT_RE = re.compile(r"\.(jpe?g|png|webp|gif|jxl)$", re.IGNORECASE)
+    MAX_READ_SIZE: ClassVar[int] = 256 * 1024 * 1024  # 256 MiB
 
     def __init__(self, path: Path) -> None:
         """Initialize an Archiver with the specified path.
@@ -271,7 +290,7 @@ class Archiver(ABC):
         return self._path
 
     @abstractmethod
-    def read_file(self, archive_file: str) -> bytes:
+    def read_file(self, archive_file: str, max_size: int | None = None) -> bytes:
         """Read the contents of a file from the archive.
 
         Extracts and returns the complete contents of the specified file
@@ -282,12 +301,15 @@ class Archiver(ABC):
             archive_file: Path of the file within the archive. Should use
                 forward slashes as path separators (e.g., "folder/file.txt").
                 The path is relative to the archive root.
+            max_size: Maximum uncompressed size in bytes to read. Defaults to
+                MAX_READ_SIZE when None.
 
         Returns:
             The complete file contents as bytes. For text files, you'll need to decode the bytes using the
                 appropriate encoding.
 
         Raises:
+            ArchiverFileTooLargeError: If the file's uncompressed size exceeds max_size.
             ArchiverReadError: If the file cannot be read. This includes cases
                 where the file doesn't exist, the archive is corrupted, or
                 there are permission issues.
@@ -494,6 +516,35 @@ class Archiver(ABC):
             should override this method to perform proper cleanup.
 
         """
+
+    def _resolve_max_size(self, max_size: int | None) -> int:
+        """Return the effective read size limit.
+
+        Args:
+            max_size: The caller-supplied limit, or None to use MAX_READ_SIZE.
+
+        Returns:
+            The maximum number of bytes read_file() may return.
+
+        """
+        return self.MAX_READ_SIZE if max_size is None else max_size
+
+    @staticmethod
+    def _check_size(archive_file: str, size: int, max_size: int) -> None:
+        """Raise if a file's uncompressed size exceeds the read limit.
+
+        Args:
+            archive_file: Name of the file within the archive.
+            size: The file's uncompressed size in bytes.
+            max_size: The maximum allowed size in bytes.
+
+        Raises:
+            ArchiverFileTooLargeError: If size is greater than max_size.
+
+        """
+        if size > max_size:
+            msg = f"'{archive_file}' is {size} bytes, exceeding the {max_size} byte read limit"
+            raise ArchiverFileTooLargeError(msg)
 
     def _handle_error(self, operation: str, filename: str, error: Exception) -> None:
         """Centralized error handling and logging.

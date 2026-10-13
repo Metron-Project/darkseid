@@ -160,16 +160,19 @@ class TarArchiver(Archiver):
     def _read_mode(self) -> str:
         return f"r:{self._mode}" if self._mode else "r"
 
-    def read_file(self, archive_file: str) -> bytes:
+    def read_file(self, archive_file: str, max_size: int | None = None) -> bytes:
         """Read the contents of a file from the TAR archive.
 
         Args:
             archive_file: Path of the file within the archive.
+            max_size: Maximum uncompressed size in bytes to read. Defaults to
+                MAX_READ_SIZE when None.
 
         Returns:
             The complete file contents as bytes.
 
         Raises:
+            ArchiverFileTooLargeError: If the file's size exceeds max_size.
             ArchiverReadError: If the file cannot be read from the archive.
 
         """
@@ -181,6 +184,7 @@ class TarArchiver(Archiver):
                         msg = f"'{archive_file}' is not a regular file"
                         raise ArchiverReadError(msg)
 
+                    self._check_size(archive_file, member.size, self._resolve_max_size(max_size))
                     file_obj = tar.extractfile(member)
                     if file_obj is None:
                         msg = f"Cannot extract file: {archive_file}"

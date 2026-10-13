@@ -188,11 +188,12 @@ class PdfArchiver(Archiver):
         """
         doc.save(doc.name, incremental=True, encryption=pymupdf.PDF_ENCRYPT_KEEP)
 
-    def _read_page(self, archive_file: str) -> bytes:
+    def _read_page(self, archive_file: str, max_size: int) -> bytes:
         """Read and render a page as PNG.
 
         Args:
             archive_file: The page filename (e.g., 'page_001.png').
+            max_size: Maximum size in bytes of the rendered PNG.
 
         Returns:
             PNG image data rendered at PAGE_DPI resolution.
@@ -213,7 +214,9 @@ class PdfArchiver(Archiver):
                 # Render page to PNG at configured DPI
                 mat = pymupdf.Matrix(self.PAGE_ZOOM_FACTOR, self.PAGE_ZOOM_FACTOR)
                 pix = page.get_pixmap(matrix=mat)
-                return pix.tobytes("png")
+                data = pix.tobytes("png")
+                self._check_size(archive_file, len(data), max_size)
+                return data
 
         except pymupdf.FileDataError as e:
             self._handle_error("read", archive_file, e)
@@ -226,11 +229,12 @@ class PdfArchiver(Archiver):
             msg = f"Failed to read page from PDF: {e}"
             raise ArchiverReadError(msg) from e
 
-    def _read_embedded_file(self, archive_file: str) -> bytes:
+    def _read_embedded_file(self, archive_file: str, max_size: int) -> bytes:
         """Read an embedded file from the PDF.
 
         Args:
             archive_file: The embedded filename (e.g., 'ComicInfo.xml').
+            max_size: Maximum uncompressed size in bytes to read.
 
         Returns:
             The embedded file content as bytes.
@@ -246,8 +250,13 @@ class PdfArchiver(Archiver):
                     msg = f"Embedded file not found: {archive_file}"
                     raise ArchiverReadError(msg)  # noqa: TRY301
 
-                # Get the embedded file content
-                return doc.embfile_get(archive_file)
+                # Reject oversized files using the recorded size before decompressing
+                declared_size = doc.embfile_info(archive_file).get("size", -1)
+                self._check_size(archive_file, declared_size, max_size)
+
+                data = doc.embfile_get(archive_file)
+                self._check_size(archive_file, len(data), max_size)
+                return data
 
         except pymupdf.FileDataError as e:
             self._handle_error("read", archive_file, e)
@@ -260,13 +269,14 @@ class PdfArchiver(Archiver):
             msg = f"Failed to read embedded file from PDF: {e}"
             raise ArchiverReadError(msg) from e
 
-    def read_file(self, archive_file: str) -> bytes:
+    def read_file(self, archive_file: str, max_size: int | None = None) -> bytes:
         """Read a file from the PDF (page or embedded file).
 
         Args:
             archive_file: The filename within the archive. Can be:
                          - Page file: 'page_NNN.png' (zero-padded page number, starts at 001)
                          - Embedded file: e.g., 'ComicInfo.xml', 'MetronInfo.xml'
+            max_size: Maximum size in bytes to read. Defaults to MAX_READ_SIZE when None.
 
         Returns:
             File data as bytes:
@@ -274,6 +284,7 @@ class PdfArchiver(Archiver):
                 - For embedded files: Raw file content
 
         Raises:
+            ArchiverFileTooLargeError: If the file's size exceeds max_size.
             ArchiverReadError: If the file cannot be read due to:
 
                 - Invalid page filename format
@@ -291,9 +302,10 @@ class PdfArchiver(Archiver):
             >>> metadata = archiver.read_file("ComicInfo.xml")
 
         """
+        limit = self._resolve_max_size(max_size)
         if self._is_page_file(archive_file):
-            return self._read_page(archive_file)
-        return self._read_embedded_file(archive_file)
+            return self._read_page(archive_file, limit)
+        return self._read_embedded_file(archive_file, limit)
 
     def write_file(self, archive_file: str, data: str | bytes) -> bool:
         """Write an embedded file to the PDF.

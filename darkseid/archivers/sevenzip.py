@@ -220,7 +220,7 @@ class SevenZipArchiver(Archiver):
         # Clear filename cache to free memory
         self._filename_list_cache = None
 
-    def read_file(self, archive_file: str) -> bytes:
+    def read_file(self, archive_file: str, max_size: int | None = None) -> bytes:
         """Read a file from the 7z archive.
 
         Reads the specified file from the archive and returns its contents as bytes.
@@ -228,12 +228,15 @@ class SevenZipArchiver(Archiver):
         Args:
             archive_file: Path of the file within the archive. Use forward slashes
                          for directory separators regardless of platform.
+            max_size: Maximum uncompressed size in bytes to read. Defaults to
+                     MAX_READ_SIZE when None.
 
         Returns:
             The file contents as bytes. For text files, use .decode() to convert
                 to string.
 
         Raises:
+            ArchiverFileTooLargeError: If the file's uncompressed size exceeds max_size.
             ArchiverReadError: If the file cannot be read, doesn't exist, or
                              the archive is corrupted.
 
@@ -257,10 +260,17 @@ class SevenZipArchiver(Archiver):
 
         # py7zr expects consistent path separators
         normalized_path = archive_file.replace("\\", "/")
+        limit = self._resolve_max_size(max_size)
         try:
             with py7zr.SevenZipFile(self._path, mode="r") as archive:
-                # read specific file
-                seven_zip_factory = py7zr.io.BytesIOFactory(maxsize)
+                # Reject oversized files before decompressing anything
+                for info in archive.list():
+                    if info.filename == normalized_path:
+                        self._check_size(archive_file, info.uncompressed, limit)
+                        break
+
+                # read specific file; the factory limit bounds memory if the header lies
+                seven_zip_factory = py7zr.io.BytesIOFactory(limit + 1)
                 archive.extract(targets=[normalized_path], factory=seven_zip_factory)
                 file_obj = seven_zip_factory.products.get(normalized_path)
 
@@ -273,6 +283,7 @@ class SevenZipArchiver(Archiver):
                     content = file_obj.read()
                 else:
                     raise ArchiverReadError  # noqa: TRY301
+                self._check_size(archive_file, len(content), limit)
         except ArchiverReadError:
             raise
         except Exception as e:
