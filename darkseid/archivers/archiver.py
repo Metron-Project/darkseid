@@ -532,6 +532,14 @@ class Archiver(ABC):
         Symlinks are followed so the link itself is preserved, and the original
         file's permission bits are copied to the replacement.
 
+        The replacement is a new file, so it is owned by the user running the write
+        and doesn't keep the original's ACLs, extended attributes or hard links.
+
+        If a temporary file can't be created next to the archive (for example, the
+        directory isn't writable), the new archive is written to the system temp
+        directory instead and then copied over the original in place. Only that
+        final copy is non-atomic.
+
         When the archive doesn't exist yet, the target path is yielded directly
         and removed again if writing fails.
 
@@ -548,7 +556,19 @@ class Archiver(ABC):
                 raise
             return
 
-        fd, tmp_name = tempfile.mkstemp(dir=target.parent, prefix=f".{target.name}.", suffix=".tmp")
+        try:
+            fd, tmp_name = tempfile.mkstemp(
+                dir=target.parent, prefix=f".{target.name}.", suffix=".tmp"
+            )
+        except PermissionError:
+            logger.warning(
+                "Cannot create a temporary file in %s; rewriting %s in place",
+                target.parent,
+                target,
+            )
+            yield from self._replace_in_place(target)
+            return
+
         os.close(fd)
         tmp_path = Path(tmp_name)
         try:
@@ -558,6 +578,30 @@ class Archiver(ABC):
         except BaseException:
             tmp_path.unlink(missing_ok=True)
             raise
+
+    @staticmethod
+    def _replace_in_place(target: Path) -> Generator[Path]:
+        """Yield a temp path elsewhere, then copy its contents over target in place.
+
+        Used by _atomic_replace() when the archive's directory isn't writable. The
+        new archive is still built completely before the original is touched.
+
+        Args:
+            target: The existing archive file to overwrite.
+
+        Yields:
+            The path the caller should write the complete new archive to.
+
+        """
+        fd, tmp_name = tempfile.mkstemp(suffix=".tmp")
+        os.close(fd)
+        tmp_path = Path(tmp_name)
+        try:
+            yield tmp_path
+            with tmp_path.open("rb") as src, target.open("wb") as dst:
+                shutil.copyfileobj(src, dst)
+        finally:
+            tmp_path.unlink(missing_ok=True)
 
     def _resolve_max_size(self, max_size: int | None) -> int:
         """Return the effective read size limit.

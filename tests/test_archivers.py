@@ -1387,3 +1387,103 @@ def test_seven_zip_write_file_rejects_oversized_member(sample_seven_zip_path, mo
     with pytest.raises(ArchiverFileTooLargeError):
         SevenZipArchiver(sample_seven_zip_path).write_file("new.txt", "new")
     assert sample_seven_zip_path.read_bytes() == original
+
+
+@pytest.fixture
+def mid_corrupt_tar_path(temp_dir):
+    """Create a TAR archive whose fourth member header is corrupt."""
+    tar_path = temp_dir / "corrupt.cbt"
+    with tarfile.open(tar_path, "w", format=tarfile.USTAR_FORMAT) as tf:
+        for i in range(5):
+            tarinfo = tarfile.TarInfo(name=f"page{i}.jpg")
+            tarinfo.size = 600
+            tf.addfile(tarinfo, io.BytesIO(b"x" * 600))
+
+    # Each member is a 512 byte header plus 1024 bytes of data; break page3's checksum.
+    raw = bytearray(tar_path.read_bytes())
+    header = 3 * (512 + 1024)
+    raw[header + 148 : header + 156] = b"garbage!"
+    tar_path.write_bytes(bytes(raw))
+    return tar_path
+
+
+def test_tar_write_file_corrupt_member_header_left_untouched(mid_corrupt_tar_path):
+    """Test a corrupt header part way through the archive raises instead of dropping members."""
+    original = mid_corrupt_tar_path.read_bytes()
+
+    with pytest.raises(ArchiverWriteError):
+        TarArchiver(mid_corrupt_tar_path).write_file("ComicInfo.xml", "<ComicInfo/>")
+    assert mid_corrupt_tar_path.read_bytes() == original
+
+
+def test_tar_remove_files_corrupt_member_header_left_untouched(mid_corrupt_tar_path):
+    """Test removing files from an archive with a corrupt header fails without changes."""
+    original = mid_corrupt_tar_path.read_bytes()
+
+    assert TarArchiver(mid_corrupt_tar_path).remove_files(["page0.jpg"]) is False
+    assert mid_corrupt_tar_path.read_bytes() == original
+
+
+@pytest.mark.parametrize(
+    ("filename", "mode"),
+    [("test.tar.gz", "w:gz"), ("test.tar.bz2", "w:bz2"), ("test.tar.xz", "w:xz")],
+)
+def test_tar_rewrite_compressed_archive(temp_dir, filename, mode):
+    """Test rewriting compressed TAR archives keeps existing members."""
+    tar_path = temp_dir / filename
+    with tarfile.open(tar_path, mode) as tf:
+        tarinfo = tarfile.TarInfo(name="page.jpg")
+        tarinfo.size = 4
+        tf.addfile(tarinfo, io.BytesIO(b"data"))
+
+    archiver = TarArchiver(tar_path)
+    assert archiver.write_file("ComicInfo.xml", "<ComicInfo/>") is True
+    assert archiver.get_filename_list() == ["ComicInfo.xml", "page.jpg"]
+    assert archiver.read_file("page.jpg") == b"data"
+
+
+def test_tar_write_file_sets_mtime(temp_dir):
+    """Test files added to a TAR archive get a current modification time."""
+    tar_path = temp_dir / "test.cbt"
+    assert TarArchiver(tar_path).write_file("ComicInfo.xml", "<ComicInfo/>") is True
+
+    with tarfile.open(tar_path) as tf:
+        assert tf.getmember("ComicInfo.xml").mtime > 0
+
+
+def test_seven_zip_remove_files_corrupt_archive(temp_dir):
+    """Test removing files from an unreadable 7z archive reports failure."""
+    archive_path = temp_dir / "test.cb7"
+    original = b"this is not a valid archive" * 100
+    archive_path.write_bytes(original)
+
+    assert SevenZipArchiver(archive_path).remove_files(["ComicInfo.xml"]) is False
+    assert archive_path.read_bytes() == original
+
+
+@pytest.mark.parametrize(
+    ("archive_type", "archiver_class"), [("tar", TarArchiver), ("seven_zip", SevenZipArchiver)]
+)
+def test_write_file_falls_back_to_in_place_when_directory_not_writable(
+    temp_dir, archive_type, archiver_class, request, caplog
+):
+    """Test a rewrite falls back to overwriting in place when no temp file can be made beside it."""
+    archive_path = request.getfixturevalue(f"sample_{archive_type}_path")
+    inode = archive_path.stat().st_ino
+    real_mkstemp = tempfile.mkstemp
+
+    def mkstemp(*args, **kwargs):
+        if kwargs.get("dir") is not None:
+            msg = "read-only directory"
+            raise PermissionError(msg)
+        return real_mkstemp(*args, **kwargs)
+
+    with patch("tempfile.mkstemp", side_effect=mkstemp):
+        assert archiver_class(archive_path).write_file("new.txt", "new") is True
+
+    assert archive_path.stat().st_ino == inode
+    assert "rewriting" in caplog.text
+    archiver = archiver_class(archive_path)
+    assert archiver.read_file("new.txt") == b"new"
+    assert archiver.read_file("file1.txt") == b"content1"
+    assert list(temp_dir.iterdir()) == [archive_path]

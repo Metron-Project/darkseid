@@ -41,6 +41,7 @@ from __future__ import annotations
 import io
 import logging
 import tarfile
+import time
 from typing import TYPE_CHECKING
 
 from darkseid.archivers.archiver import Archiver, ArchiverReadError, ArchiverWriteError
@@ -200,6 +201,27 @@ class TarArchiver(Archiver):
             msg = f"Failed to read file '{archive_file}': {e}"
             raise ArchiverReadError(msg) from e
 
+    @staticmethod
+    def _check_reached_end(tar: tarfile.TarFile) -> None:
+        """Raise if iterating the archive stopped before its end-of-archive marker.
+
+        tarfile silently stops iterating when it hits an invalid header after the
+        first member, which would drop every member after it from a rewrite.
+
+        Args:
+            tar: An archive opened for reading that has been fully iterated.
+
+        Raises:
+            tarfile.ReadError: If the block where iteration stopped isn't the end marker.
+
+        """
+        if tar.fileobj is None:
+            return
+        tar.fileobj.seek(tar.offset)
+        if tar.fileobj.read(tarfile.BLOCKSIZE).strip(b"\0"):
+            msg = f"Invalid header at offset {tar.offset}"
+            raise tarfile.ReadError(msg)
+
     def _rewrite(self, exclude: Collection[str], new_files: Iterable[tuple[str, bytes]]) -> None:
         """Rebuild the archive, keeping existing members and adding new files.
 
@@ -213,7 +235,8 @@ class TarArchiver(Archiver):
             new_files: (name, data) pairs to append to the new archive.
 
         Raises:
-            tarfile.TarError: If the existing archive can't be read or the new one written.
+            tarfile.TarError: If the existing archive can't be read in full or the new
+                one written.
             OSError: If a file system operation fails.
 
         """
@@ -227,10 +250,12 @@ class TarArchiver(Archiver):
                     for member in src:
                         if member.isfile() and member.name not in exclude:
                             out.addfile(member, src.extractfile(member))
+                    self._check_reached_end(src)
 
             for name, data in new_files:
                 tarinfo = tarfile.TarInfo(name=name)
                 tarinfo.size = len(data)
+                tarinfo.mtime = int(time.time())
                 out.addfile(tarinfo, io.BytesIO(data))
 
         # Invalidate filename cache since the archive contents changed
