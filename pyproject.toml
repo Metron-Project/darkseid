@@ -3,7 +3,7 @@ name = "darkseid"
 version = "8.4.1"
 description = "A library to interact with comic archives"
 authors = [{ name = "Brian Pepple", email = "bpepple@metron.cloud" }]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 readme = "README.md"
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
@@ -23,11 +23,11 @@ classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "Natural Language :: English",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Topic :: Software Development :: Libraries",
   "Topic :: Utilities",
   "Operating System :: MacOS :: MacOS X",
@@ -141,7 +141,7 @@ exclude = [
 useLibraryCodeForTypes = true
 reportMissingImports = true
 reportImportCycles = true
-pythonVersion = "3.10"
+pythonVersion = "3.11"
 pythonPlatform = "All"
 
 [tool.pytest.ini_options]
@@ -163,7 +163,7 @@ exclude = "*~,.git/*,.mypy_cache/*,.pytest_cache/*,.venv*,__pycache__/*,cache/*,
 
 [tool.ruff]
 extend-exclude = ["node_modules"]
-target-version = "py310"
+target-version = "py311"
 line-length = 100
 
 [tool.ruff.lint]
@@ -259,7 +259,7 @@ min_confidence = 61
 sort_by_size = true
 
 [tool.tox]
-env_list = ["3.10", "3.11", "3.12", "3.13"]
+env_list = ["3.11", "3.12", "3.13", "3.14", "3.15"]
 min_version = "4.22"
 
 [tool.tox.env_run_base]
