@@ -1,6 +1,7 @@
 # ruff: noqa: SLF001, ARG001
 """Tests for validate.py module using function-based pytest approach."""
 
+import logging
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -356,3 +357,59 @@ def test_xml_bytes_preserved_through_validation(valid_xml_bytes):
         validator.validate()
 
     assert validator.xml == original_xml
+
+
+def _billion_laughs() -> bytes:
+    entities = '<!ENTITY a "' + "A" * 1000 + '">'
+    for i in range(7):
+        entities += f'<!ENTITY {chr(98 + i)} "' + f"&{chr(97 + i)};" * 10 + '">'
+    return (
+        f'<?xml version="1.0"?><!DOCTYPE ComicInfo [{entities}]>'
+        "<ComicInfo><Series>&h;</Series></ComicInfo>"
+    ).encode()
+
+
+HOSTILE_XML = [
+    pytest.param(
+        b'<?xml version="1.0"?><!DOCTYPE ComicInfo [<!ENTITY x SYSTEM "file:///etc/passwd">]>'
+        b"<ComicInfo><Series>&x;</Series></ComicInfo>",
+        id="external_entity",
+    ),
+    pytest.param(_billion_laughs(), id="entity_expansion"),
+    pytest.param(
+        b'<?xml version="1.0"?><!DOCTYPE ComicInfo [<!ENTITY s "X">]>'
+        b"<ComicInfo><Series>&s;</Series></ComicInfo>",
+        id="internal_entity",
+    ),
+]
+
+
+@pytest.mark.parametrize("xml", HOSTILE_XML)
+def test_validate_rejects_entities(xml, caplog):
+    """Test documents declaring entities are rejected without logging tracebacks."""
+    assert ValidateMetadata(xml).validate() == SchemaVersion.UNKNOWN
+    assert not [record for record in caplog.records if record.levelno >= logging.ERROR]
+
+
+@pytest.mark.parametrize("xml", HOSTILE_XML)
+def test_get_validation_errors_reports_entities(xml):
+    """Test documents declaring entities are reported as invalid XML."""
+    errors = ValidateMetadata(xml).get_validation_errors(SchemaVersion.COMIC_INFO_V2)
+    assert len(errors) == 1
+    assert errors[0].startswith("Invalid XML:")
+    assert "forbidden" in errors[0].lower()
+
+
+@pytest.mark.parametrize(
+    "xml",
+    [
+        pytest.param(b'<?xml version="1.0"?><ComicInfo><Series>X</Series></ComicInfo>', id="plain"),
+        pytest.param(
+            b'<?xml version="1.0"?><!DOCTYPE ComicInfo><ComicInfo><Series>X</Series></ComicInfo>',
+            id="doctype_without_entities",
+        ),
+    ],
+)
+def test_validate_accepts_documents_without_entities(xml):
+    """Test defusing doesn't reject ordinary documents."""
+    assert ValidateMetadata(xml).validate() == SchemaVersion.COMIC_INFO_V2

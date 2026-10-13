@@ -12,7 +12,7 @@ from importlib.resources import as_file, files
 from io import BytesIO
 from typing import TYPE_CHECKING, ClassVar
 
-from xmlschema import XMLSchema10, XMLSchema11, XMLSchemaValidationError
+from xmlschema import XMLResourceError, XMLSchema10, XMLSchema11, XMLSchemaValidationError
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -175,7 +175,10 @@ class ValidateMetadata:
 
         try:
             schema_class = config["schema_class"]
-            schema = schema_class(schema_path)
+            # Metadata comes from untrusted archives, so always parse it with xmlschema's
+            # SafeXMLParser (which forbids entities) rather than relying on the
+            # platform's expat build to limit entity expansion.
+            schema = schema_class(schema_path, defuse="always")
             self._schema_cache[schema_version] = schema
             yield schema
         except Exception:
@@ -202,6 +205,9 @@ class ValidateMetadata:
                 logger.debug(f"XML validated successfully against {schema_version}")
             except XMLSchemaValidationError as e:
                 logger.debug(f"XML validation failed for {schema_version}: {e}")
+                return False
+            except XMLResourceError as e:
+                logger.debug(f"XML could not be parsed for {schema_version}: {e}")
                 return False
             except Exception:
                 logger.exception(f"Unexpected error during validation for {schema_version}")
@@ -267,6 +273,8 @@ class ValidateMetadata:
                 schema.validate(BytesIO(self.xml))
             except XMLSchemaValidationError as e:
                 errors.append(str(e))
+            except XMLResourceError as e:
+                errors.append(f"Invalid XML: {e}")
             except Exception as e:  # noqa: BLE001 - report any schema library failure as an error
                 errors.append(f"Unexpected validation error: {e}")
 
