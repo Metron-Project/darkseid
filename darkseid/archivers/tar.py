@@ -387,6 +387,8 @@ class TarArchiver(Archiver):
 
         Existing files in this archive are kept unless the source archive has a
         file with the same name. Nothing is written if any file can't be copied.
+        Files with unsafe names (absolute paths, drive letters or '..' components)
+        are skipped with a warning.
 
         Args:
             other_archive: Source archive to copy files from.
@@ -396,7 +398,7 @@ class TarArchiver(Archiver):
 
         """
         try:
-            source_files = other_archive.get_filename_list()
+            source_files = self._safe_source_files(other_archive)
             if not source_files:
                 return True  # Nothing to copy
 

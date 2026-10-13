@@ -1284,7 +1284,8 @@ class Comic:
         """Export the comic archive to CBZ (ZIP) format.
 
         Converts RAR/CBR, CBT, or CB7 archives to ZIP/CBZ format. Returns True immediately
-        if already ZIP. Preserves all pages, metadata, and directory structure.
+        if already ZIP. Preserves all pages, metadata, and directory structure. Files with
+        unsafe names (absolute paths, drive letters or '..' components) are skipped.
 
         Args:
             zip_filename: Path where the ZIP archive will be created (overwrites if exists).

@@ -187,6 +187,7 @@ class Archiver(ABC):
 
     IMAGE_EXT_RE = re.compile(r"\.(jpe?g|png|webp|gif|jxl)$", re.IGNORECASE)
     MAX_READ_SIZE: ClassVar[int] = 256 * 1024 * 1024  # 256 MiB
+    _DRIVE_RE = re.compile(r"^[A-Za-z]:")
 
     def __init__(self, path: Path) -> None:
         """Initialize an Archiver with the specified path.
@@ -602,6 +603,44 @@ class Archiver(ABC):
                 shutil.copyfileobj(src, dst)
         finally:
             tmp_path.unlink(missing_ok=True)
+
+    @classmethod
+    def _is_safe_member_name(cls, name: str) -> bool:
+        """Check whether an archive member name is safe to copy into a new archive.
+
+        Names that are empty, absolute, start with a Windows drive letter, or
+        contain a '..' component could write outside the extraction directory
+        when the new archive is extracted by a tool that doesn't sanitize them.
+
+        Args:
+            name: The member name from the source archive.
+
+        Returns:
+            True if the name is a plain relative path, False otherwise.
+
+        """
+        normalized = name.replace("\\", "/")
+        if not normalized or normalized.startswith("/") or cls._DRIVE_RE.match(normalized):
+            return False
+        return ".." not in normalized.split("/")
+
+    def _safe_source_files(self, other_archive: Archiver) -> list[str]:
+        """Return the files to copy from another archive, skipping unsafe names.
+
+        Args:
+            other_archive: The archive being copied from.
+
+        Returns:
+            The source archive's file names, without any unsafe names.
+
+        """
+        safe_files = []
+        for filename in other_archive.get_filename_list():
+            if self._is_safe_member_name(filename):
+                safe_files.append(filename)
+            else:
+                logger.warning("Skipping unsafe file name %r in %s", filename, other_archive.path)
+        return safe_files
 
     def _resolve_max_size(self, max_size: int | None) -> int:
         """Return the effective read size limit.
