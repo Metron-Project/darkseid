@@ -1487,3 +1487,58 @@ def test_write_file_falls_back_to_in_place_when_directory_not_writable(
     assert archiver.read_file("new.txt") == b"new"
     assert archiver.read_file("file1.txt") == b"content1"
     assert list(temp_dir.iterdir()) == [archive_path]
+
+
+# Unsafe member name tests
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("page1.jpg", True),
+        ("dir/page1.jpg", True),
+        ("./dir/page1.jpg", True),
+        ("page..1.jpg", True),
+        ("..page.jpg", True),
+        ("", False),
+        ("../evil.jpg", False),
+        ("dir/../../evil.jpg", False),
+        ("..\\evil.jpg", False),
+        ("/abs/evil.jpg", False),
+        ("\\abs\\evil.jpg", False),
+        ("C:/win/evil.jpg", False),
+        ("c:evil.jpg", False),
+    ],
+)
+def test_is_safe_member_name(name, expected):
+    """Test detection of member names that could escape an extraction directory."""
+    assert Archiver._is_safe_member_name(name) is expected  # noqa: SLF001
+
+
+UNSAFE_COPY_NAMES = ["../evil.jpg", "/abs/evil.jpg", "dir/../../evil2.jpg", "C:/win/evil.jpg"]
+SAFE_COPY_NAMES = ["page1.jpg", "dir/page2.jpg"]
+
+
+def _member_names(path: Path) -> list[str]:
+    if path.suffix == ".cbz":
+        with zipfile.ZipFile(path) as zf:
+            return zf.namelist()
+    with tarfile.open(path) as tf:
+        return tf.getnames()
+
+
+@pytest.mark.parametrize(
+    ("archiver_class", "filename"), [(ZipArchiver, "out.cbz"), (TarArchiver, "out.cbt")]
+)
+def test_copy_from_archive_skips_unsafe_names(temp_dir, archiver_class, filename, caplog):
+    """Test copying from another archive leaves out files with unsafe names."""
+    source = Mock()
+    source.path = temp_dir / "source.cbr"
+    source.get_filename_list.return_value = SAFE_COPY_NAMES + UNSAFE_COPY_NAMES
+    source.read_file.side_effect = lambda name: name.encode()
+
+    out_path = temp_dir / filename
+    assert archiver_class(out_path).copy_from_archive(source) is True
+
+    assert sorted(_member_names(out_path)) == sorted(SAFE_COPY_NAMES)
+    assert {call.args[0] for call in source.read_file.call_args_list} == set(SAFE_COPY_NAMES)
+    for name in UNSAFE_COPY_NAMES:
+        assert repr(name) in caplog.text

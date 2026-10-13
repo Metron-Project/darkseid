@@ -359,6 +359,8 @@ class ZipArchiver(Archiver):
             - Creates a new ZIP file, replacing any existing content
             - Automatically selects compression based on file type
             - Skips corrupted files with warnings
+            - Skips files with unsafe names (absolute paths, drive letters or
+              '..' components) with warnings
             - Performs cleanup on partial failures
             - Uses ZIP64 format for large archives
 
@@ -373,7 +375,7 @@ class ZipArchiver(Archiver):
         try:
             with ZipFile(self.path, mode="w", allowZip64=True) as zout:
                 try:
-                    for filename in other_archive.get_filename_list():
+                    for filename in self._safe_source_files(other_archive):
                         data = other_archive.read_file(filename)
                         if data is not None:
                             # Apply same compression logic as write_file
