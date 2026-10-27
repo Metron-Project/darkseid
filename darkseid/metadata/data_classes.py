@@ -17,6 +17,8 @@ from typing import TYPE_CHECKING, TypedDict
 if TYPE_CHECKING:
     from datetime import date, datetime
 
+    from pycountry.db import Data
+
 
 import logging
 import re
@@ -52,8 +54,10 @@ _CURRENCY_TO_COUNTRY: dict[str, str] = {
 
 _COUNTRY_TO_CURRENCY: dict[str, str] = {v: k for k, v in _CURRENCY_TO_COUNTRY.items()}
 
-# Script, region and variant subtags following the primary language subtag of a BCP 47 tag
-_LANGUAGE_SUBTAGS_RE = re.compile(r"[a-zA-Z0-9]{1,8}(-[a-zA-Z0-9]{1,8})*")
+# BCP 47 subtags that may follow the primary language subtag
+_SCRIPT_SUBTAG_RE = re.compile(r"[a-zA-Z]{4}")
+_REGION_SUBTAG_RE = re.compile(r"[a-zA-Z]{2}|\d{3}")
+_VARIANT_SUBTAG_RE = re.compile(r"[a-zA-Z0-9]{5,8}|\d[a-zA-Z0-9]{3}")
 
 
 def currency_to_country(currency_code: str) -> str | None:
@@ -82,13 +86,54 @@ def country_to_currency(country_code: str) -> str | None:
     return _COUNTRY_TO_CURRENCY.get(country_code)
 
 
+def _get_language(code: str) -> Data | None:
+    """Get a language by its ISO 639-1, ISO 639-3 or ISO 639-2/B code."""
+    if len(code) == COUNTRY_LEN:
+        return pycountry.languages.get(alpha_2=code)
+    if len(code) == LANGUAGE_ALPHA_3_LEN:
+        return pycountry.languages.get(alpha_3=code) or pycountry.languages.get(bibliographic=code)
+    return None
+
+
+def _normalize_language_subtags(subtags: list[str]) -> list[str] | None:
+    """Validate and normalize the subtags following the primary language subtag.
+
+    Subtags must be in BCP 47 order: an optional script, an optional region, then any
+    variants. Scripts and alphabetic regions must be known ISO 15924 and ISO 3166-1 codes.
+
+    Returns:
+        The subtags in their canonical case, or None if they are malformed.
+
+    """
+    normalized = []
+    remaining = iter(subtags)
+    subtag = next(remaining, None)
+    if subtag and _SCRIPT_SUBTAG_RE.fullmatch(subtag):
+        if pycountry.scripts.get(alpha_4=subtag) is None:
+            return None
+        normalized.append(subtag.title())
+        subtag = next(remaining, None)
+    if subtag and _REGION_SUBTAG_RE.fullmatch(subtag):
+        if subtag.isalpha() and pycountry.countries.get(alpha_2=subtag) is None:
+            return None
+        normalized.append(subtag.upper())
+        subtag = next(remaining, None)
+    while subtag is not None:
+        if not _VARIANT_SUBTAG_RE.fullmatch(subtag):
+            return None
+        normalized.append(subtag.lower())
+        subtag = next(remaining, None)
+    return normalized
+
+
 def validate_language_tag(value: str | None) -> str | None:
     """Validate and normalize a BCP 47 language tag.
 
-    The primary language subtag is resolved with pycountry and normalized to its ISO 639-1
-    code, falling back to the ISO 639-3 code for languages without one (e.g. "fil"). Any
-    script, region or variant subtags (e.g. "pt-BR", "zh-Hant") are kept as given. A value
-    without subtags may also be a language name (e.g. "English").
+    The value is first looked up as a language code or name (e.g. "ger", "English", "Ai-Cham"),
+    then parsed as a tag. The primary language subtag is normalized to its ISO 639-1 code,
+    falling back to the ISO 639-3 code for languages without one (e.g. "fil"). Script, region
+    and variant subtags (e.g. "pt-BR", "zh-Hant") are normalized to their canonical case.
+    Extended language, extension and private use subtags aren't supported.
 
     Args:
         value: The language tag or name to validate.
@@ -104,24 +149,21 @@ def validate_language_tag(value: str | None) -> str | None:
         return None
     value = value.strip()
 
-    primary, sep, subtags = value.partition("-")
-    if len(primary) == COUNTRY_LEN:
-        obj = pycountry.languages.get(alpha_2=primary)
-    elif len(primary) == LANGUAGE_ALPHA_3_LEN and sep:
-        obj = pycountry.languages.get(alpha_3=primary)
-    else:
-        sep = subtags = ""
-        try:
-            obj = pycountry.languages.lookup(value)
-        except LookupError as e:
-            msg = f"Couldn't find language {value}"
-            raise ValueError(msg) from e
-    if obj is None or (sep and not _LANGUAGE_SUBTAGS_RE.fullmatch(subtags)):
+    # Codes are checked before lookup(), which can match a language name equal to another
+    # language's code (e.g. "En" is a language name, not just English's ISO 639-1 code).
+    try:
+        obj = _get_language(value) or pycountry.languages.lookup(value)
+        subtags = []
+    except LookupError:
+        primary, *rest = value.split("-")
+        obj = _get_language(primary)
+        subtags = _normalize_language_subtags(rest) if rest else []
+    if obj is None or subtags is None:
         msg = f"Couldn't find language {value}"
         raise ValueError(msg)
 
     code = getattr(obj, "alpha_2", None) or obj.alpha_3
-    return f"{code}-{subtags}" if subtags else code
+    return "-".join([code, *subtags])
 
 
 class Validations:

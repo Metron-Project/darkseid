@@ -159,10 +159,19 @@ def test_series_invalid_language():
         ("fil", "fil"),
         ("yue", "yue"),
         ("pt-BR", "pt-BR"),
-        ("pt-br", "pt-br"),
+        ("pt-br", "pt-BR"),
+        ("EN-us", "en-US"),
         ("zh-Hant", "zh-Hant"),
-        ("zh-Hant-TW", "zh-Hant-TW"),
+        ("zh-hant-tw", "zh-Hant-TW"),
         ("fil-PH", "fil-PH"),
+        ("es-419", "es-419"),
+        ("de-CH-1901", "de-CH-1901"),
+        ("sl-ROZAJ", "sl-rozaj"),
+        ("ger", "de"),
+        ("ger-DE", "de-DE"),
+        ("fre-CA", "fr-CA"),
+        ("chi-Hant", "zh-Hant"),
+        ("Ai-Cham", "aih"),
         ("", None),
         (None, None),
     ],
@@ -172,7 +181,22 @@ def test_series_bcp47_language(language, expected):
     assert Series("Foo Bar", language=language).language == expected
 
 
-@pytest.mark.parametrize("language", ["xyz", "zz-BR", "pt-", "pt-toolongsubtag", "pt-B_R"])
+@pytest.mark.parametrize(
+    "language",
+    [
+        "xyz",
+        "zz-BR",
+        "pt-",
+        "pt-toolongsubtag",
+        "pt-B_R",
+        "Na-Dene",
+        "zh-min-nan",
+        "en-XX",
+        "zh-Abcd",
+        "pt-BR-BR",
+        "en-US-x-private",
+    ],
+)
 def test_series_invalid_bcp47_language(language):
     """Test Series rejects unknown languages and malformed subtags."""
     with pytest.raises(ValueError, match="Couldn't find language"):
