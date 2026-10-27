@@ -36,6 +36,7 @@ from darkseid.metadata.data_classes import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from datetime import date
 
 # Constants
@@ -78,8 +79,6 @@ VALID_SERIES_FORMATS = frozenset(
         "trade paperback",
     }
 )
-
-SERIES_STATUSES = ("Cancelled", "Completed", "Hiatus", "Ongoing")
 
 VALID_ROLES = frozenset(
     {
@@ -151,6 +150,14 @@ FORMAT_MAPPINGS = {
         {"single issue", "magazine", "series", "giant", "giant size", "giant-size"}
     ),
     "Trade Paperback": frozenset({"trade paperback", "tpb", "trade paper back"}),
+}
+
+# Series status mappings
+STATUS_MAPPINGS = {
+    "Cancelled": frozenset({"cancelled"}),
+    "Completed": frozenset({"completed"}),
+    "Hiatus": frozenset({"hiatus"}),
+    "Ongoing": frozenset({"ongoing"}),
 }
 
 
@@ -340,6 +347,27 @@ class MetronInfo(BaseMetadataHandler):
         return {"id": str(id_)} if id_ else {}
 
     @staticmethod
+    def _match_mapping(value: str | None, mappings: Mapping[str, frozenset[str]]) -> str | None:
+        """Match a value case-insensitively against a mapping of canonical values to synonyms.
+
+        Args:
+            value: Value to match.
+            mappings: Mapping of canonical values to their lowercase synonyms.
+
+        Returns:
+            The canonical value whose synonyms include the value, or None.
+
+        """
+        if not value:
+            return None
+
+        lower_val = value.strip().lower()
+        return next(
+            (canonical for canonical, synonyms in mappings.items() if lower_val in synonyms),
+            None,
+        )
+
+    @staticmethod
     def _normalize_age_rating(age_rating: AgeRatings | None) -> str | None:
         """Normalize age rating to valid MetronInfo format.
 
@@ -360,13 +388,7 @@ class MetronInfo(BaseMetadataHandler):
                 else age_rating.metron_info
             )
 
-        if age_rating.comic_rack:
-            lower_val = age_rating.comic_rack.lower()
-            for rating, synonyms in RATING_MAPPINGS.items():
-                if lower_val in synonyms:
-                    return rating
-
-        return None
+        return MetronInfo._match_mapping(age_rating.comic_rack, RATING_MAPPINGS)
 
     @staticmethod
     def _normalize_series_format(format_str: str | None) -> str | None:
@@ -379,14 +401,7 @@ class MetronInfo(BaseMetadataHandler):
             Normalized format or None.
 
         """
-        if not format_str:
-            return None
-
-        lower_val = format_str.strip().lower()
-        return next(
-            (fmt for fmt, synonyms in FORMAT_MAPPINGS.items() if lower_val in synonyms),
-            None,
-        )
+        return MetronInfo._match_mapping(format_str, FORMAT_MAPPINGS)
 
     @staticmethod
     def _normalize_series_status(status: str | None) -> str | None:
@@ -399,11 +414,7 @@ class MetronInfo(BaseMetadataHandler):
             Normalized status or None.
 
         """
-        if not status:
-            return None
-
-        lower_val = status.strip().lower()
-        return next((val for val in SERIES_STATUSES if val.lower() == lower_val), None)
+        return MetronInfo._match_mapping(status, STATUS_MAPPINGS)
 
     @staticmethod
     def _set_date_element(root: ET.Element, tag: str, date_val: date | None = None) -> None:

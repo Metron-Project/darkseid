@@ -253,6 +253,8 @@ def test_series_format_edge_cases(metron_info):
         (AgeRatings(comic_rack="PG"), "Teen", "comic_rack_pg"),
         (AgeRatings(comic_rack="R18+"), "Mature", "comic_rack_r18"),
         (AgeRatings(comic_rack="M"), "Mature", "comic_rack_m"),
+        (AgeRatings(comic_rack=" pg "), "Teen", "comic_rack_whitespace"),
+        (AgeRatings(comic_rack="NotARating"), None, "unknown_comic_rack_rating"),
         (AgeRatings(metron_info=""), None, "empty_metron_rating"),
         (AgeRatings(comic_rack=""), None, "empty_comic_rack_rating"),
         (AgeRatings(), None, "empty_ratings_object"),
