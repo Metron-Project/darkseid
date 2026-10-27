@@ -149,6 +149,45 @@ def test_series_invalid_language():
         Series("Foo Bar", language="xyz")
 
 
+@pytest.mark.parametrize(
+    ("language", "expected"),
+    [
+        ("en", "en"),
+        (" de ", "de"),
+        ("English", "en"),
+        ("eng", "en"),
+        ("fil", "fil"),
+        ("yue", "yue"),
+        ("pt-BR", "pt-BR"),
+        ("pt-br", "pt-br"),
+        ("zh-Hant", "zh-Hant"),
+        ("zh-Hant-TW", "zh-Hant-TW"),
+        ("fil-PH", "fil-PH"),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_series_bcp47_language(language, expected):
+    """Test Series accepts BCP 47 language tags, normalizing the primary language subtag."""
+    assert Series("Foo Bar", language=language).language == expected
+
+
+@pytest.mark.parametrize("language", ["xyz", "zz-BR", "pt-", "pt-toolongsubtag", "pt-B_R"])
+def test_series_invalid_bcp47_language(language):
+    """Test Series rejects unknown languages and malformed subtags."""
+    with pytest.raises(ValueError, match="Couldn't find language"):
+        Series("Foo Bar", language=language)
+
+
+def test_series_end_year_validation():
+    """Test Series end_year validation."""
+    assert Series("Superman", start_year=1938, end_year=2011).end_year == 2011
+    assert Series("Superman", end_year=None).end_year is None
+
+    with pytest.raises(ValueError, match="length must be 4"):
+        Series("Superman", end_year=99)
+
+
 def test_series_start_year_validation():
     """Test Series start_year validation."""
     # Valid year

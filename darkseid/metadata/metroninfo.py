@@ -79,6 +79,8 @@ VALID_SERIES_FORMATS = frozenset(
     }
 )
 
+SERIES_STATUSES = ("Cancelled", "Completed", "Hiatus", "Ongoing")
+
 VALID_ROLES = frozenset(
     {
         "writer",
@@ -162,7 +164,7 @@ class MetronInfo(BaseMetadataHandler):
     def __init__(self) -> None:
         """Initialize the MetronInfo instance."""
         self._schema_path = (
-            Path(__file__).parent.parent / "schemas" / "MetronInfo" / "v1_1" / "MetronInfo.xsd"
+            Path(__file__).parent.parent / "schemas" / "MetronInfo" / "v1_2" / "MetronInfo.xsd"
         )
 
     def metadata_from_string(self, xml_string: str) -> Metadata:
@@ -278,13 +280,13 @@ class MetronInfo(BaseMetadataHandler):
         }
 
         root.attrib["xmlns:metroninfo"] = (
-            "https://metron-project.github.io/docs/metroninfo/schemas/v1.1"
+            "https://metron-project.github.io/docs/metroninfo/schemas/v1.2"
         )
         root.attrib["xmlns:xsd"] = "http://www.w3.org/2001/XMLSchema"
         root.attrib["xmlns:xsi"] = "http://www.w3.org/2001/XMLSchema-instance"
         root.attrib["xsi:schemaLocation"] = (
-            "https://metron-project.github.io/docs/metroninfo/schemas/v1.1 "
-            "https://raw.githubusercontent.com/Metron-Project/metroninfo/refs/heads/master/schema/v1.1/MetronInfo.xsd"
+            "https://metron-project.github.io/docs/metroninfo/schemas/v1.2 "
+            "https://raw.githubusercontent.com/Metron-Project/metroninfo/refs/heads/master/schema/v1.2/MetronInfo.xsd"
         )
 
         return root
@@ -385,6 +387,23 @@ class MetronInfo(BaseMetadataHandler):
             (fmt for fmt, synonyms in FORMAT_MAPPINGS.items() if lower_val in synonyms),
             None,
         )
+
+    @staticmethod
+    def _normalize_series_status(status: str | None) -> str | None:
+        """Normalize series status to valid MetronInfo status.
+
+        Args:
+            status: Status string to normalize.
+
+        Returns:
+            Normalized status or None.
+
+        """
+        if not status:
+            return None
+
+        lower_val = status.strip().lower()
+        return next((val for val in SERIES_STATUSES if val.lower() == lower_val), None)
 
     @staticmethod
     def _set_date_element(root: ET.Element, tag: str, date_val: date | None = None) -> None:
@@ -505,10 +524,18 @@ class MetronInfo(BaseMetadataHandler):
         if series_format is not None:
             ET.SubElement(series_node, "Format").text = series_format
 
-        if series.start_year:
-            ET.SubElement(series_node, "StartYear").text = str(series.start_year)
-        elif series.volume is not None and series.volume >= VOLUME_THRESHOLD:
-            ET.SubElement(series_node, "StartYear").text = str(series.volume)
+        start_year = series.start_year
+        if not start_year and series.volume is not None and series.volume >= VOLUME_THRESHOLD:
+            start_year = series.volume
+        if start_year:
+            ET.SubElement(series_node, "StartYear").text = str(start_year)
+
+        status = self._normalize_series_status(series.status)
+        # The schema rejects an EndYear before the StartYear, or on an ongoing series.
+        if series.end_year and status != "Ongoing" and series.end_year >= (start_year or 0):
+            ET.SubElement(series_node, "EndYear").text = str(series.end_year)
+        if status is not None:
+            ET.SubElement(series_node, "Status").text = status
 
         if series.issue_count:
             ET.SubElement(series_node, "IssueCount").text = str(series.issue_count)
@@ -524,6 +551,9 @@ class MetronInfo(BaseMetadataHandler):
                 if alt_name.language:
                     attrib["lang"] = alt_name.language
                 ET.SubElement(alt_names_node, "AlternativeName", attrib=attrib).text = alt_name.name
+
+        if series.summary:
+            ET.SubElement(series_node, "Summary").text = series.summary
 
     def _add_info_sources(self, root: ET.Element, info_sources: list[InfoSources]) -> None:
         """Add information sources to XML.
@@ -827,12 +857,19 @@ class MetronInfo(BaseMetadataHandler):
         series.language = series_element.attrib.get("lang")
 
         # Define mapping for simple text elements
-        text_mappings = {"Name": "name", "SortName": "sort_name", "Format": "format"}
+        text_mappings = {
+            "Name": "name",
+            "SortName": "sort_name",
+            "Format": "format",
+            "Status": "status",
+            "Summary": "summary",
+        }
 
         # Define mapping for integer elements
         int_mappings = {
             "Volume": "volume",
             "StartYear": "start_year",
+            "EndYear": "end_year",
             "IssueCount": "issue_count",
             "VolumeCount": "volume_count",
         }

@@ -323,6 +323,96 @@ def test_community_rating_missing_rating_count(metron_info):
     assert result.rating_count is None
 
 
+# Series EndYear, Status & Summary (v1.2) tests
+def test_series_v1_2_fields_round_trip(metron_info, tmp_path):
+    """EndYear, Status and Summary validate against the schema and survive a round trip."""
+    metadata = Metadata()
+    metadata.series = Series(
+        name="Justice League",
+        start_year=1970,
+        end_year=1975,
+        status="completed",
+        summary="The original run.",
+    )
+
+    filename = tmp_path / "MetronInfo.xml"
+    metron_info.write_xml(filename, metadata)
+    result = metron_info.metadata_from_string(filename.read_text())
+
+    assert result.series.end_year == 1975
+    assert result.series.status == "Completed"
+    assert result.series.summary == "The original run."
+
+
+@pytest.mark.parametrize(
+    ("start_year", "end_year", "status"),
+    [
+        (1975, 1970, None),  # EndYear before StartYear
+        (1970, 1975, "Ongoing"),  # Ongoing series can't have an EndYear
+    ],
+)
+def test_series_end_year_omitted_when_invalid(metron_info, tmp_path, start_year, end_year, status):
+    """An EndYear the schema would reject is dropped rather than failing the write."""
+    metadata = Metadata()
+    metadata.series = Series(
+        name="Test Series", start_year=start_year, end_year=end_year, status=status
+    )
+
+    filename = tmp_path / "MetronInfo.xml"
+    metron_info.write_xml(filename, metadata)
+    root = ET.fromstring(filename.read_text())  # noqa: S314
+
+    assert root.find("Series/EndYear") is None
+    assert root.find("Series/StartYear").text == str(start_year)
+
+
+def test_series_end_year_checked_against_volume_start_year(metron_info):
+    """A volume used as the StartYear is also used to check the EndYear."""
+    metadata = Metadata()
+    metadata.series = Series(name="Test Series", volume=2016, end_year=2015)
+
+    root = metron_info._convert_metadata_to_xml(metadata).getroot()
+
+    assert root.find("Series/StartYear").text == "2016"
+    assert root.find("Series/EndYear") is None
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        ("Ongoing", "Ongoing"),
+        (" hiatus ", "Hiatus"),
+        ("CANCELLED", "Cancelled"),
+        ("Unknown", None),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_normalize_series_status(metron_info, status, expected):
+    """Series status is matched case-insensitively and unknown values are dropped."""
+    assert metron_info._normalize_series_status(status) == expected
+
+
+def test_series_bcp47_language_round_trip(metron_info, tmp_path):
+    """BCP 47 language tags validate against the schema and survive a round trip."""
+    metadata = Metadata()
+    metadata.series = Series(
+        name="Test Series",
+        language="pt-BR",
+        alternative_names=[
+            AlternativeNames("Ang Kagila-gilalas", language="fil"),
+            AlternativeNames("蜘蛛人", language="zh-Hant"),
+        ],
+    )
+
+    filename = tmp_path / "MetronInfo.xml"
+    metron_info.write_xml(filename, metadata)
+    result = metron_info.metadata_from_string(filename.read_text())
+
+    assert result.series.language == "pt-BR"
+    assert [n.language for n in result.series.alternative_names] == ["fil", "zh-Hant"]
+
+
 # XML Conversion Tests
 def test_convert_complex_metadata_to_xml(metron_info, complex_metadata):
     """Test XML conversion with complex metadata."""
