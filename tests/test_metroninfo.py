@@ -356,9 +356,9 @@ def test_series_v1_2_fields_round_trip(metron_info, tmp_path):
 def test_series_end_year_omitted_when_invalid(metron_info, tmp_path, start_year, end_year, status):
     """An EndYear the schema would reject is dropped rather than failing the write."""
     metadata = Metadata()
-    metadata.series = Series(
-        name="Test Series", start_year=start_year, end_year=end_year, status=status
-    )
+    metadata.series = Series(name="Test Series", start_year=start_year, status=status)
+    # Set after construction, which Series doesn't validate (e.g. when parsed from XML)
+    metadata.series.end_year = end_year
 
     filename = tmp_path / "MetronInfo.xml"
     metron_info.write_xml(filename, metadata)

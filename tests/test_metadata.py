@@ -208,8 +208,17 @@ def test_series_end_year_validation():
     assert Series("Superman", start_year=1938, end_year=2011).end_year == 2011
     assert Series("Superman", end_year=None).end_year is None
 
-    with pytest.raises(ValueError, match="length must be 4"):
+    with pytest.raises(ValueError, match="End year: 99 length must be 4"):
         Series("Superman", end_year=99)
+
+
+def test_series_end_year_before_start_year():
+    """Test Series rejects an end year before the start year."""
+    assert Series("Superman", start_year=1938, end_year=1938).end_year == 1938
+    assert Series("Superman", end_year=1938).end_year == 1938
+
+    with pytest.raises(ValueError, match="End year: 1937 can't precede start year: 1938"):
+        Series("Superman", start_year=1938, end_year=1937)
 
 
 def test_series_start_year_validation():
@@ -223,7 +232,7 @@ def test_series_start_year_validation():
     assert series_none.start_year is None
 
     # Invalid year length
-    with pytest.raises(ValueError, match=r"Year: .* length must be 4"):
+    with pytest.raises(ValueError, match=r"Start year: .* length must be 4"):
         Series("Superman", start_year=38)
 
 

@@ -166,6 +166,18 @@ def validate_language_tag(value: str | None) -> str | None:
     return "-".join([code, *subtags])
 
 
+def _validate_year(value: int | None, label: str) -> int | None:
+    """Validate a four-digit year, using the label in the error message."""
+    if not value:
+        return None
+
+    if len(str(value)) == YEAR_LEN:
+        return value
+
+    msg = f"{label}: {value} length must be {YEAR_LEN}"
+    raise ValueError(msg)
+
+
 class Validations:
     """A base class for data validation in dataclasses.
 
@@ -434,16 +446,39 @@ class Series(Basic, Validations):
             ValueError: Raised when the year is not exactly four digits.
 
         """
-        if not value:
-            return None
+        return _validate_year(value, "Start year")
 
-        if len(str(value)) == YEAR_LEN:
-            return value
+    @staticmethod
+    def validate_end_year(value: int, **_: any) -> int | None:
+        """Validate an end year value.
 
-        msg = f"Year: {value} length must be {YEAR_LEN}"
-        raise ValueError(msg)
+        This method checks if the provided value is a valid four-digit year. If the value is not present,
+        it returns None. If the value is not exactly four digits, it raises a ValueError.
 
-    validate_end_year = validate_start_year
+        Args:
+            value (int): The year value to validate.
+            **_ (any): Additional keyword arguments (ignored).
+
+        Returns:
+            Optional[int]: The validated year value, or None if the value is not present.
+
+        Raises:
+            ValueError: Raised when the year is not exactly four digits.
+
+        """
+        return _validate_year(value, "End year")
+
+    def __post_init__(self: Series) -> None:
+        """Validate the series fields and check the end year doesn't precede the start year.
+
+        Raises:
+            ValueError: Raised when a field is invalid or the end year precedes the start year.
+
+        """
+        super().__post_init__()
+        if self.start_year and self.end_year and self.end_year < self.start_year:
+            msg = f"End year: {self.end_year} can't precede start year: {self.start_year}"
+            raise ValueError(msg)
 
     @staticmethod
     def validate_language(value: str, **_: any) -> str | None:
