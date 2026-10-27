@@ -415,6 +415,26 @@ def test_series_bcp47_language_round_trip(metron_info, tmp_path):
     assert [n.language for n in result.series.alternative_names] == ["fil", "zh-Hant"]
 
 
+def test_series_languages_normalized_on_read(metron_info, caplog):
+    """Series and alternative name languages are normalized, and unknown ones dropped."""
+    xml = """<?xml version="1.0" encoding="utf-8"?>
+    <MetronInfo>
+        <Series lang="pt-br">
+            <Name>Test Series</Name>
+            <AlternativeNames>
+                <AlternativeName lang="zh-hant">蜘蛛人</AlternativeName>
+                <AlternativeName lang="zz">Unknown</AlternativeName>
+            </AlternativeNames>
+        </Series>
+    </MetronInfo>"""
+
+    result = metron_info.metadata_from_string(xml)
+
+    assert result.series.language == "pt-BR"
+    assert [n.language for n in result.series.alternative_names] == ["zh-Hant", None]
+    assert "Dropping unknown language: zz" in caplog.text
+
+
 # XML Conversion Tests
 def test_convert_complex_metadata_to_xml(metron_info, complex_metadata):
     """Test XML conversion with complex metadata."""

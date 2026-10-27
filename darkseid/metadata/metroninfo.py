@@ -865,7 +865,7 @@ class MetronInfo(BaseMetadataHandler):
 
         series = Series(DEFAULT_SERIES_NAME)
         series.id_ = self._get_id_from_attrib(series_element.attrib)
-        series.language = series_element.attrib.get("lang")
+        series.language = self._parse_language(series_element.attrib.get("lang"))
 
         # Define mapping for simple text elements
         text_mappings = {
@@ -898,7 +898,7 @@ class MetronInfo(BaseMetadataHandler):
                         alt_name = AlternativeNames(
                             name_elem.text,
                             self._get_id_from_attrib(name_elem.attrib),
-                            name_elem.attrib.get("lang"),
+                            self._parse_language(name_elem.attrib.get("lang")),
                         )
                         alt_names.append(alt_name)
                 series.alternative_names = alt_names

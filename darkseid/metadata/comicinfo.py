@@ -440,7 +440,7 @@ class ComicInfo(BaseMetadataHandler):
 
         md.genres = self._string_to_resource(self._get_text_content(root, "Genre"))
         md.web_link = self._parse_urls(self._get_text_content(root, "Web"))
-        md.series.language = self._get_text_content(root, "LanguageISO")
+        md.series.language = self._parse_language(self._get_text_content(root, "LanguageISO"))
         md.series.format = self._get_text_content(root, "Format")
         md.manga = self._get_text_content(root, "Manga")
         md.characters = self._string_to_resource(self._get_text_content(root, "Characters"))
