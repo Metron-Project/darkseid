@@ -654,7 +654,7 @@ wheels = [
 
 [[package]]
 name = "darkseid"
-version = "9.0.0"
+version = "9.1.0"
 source = { editable = "." }
 default-groups = ["dev", "docs", "test"]
 dependencies = [
