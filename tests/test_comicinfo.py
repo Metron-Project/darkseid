@@ -395,3 +395,20 @@ def test_review_parsed_from_xml_string() -> None:
     )
     md = ComicInfo().metadata_from_string(xml)
     assert md.review == "A fantastic underwater adventure."
+
+
+@pytest.mark.parametrize(
+    ("language", "expected"),
+    [("pt-br", "pt-BR"), ("English", "en"), ("unknown", None)],
+)
+def test_language_iso_normalized_on_read(language: str, expected: str | None) -> None:
+    """Test LanguageISO is normalized on read, and an unknown language is dropped."""
+    xml = (
+        '<?xml version="1.0" encoding="utf-8"?>'
+        "<ComicInfo>"
+        "<Series>Aquaman</Series>"
+        f"<LanguageISO>{language}</LanguageISO>"
+        "</ComicInfo>"
+    )
+    md = ComicInfo().metadata_from_string(xml)
+    assert md.series.language == expected

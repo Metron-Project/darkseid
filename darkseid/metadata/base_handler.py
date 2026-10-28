@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
 from datetime import UTC, date, datetime
@@ -11,8 +12,13 @@ from typing import TYPE_CHECKING, Any
 
 from defusedxml.ElementTree import parse
 
+from darkseid.metadata.data_classes import validate_language_tag
+
 if TYPE_CHECKING:
     from darkseid.metadata.data_classes import Metadata
+
+
+logger = logging.getLogger(__name__)
 
 
 class XmlError(Exception):
@@ -213,6 +219,23 @@ class BaseMetadataHandler(ABC):
 
         """
         return int(value) if value and value.isdigit() else None
+
+    @staticmethod
+    def _parse_language(value: str | None) -> str | None:
+        """Safely parse a language tag or name to a normalized BCP 47 tag.
+
+        Args:
+            value: Language value to parse.
+
+        Returns:
+            Normalized language tag, or None if the value is empty or not a known language.
+
+        """
+        try:
+            return validate_language_tag(value)
+        except ValueError:
+            logger.warning("Dropping unknown language: %s", value)
+            return None
 
     @staticmethod
     def _parse_date(value: str | None) -> date | None:

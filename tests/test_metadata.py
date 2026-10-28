@@ -149,6 +149,78 @@ def test_series_invalid_language():
         Series("Foo Bar", language="xyz")
 
 
+@pytest.mark.parametrize(
+    ("language", "expected"),
+    [
+        ("en", "en"),
+        (" de ", "de"),
+        ("English", "en"),
+        ("eng", "en"),
+        ("fil", "fil"),
+        ("yue", "yue"),
+        ("pt-BR", "pt-BR"),
+        ("pt-br", "pt-BR"),
+        ("EN-us", "en-US"),
+        ("zh-Hant", "zh-Hant"),
+        ("zh-hant-tw", "zh-Hant-TW"),
+        ("fil-PH", "fil-PH"),
+        ("es-419", "es-419"),
+        ("de-CH-1901", "de-CH-1901"),
+        ("sl-ROZAJ", "sl-rozaj"),
+        ("ger", "de"),
+        ("ger-DE", "de-DE"),
+        ("fre-CA", "fr-CA"),
+        ("chi-Hant", "zh-Hant"),
+        ("Ai-Cham", "aih"),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_series_bcp47_language(language, expected):
+    """Test Series accepts BCP 47 language tags, normalizing the primary language subtag."""
+    assert Series("Foo Bar", language=language).language == expected
+
+
+@pytest.mark.parametrize(
+    "language",
+    [
+        "xyz",
+        "zz-BR",
+        "pt-",
+        "pt-toolongsubtag",
+        "pt-B_R",
+        "Na-Dene",
+        "zh-min-nan",
+        "en-XX",
+        "zh-Abcd",
+        "pt-BR-BR",
+        "en-US-x-private",
+    ],
+)
+def test_series_invalid_bcp47_language(language):
+    """Test Series rejects unknown languages and malformed subtags."""
+    with pytest.raises(ValueError, match="Couldn't find language"):
+        Series("Foo Bar", language=language)
+
+
+def test_series_end_year_validation():
+    """Test Series end_year validation."""
+    assert Series("Superman", start_year=1938, end_year=2011).end_year == 2011
+    assert Series("Superman", end_year=None).end_year is None
+
+    with pytest.raises(ValueError, match="End year: 99 length must be 4"):
+        Series("Superman", end_year=99)
+
+
+def test_series_end_year_before_start_year():
+    """Test Series rejects an end year before the start year."""
+    assert Series("Superman", start_year=1938, end_year=1938).end_year == 1938
+    assert Series("Superman", end_year=1938).end_year == 1938
+
+    with pytest.raises(ValueError, match="End year: 1937 can't precede start year: 1938"):
+        Series("Superman", start_year=1938, end_year=1937)
+
+
 def test_series_start_year_validation():
     """Test Series start_year validation."""
     # Valid year
@@ -160,7 +232,7 @@ def test_series_start_year_validation():
     assert series_none.start_year is None
 
     # Invalid year length
-    with pytest.raises(ValueError, match=r"Year: .* length must be 4"):
+    with pytest.raises(ValueError, match=r"Start year: .* length must be 4"):
         Series("Superman", start_year=38)
 
 

@@ -50,6 +50,7 @@ class SchemaVersion(Enum):
     for validation priority.
     """
 
+    METRON_INFO_V1_2 = auto()
     METRON_INFO_V1_1 = auto()
     COMIC_INFO_V2 = auto()
     COMIC_INFO_V1 = auto()
@@ -87,11 +88,18 @@ class ValidateMetadata:
             "file_name": "MetronInfo.xsd",
             "schema_class": XMLSchema11,
         },
+        SchemaVersion.METRON_INFO_V1_2: {
+            "module_path": "darkseid.schemas.MetronInfo.v1_2",
+            "file_name": "MetronInfo.xsd",
+            "schema_class": XMLSchema11,
+        },
     }
 
-    # Validation order: newest/most specific schemas first
+    # Validation order: MetronInfo before ComicInfo, newest ComicInfo first. MetronInfo v1.2 is a
+    # superset of v1.1, so v1.1 is checked first to report the oldest version a document conforms to.
     _VALIDATION_ORDER: ClassVar[list[SchemaVersion]] = [
         SchemaVersion.METRON_INFO_V1_1,
+        SchemaVersion.METRON_INFO_V1_2,
         SchemaVersion.COMIC_INFO_V2,
         SchemaVersion.COMIC_INFO_V1,
     ]
@@ -216,13 +224,15 @@ class ValidateMetadata:
                 return True
 
     def validate(self) -> SchemaVersion:
-        """Determine and return the highest valid schema version for the XML metadata.
+        """Determine and return the schema version for the XML metadata.
 
         This method checks the XML against all supported schema versions in order
-        of preference (newest first) and returns the first valid match.
+        of preference and returns the first valid match. ComicInfo is checked newest
+        first; MetronInfo is checked oldest first, since each version is a superset of
+        the previous one.
 
         Returns:
-            The highest valid schema version found, or SchemaVersion.UNKNOWN
+            The first valid schema version found, or SchemaVersion.UNKNOWN
             if no valid schema is found.
 
         """

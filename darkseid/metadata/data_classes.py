@@ -17,8 +17,11 @@ from typing import TYPE_CHECKING, TypedDict
 if TYPE_CHECKING:
     from datetime import date, datetime
 
+    from pycountry.db import Data
+
 
 import logging
+import re
 
 import pycountry
 
@@ -28,6 +31,7 @@ logger = logging.getLogger(__name__)
 MAX_UPC = 17
 MAX_ISBN = 13
 COUNTRY_LEN = 2
+LANGUAGE_ALPHA_3_LEN = 3
 CURRENCY_LEN = 3
 YEAR_LEN = 4
 
@@ -49,6 +53,11 @@ _CURRENCY_TO_COUNTRY: dict[str, str] = {
 }
 
 _COUNTRY_TO_CURRENCY: dict[str, str] = {v: k for k, v in _CURRENCY_TO_COUNTRY.items()}
+
+# BCP 47 subtags that may follow the primary language subtag
+_SCRIPT_SUBTAG_RE = re.compile(r"[a-zA-Z]{4}")
+_REGION_SUBTAG_RE = re.compile(r"[a-zA-Z]{2}|\d{3}")
+_VARIANT_SUBTAG_RE = re.compile(r"[a-zA-Z0-9]{5,8}|\d[a-zA-Z0-9]{3}")
 
 
 def currency_to_country(currency_code: str) -> str | None:
@@ -75,6 +84,98 @@ def country_to_currency(country_code: str) -> str | None:
 
     """
     return _COUNTRY_TO_CURRENCY.get(country_code)
+
+
+def _get_language(code: str) -> Data | None:
+    """Get a language by its ISO 639-1, ISO 639-3 or ISO 639-2/B code."""
+    if len(code) == COUNTRY_LEN:
+        return pycountry.languages.get(alpha_2=code)
+    if len(code) == LANGUAGE_ALPHA_3_LEN:
+        return pycountry.languages.get(alpha_3=code) or pycountry.languages.get(bibliographic=code)
+    return None
+
+
+def _normalize_language_subtags(subtags: list[str]) -> list[str] | None:
+    """Validate and normalize the subtags following the primary language subtag.
+
+    Subtags must be in BCP 47 order: an optional script, an optional region, then any
+    variants. Scripts and alphabetic regions must be known ISO 15924 and ISO 3166-1 codes.
+
+    Returns:
+        The subtags in their canonical case, or None if they are malformed.
+
+    """
+    normalized = []
+    remaining = iter(subtags)
+    subtag = next(remaining, None)
+    if subtag and _SCRIPT_SUBTAG_RE.fullmatch(subtag):
+        if pycountry.scripts.get(alpha_4=subtag) is None:
+            return None
+        normalized.append(subtag.title())
+        subtag = next(remaining, None)
+    if subtag and _REGION_SUBTAG_RE.fullmatch(subtag):
+        if subtag.isalpha() and pycountry.countries.get(alpha_2=subtag) is None:
+            return None
+        normalized.append(subtag.upper())
+        subtag = next(remaining, None)
+    while subtag is not None:
+        if not _VARIANT_SUBTAG_RE.fullmatch(subtag):
+            return None
+        normalized.append(subtag.lower())
+        subtag = next(remaining, None)
+    return normalized
+
+
+def validate_language_tag(value: str | None) -> str | None:
+    """Validate and normalize a BCP 47 language tag.
+
+    The value is first looked up as a language code or name (e.g. "ger", "English", "Ai-Cham"),
+    then parsed as a tag. The primary language subtag is normalized to its ISO 639-1 code,
+    falling back to the ISO 639-3 code for languages without one (e.g. "fil"). Script, region
+    and variant subtags (e.g. "pt-BR", "zh-Hant") are normalized to their canonical case.
+    Extended language, extension and private use subtags aren't supported.
+
+    Args:
+        value: The language tag or name to validate.
+
+    Returns:
+        The normalized language tag, or None if the value is empty.
+
+    Raises:
+        ValueError: Raised when the language cannot be found or the subtags are malformed.
+
+    """
+    if not value:
+        return None
+    value = value.strip()
+
+    # Codes are checked before lookup(), which can match a language name equal to another
+    # language's code (e.g. "En" is a language name, not just English's ISO 639-1 code).
+    try:
+        obj = _get_language(value) or pycountry.languages.lookup(value)
+        subtags = []
+    except LookupError:
+        primary, *rest = value.split("-")
+        obj = _get_language(primary)
+        subtags = _normalize_language_subtags(rest) if rest else []
+    if obj is None or subtags is None:
+        msg = f"Couldn't find language {value}"
+        raise ValueError(msg)
+
+    code = getattr(obj, "alpha_2", None) or obj.alpha_3
+    return "-".join([code, *subtags])
+
+
+def _validate_year(value: int | None, label: str) -> int | None:
+    """Validate a four-digit year, using the label in the error message."""
+    if not value:
+        return None
+
+    if len(str(value)) == YEAR_LEN:
+        return value
+
+    msg = f"{label}: {value} length must be {YEAR_LEN}"
+    raise ValueError(msg)
 
 
 class Validations:
@@ -264,7 +365,7 @@ class AlternativeNames(Basic, Validations):
     Attributes:
         name (str): The alternative name for a series.
         id_ (int | None): The ID associated with the alternative name, defaults to None.
-        language (str | None): The 2-letter ISO code of the language, defaults to None.
+        language (str | None): The BCP 47 language tag, defaults to None.
 
     Static Methods:
         validate_language(value: str, **_: any) -> str | None: Validates a language value.
@@ -277,38 +378,18 @@ class AlternativeNames(Basic, Validations):
     def validate_language(value: str, **_: any) -> str | None:
         """Validate a language value.
 
-        If the value is empty, it returns None. Otherwise, it strips any leading or trailing
-        whitespace from the value. If the length of the value is 2, it tries to find the
-        language object using the alpha-2 code. Otherwise, it tries to look up the language
-        object using the value. If the language object is not found, it raises a ValueError.
-
         Args:
-            value (str): The language value to validate.
+            value (str): The BCP 47 language tag or language name to validate.
             **_ (any): Additional keyword arguments (ignored).
 
         Returns:
-            Optional[str]: The validated language code, or None if the value is empty.
+            Optional[str]: The normalized language tag, or None if the value is empty.
 
         Raises:
-            ValueError: Raised when the language object cannot be found.
+            ValueError: Raised when the language cannot be found.
 
         """
-        if not value:
-            return None
-        value = value.strip()
-
-        if len(value) == COUNTRY_LEN:
-            obj = pycountry.languages.get(alpha_2=value)
-        else:
-            try:
-                obj = pycountry.languages.lookup(value)
-            except LookupError as e:
-                msg = f"Couldn't find language {value}"
-                raise ValueError(msg) from e
-        if obj is None:
-            msg = f"Couldn't find language {value}"
-            raise ValueError(msg)
-        return obj.alpha_2
+        return validate_language_tag(value)
 
 
 @dataclass
@@ -325,7 +406,10 @@ class Series(Basic, Validations):
         issue_count (Optional[int]): The count of issues.
         volume_count (int | None): The count of volumes.
         alternative_names: list[AlternativeNames]: A list of alternative names for series.
-        language (str | None): The 2-letter ISO code of the language, defaults to None.
+        language (str | None): The BCP 47 language tag, defaults to None.
+        end_year (int | None): The year that the series ended in. A 4 digit value.
+        status (str | None): The publication status of the series (e.g. Ongoing, Completed).
+        summary (str | None): A description of the series.
 
     Static Methods:
         validate_language(value: str, **_: any) -> str | None: Validates a language value.
@@ -339,7 +423,10 @@ class Series(Basic, Validations):
     issue_count: int | None = None
     volume_count: int | None = None
     alternative_names: list[AlternativeNames] = field(default_factory=list)
-    language: str | None = None  # 2-letter iso code
+    language: str | None = None  # BCP 47 language tag
+    end_year: int | None = None
+    status: str | None = None
+    summary: str | None = None
 
     @staticmethod
     def validate_start_year(value: int, **_: any) -> int | None:
@@ -359,51 +446,56 @@ class Series(Basic, Validations):
             ValueError: Raised when the year is not exactly four digits.
 
         """
-        if not value:
-            return None
+        return _validate_year(value, "Start year")
 
-        if len(str(value)) == YEAR_LEN:
-            return value
+    @staticmethod
+    def validate_end_year(value: int, **_: any) -> int | None:
+        """Validate an end year value.
 
-        msg = f"Year: {value} length must be {YEAR_LEN}"
-        raise ValueError(msg)
+        This method checks if the provided value is a valid four-digit year. If the value is not present,
+        it returns None. If the value is not exactly four digits, it raises a ValueError.
+
+        Args:
+            value (int): The year value to validate.
+            **_ (any): Additional keyword arguments (ignored).
+
+        Returns:
+            Optional[int]: The validated year value, or None if the value is not present.
+
+        Raises:
+            ValueError: Raised when the year is not exactly four digits.
+
+        """
+        return _validate_year(value, "End year")
+
+    def __post_init__(self: Series) -> None:
+        """Validate the series fields and check the end year doesn't precede the start year.
+
+        Raises:
+            ValueError: Raised when a field is invalid or the end year precedes the start year.
+
+        """
+        super().__post_init__()
+        if self.start_year and self.end_year and self.end_year < self.start_year:
+            msg = f"End year: {self.end_year} can't precede start year: {self.start_year}"
+            raise ValueError(msg)
 
     @staticmethod
     def validate_language(value: str, **_: any) -> str | None:
         """Validate a language value.
 
-        If the value is empty, it returns None. Otherwise, it strips any leading or trailing
-        whitespace from the value. If the length of the value is 2, it tries to find the
-        language object using the alpha-2 code. Otherwise, it tries to look up the language
-        object using the value. If the language object is not found, it raises a ValueError.
-
         Args:
-            value (str): The language value to validate.
+            value (str): The BCP 47 language tag or language name to validate.
             **_ (any): Additional keyword arguments (ignored).
 
         Returns:
-            Optional[str]: The validated language code, or None if the value is empty.
+            Optional[str]: The normalized language tag, or None if the value is empty.
 
         Raises:
-            ValueError: Raised when the language object cannot be found.
+            ValueError: Raised when the language cannot be found.
 
         """
-        if not value:
-            return None
-        value = value.strip()
-
-        if len(value) == COUNTRY_LEN:
-            obj = pycountry.languages.get(alpha_2=value)
-        else:
-            try:
-                obj = pycountry.languages.lookup(value)
-            except LookupError as e:
-                msg = f"Couldn't find language {value}"
-                raise ValueError(msg) from e
-        if obj is None:
-            msg = f"Couldn't find language {value}"
-            raise ValueError(msg)
-        return obj.alpha_2
+        return validate_language_tag(value)
 
 
 @dataclass
@@ -1015,7 +1107,8 @@ class Metadata:
             if self.series.volume:
                 series_info += f" (v{self.series.volume})"
             if self.series.start_year:
-                series_info += f" [{self.series.start_year}]"
+                end_year = f"-{self.series.end_year}" if self.series.end_year else ""
+                series_info += f" [{self.series.start_year}{end_year}]"
             lines.append(f"{indent}Series: {series_info}")
 
         if self.issue:
