@@ -708,6 +708,57 @@ def test_read_metadata_after_write_returns_new_data(tmp_path, metadata_format):
     assert comic.read_metadata(metadata_format).series.name == "Updated"
 
 
+def _cached_comic_with_both_formats(path):
+    comic = Comic(_write_cbz_with_both_formats(path))
+    comic.read_metadata(MetadataFormat.COMIC_INFO)
+    comic.read_metadata(MetadataFormat.METRON_INFO)
+    assert set(comic._cache.metadata) == {MetadataFormat.COMIC_INFO, MetadataFormat.METRON_INFO}
+    return comic
+
+
+def test_write_metadata_exception_clears_cache(tmp_path):
+    """A write that raises may have changed the archive, so the cache is cleared."""
+    comic = _cached_comic_with_both_formats(tmp_path / "test.cbz")
+
+    with patch.object(comic._archiver, "write_file", side_effect=OSError("disk full")):
+        assert not comic.write_metadata(_metadata_with_series("X"), MetadataFormat.COMIC_INFO)
+
+    assert comic._cache.metadata == {}
+    assert comic._cache.has_ci is None
+
+
+def test_remove_metadata_exception_clears_cache(tmp_path):
+    """A metadata removal that raises may have changed the archive, so the cache is cleared."""
+    comic = _cached_comic_with_both_formats(tmp_path / "test.cbz")
+
+    with patch.object(comic._archiver, "remove_files", side_effect=OSError("disk full")):
+        assert not comic.remove_metadata([MetadataFormat.METRON_INFO])
+
+    assert comic._cache.metadata == {}
+    assert comic._cache.has_mi is None
+
+
+def test_remove_pages_exception_clears_cache(tmp_path):
+    """A page removal that raises may have changed the archive, so the cache is cleared."""
+    comic = _cached_comic_with_both_formats(tmp_path / "test.cbz")
+
+    with patch.object(comic._archiver, "remove_files", side_effect=OSError("disk full")):
+        assert not comic.remove_pages([0])
+
+    assert comic._cache.metadata == {}
+    assert comic._cache.page_list is None
+
+
+def test_remove_metadata_then_has_metadata_is_false(tmp_path):
+    """After removing a format, has_metadata() reflects the archive, not stale flags."""
+    comic = _cached_comic_with_both_formats(tmp_path / "test.cbz")
+
+    assert comic.remove_metadata([MetadataFormat.METRON_INFO])
+    assert not comic.has_metadata(MetadataFormat.METRON_INFO)
+    assert comic.has_metadata(MetadataFormat.COMIC_INFO)
+    assert comic.read_metadata(MetadataFormat.METRON_INFO).is_empty
+
+
 def test_read_metadata_invalid_utf8_strict_raises(tmp_path):
     """Strict mode reports metadata that isn't valid UTF-8."""
     comic = Comic(_write_cbz(tmp_path / "test.cbz", {"ComicInfo.xml": b"\xff\xfe<ComicInfo/>"}))

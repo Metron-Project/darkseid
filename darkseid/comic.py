@@ -422,8 +422,8 @@ class Comic:
     def _reset_cache(self) -> None:
         """Clear all cached data to ensure fresh reads.
 
-        This method is called after write operations to ensure that cached
-        data doesn't become stale after the archive is modified.
+        This method is called after every attempt to modify the archive, whether it
+        succeeded, failed or raised, so cached data never outlives a change to the archive.
         """
         self._cache.reset()
 
@@ -1000,20 +1000,13 @@ class Comic:
 
             raw_bytes = raw_metadata.encode("utf-8") if raw_metadata else None
             md_string = formatter.string_from_metadata(metadata, raw_bytes)
-            write_success = self._archiver.write_file(filename, md_string)
-
-            if write_success:
-                # Update appropriate cache flag
-                if filename == COMIC_RACK_FILENAME:
-                    self._cache.has_ci = True
-                elif filename == METRON_INFO_FILENAME:
-                    self._cache.has_mi = True
-
-            return self._successful_write(write_success)
-
+            return self._archiver.write_file(filename, md_string)
         except Exception:
             logger.exception("Error writing metadata to %s", self._path)
             return False
+        finally:
+            # A failed or partial write may still have changed the archive.
+            self._reset_cache()
 
     def remove_metadata(self, metadata_format_list: list[MetadataFormat]) -> bool:
         """Remove metadata from the comic archive.
@@ -1078,15 +1071,13 @@ class Comic:
             bool: True if successful, False otherwise.
 
         """
-        # Build list of filenames to remove and track formats being processed
-        formats_to_remove = set()
+        # Build list of filenames to remove
         metadata_format_filenames = []
 
         for fmt in metadata_format_list:
             filename = self._get_metadata_filename(fmt)
             if filename is not None:
                 metadata_format_filenames.append(filename)
-                formats_to_remove.add(fmt)
 
         all_metadata_present = self._metadata_present(metadata_format_filenames)
 
@@ -1094,25 +1085,19 @@ class Comic:
             return True  # No files to remove
 
         try:
-            write_success = self._archiver.remove_files(all_metadata_present)
+            return self._archiver.remove_files(all_metadata_present)
         except Exception:
             logger.exception("Error removing metadata from %s", self._path)
             return False
-
-        # Update cache flags for successfully removed formats
-        if write_success:
-            if MetadataFormat.METRON_INFO in formats_to_remove:
-                self._cache.has_mi = False
-            if MetadataFormat.COMIC_INFO in formats_to_remove:
-                self._cache.has_ci = False
-
-        return self._successful_write(write_success)
+        finally:
+            # A failed or partial removal may still have changed the archive.
+            self._reset_cache()
 
     def remove_pages(self, pages_index: list[int]) -> bool:
         """Remove pages from the comic archive by their indices (0-based).
 
-        This is a destructive operation that cannot be undone. Metadata caches are
-        invalidated after successful removal.
+        This is a destructive operation that cannot be undone. Cached data is
+        cleared after any removal attempt, successful or not.
 
         Args:
             pages_index: List of zero-based page indices to remove.
@@ -1156,19 +1141,6 @@ class Comic:
                 if (page_name := self.get_page_name(idx)) is not None
             ]
 
-            if not pages_to_remove:
-                logger.warning("No valid pages found for removal")
-                return False
-
-            write_success = self._archiver.remove_files(pages_to_remove)
-
-            if write_success:
-                # Invalidate metadata cache since page structure changed
-                self._cache.has_mi = False
-                self._cache.has_ci = False
-
-            return self._successful_write(write_success)
-
         except ValueError:
             logger.exception("Invalid page index for removal")
             return False
@@ -1176,22 +1148,18 @@ class Comic:
             logger.exception("Error removing pages from %s", self._path)
             return False
 
-    def _successful_write(self, write_success: bool) -> bool:  # noqa: FBT001
-        """Clear the cache after a write operation.
+        if not pages_to_remove:
+            logger.warning("No valid pages found for removal")
+            return False
 
-        The cache is cleared whether or not the write succeeded, since a failed write
-        may still have changed the archive. Metadata is re-read and re-parsed on the
-        next read_metadata() call.
-
-        Args:
-            write_success: Indicates if the write operation was successful.
-
-        Returns:
-            The success status of the write operation.
-
-        """
-        self._reset_cache()
-        return write_success
+        try:
+            return self._archiver.remove_files(pages_to_remove)
+        except Exception:
+            logger.exception("Error removing pages from %s", self._path)
+            return False
+        finally:
+            # A failed or partial removal may still have changed the archive.
+            self._reset_cache()
 
     def _has_metadata_file(self, cache_attr: str, filename: str) -> bool:
         """Check if a metadata file exists in the archive.
