@@ -167,7 +167,7 @@ class MetadataFormatRegistry:
         entry = self._registry.get(fmt)
         return entry["filename"] if entry else None
 
-    def get_reader(self, fmt: MetadataFormat) -> Callable[[bool], Metadata] | None:
+    def get_reader(self, fmt: MetadataFormat) -> Callable[..., Metadata] | None:
         """Get the reader function for a metadata format."""
         entry = self._registry.get(fmt)
         return entry["reader"] if entry else None
@@ -694,9 +694,9 @@ class Comic:
             logger.warning("Unknown metadata format: %s", metadata_format)
             return Metadata()
 
-        return reader(strict)
+        return reader(strict=strict)
 
-    def _read_comicinfo(self, strict: bool = False) -> Metadata:  # noqa: FBT001, FBT002
+    def _read_comicinfo(self, *, strict: bool = False) -> Metadata:
         """Read and parse ComicInfo metadata from the archive.
 
         Args:
@@ -708,7 +708,7 @@ class Comic:
         """
         return self._read_and_cache_metadata(MetadataFormat.COMIC_INFO, ComicInfo(), strict=strict)
 
-    def _read_metroninfo(self, strict: bool = False) -> Metadata:  # noqa: FBT001, FBT002
+    def _read_metroninfo(self, *, strict: bool = False) -> Metadata:
         """Read and parse MetronInfo metadata from the archive.
 
         Args:
@@ -750,7 +750,10 @@ class Comic:
                 raise
             logger.exception("Error reading %s metadata from %s", metadata_format, self._path)
             # Don't cache the failure; a later strict read must still see the error.
-            return Metadata()
+            # Still give the empty result a default page list, as a successful read would.
+            metadata = Metadata()
+            metadata.set_default_page_list(self.get_number_of_pages())
+            return metadata
 
         self._cache.metadata = metadata
         self._validate_and_fix_page_list()
@@ -767,10 +770,11 @@ class Comic:
             Metadata: Parsed metadata object, or empty Metadata if there is no raw metadata.
 
         Raises:
-            ComicMetadataError: If the raw metadata can't be parsed.
+            ComicMetadataError: If the raw metadata can't be parsed, including when the
+                metadata file exists but is empty.
 
         """
-        if not raw_metadata:
+        if raw_metadata is None:
             return Metadata()
 
         try:

@@ -624,6 +624,28 @@ def test_read_metadata_failure_not_cached(tmp_path):
         comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True)
 
 
+def test_read_metadata_malformed_xml_non_strict_sets_default_page_list(tmp_path):
+    """Non-strict failure still returns a default page list, as before strict mode existed."""
+    comic = Comic(_write_cbz(tmp_path / "test.cbz", {"ComicInfo.xml": "<ComicInfo><Series>"}))
+
+    metadata = comic.read_metadata(MetadataFormat.COMIC_INFO)
+    assert len(metadata.pages) == comic.get_number_of_pages() == 1
+
+
+@pytest.mark.parametrize("filename", ["ComicInfo.xml", "MetronInfo.xml"])
+def test_read_metadata_zero_byte_file_strict_raises(tmp_path, filename):
+    """An existing but empty metadata file is malformed, not missing."""
+    comic = Comic(_write_cbz(tmp_path / "test.cbz", {filename: ""}))
+    metadata_format = (
+        MetadataFormat.COMIC_INFO if filename == "ComicInfo.xml" else MetadataFormat.METRON_INFO
+    )
+
+    assert comic.has_metadata(metadata_format)
+    assert comic.read_metadata(metadata_format).is_empty
+    with pytest.raises(ComicMetadataError):
+        comic.read_metadata(metadata_format, strict=True)
+
+
 def test_read_metadata_invalid_utf8_strict_raises(tmp_path):
     """Strict mode reports metadata that isn't valid UTF-8."""
     comic = Comic(_write_cbz(tmp_path / "test.cbz", {"ComicInfo.xml": b"\xff\xfe<ComicInfo/>"}))
