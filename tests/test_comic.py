@@ -450,6 +450,23 @@ def test_get_page_name_list_no_sort(sample_cbz_file):
         assert page_list == ["page2.jpg", "page1.jpg"]
 
 
+def test_get_page_name_list_sort_flag_respected_after_caching(sample_cbz_file):
+    """Test that each sort_list value returns its own order regardless of call order."""
+    with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
+        mock_archiver = Mock()
+        mock_archiver.get_filename_list.return_value = ["page2.jpg", "page1.jpg"]
+        mock_factory.return_value = mock_archiver
+
+        comic = Comic(sample_cbz_file)
+
+        assert comic.get_page_name_list(sort_list=False) == ["page2.jpg", "page1.jpg"]
+        assert comic.get_page_name_list() == ["page1.jpg", "page2.jpg"]
+        assert comic.get_page_name_list(sort_list=False) == ["page2.jpg", "page1.jpg"]
+        # Indexed page lookups must use the sorted order even after an unsorted call
+        assert comic.get_page_name(0) == "page1.jpg"
+        mock_archiver.get_filename_list.assert_called_once()
+
+
 def test_get_page_name_list_cached(sample_cbz_file):
     """Test that page name list is cached."""
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:

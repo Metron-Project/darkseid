@@ -119,6 +119,7 @@ class ComicCache:
     has_mi: bool | None = None
     page_count: int | None = None
     page_list: list[str] | None = None
+    unsorted_page_list: list[str] | None = None
     metadata: dict[MetadataFormat, Metadata] = field(default_factory=dict)
 
     def reset(self) -> None:
@@ -127,6 +128,7 @@ class ComicCache:
         self.has_mi = None
         self.page_count = None
         self.page_list = None
+        self.unsorted_page_list = None
         self.metadata.clear()
 
 
@@ -617,28 +619,32 @@ class Comic:
             - Only image files are included in the list
             - Hidden files (starting with '.') are excluded
             - Natural sorting ensures proper ordering (e.g., page10.jpg comes after page2.jpg)
-            - Results are cached for performance
+            - Sorted and unsorted results are cached separately, so the order returned
+              always matches ``sort_list`` regardless of call order
 
         """
-        if self._cache.page_list is not None:
-            return self._cache.page_list
+        if not sort_list:
+            return self._get_unsorted_page_list()
+
+        if self._cache.page_list is None:
+            self._cache.page_list = natsorted(self._get_unsorted_page_list(), alg=ns.IGNORECASE)
+        return self._cache.page_list
+
+    def _get_unsorted_page_list(self) -> list[str]:
+        """Get the image filenames in archive order, cached after the first read."""
+        if self._cache.unsorted_page_list is not None:
+            return self._cache.unsorted_page_list
 
         try:
-            # Get the list of file names in the archive
             files = self._archiver.get_filename_list()
-
-            # Sort files if requested (case-insensitive natural sort)
-            if sort_list:
-                files = natsorted(files, alg=ns.IGNORECASE)
-
-            # Filter for image files only
-            self._cache.page_list = [str(name) for name in files if self.is_image(Path(str(name)))]
-
+            self._cache.unsorted_page_list = [
+                str(name) for name in files if self.is_image(Path(str(name)))
+            ]
         except Exception:
             logger.exception("Error getting page list from %s", self._path)
-            self._cache.page_list = []
+            self._cache.unsorted_page_list = []
 
-        return self._cache.page_list
+        return self._cache.unsorted_page_list
 
     def get_number_of_pages(self) -> int:
         """Get the total number of pages (images) in the archive.
