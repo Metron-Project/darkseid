@@ -426,7 +426,7 @@ class MetronInfo(BaseMetadataHandler):
             date_val: Date value.
 
         """
-        # Skip dates with invalid years, leaving any existing element as it is
+        # Skip dates with invalid years. Note: an existing element is currently left in place.
         if date_val is not None and date_val.year < EARLIEST_YEAR:
             return
         MetronInfo._set_element_text(

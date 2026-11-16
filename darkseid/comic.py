@@ -556,7 +556,7 @@ class Comic:
                  a hidden file (doesn't start with '.').
 
         Note:
-            Supported formats: .jpg, .jpeg, .png, .gif, .webp, .jxl
+            Supported formats are listed in darkseid.constants.IMAGE_EXTENSIONS.
             Hidden files (starting with '.') are excluded.
 
         """

@@ -65,7 +65,7 @@ class PdfArchiver(Archiver):
         path (Path): The filesystem path to the PDF file.
 
     Note:
-        - PDF pages are read-only virtual files rendered at 144 DPI (PAGE_ZOOM_FACTOR x 72)
+        - PDF pages are read-only virtual files rendered at PAGE_DPI
         - Metadata files can be embedded, read, and removed as PDF attachments
         - copy_from_archive() is not supported for PDFs
 
@@ -79,8 +79,9 @@ class PdfArchiver(Archiver):
     """
 
     # Constants for page rendering
-    # PDF coordinates are 72 units per inch, so a 2x zoom renders pages at 144 DPI.
     PAGE_ZOOM_FACTOR = 2.0
+    # PDF coordinates are 72 units per inch, so the rendered resolution follows the zoom.
+    PAGE_DPI = int(PAGE_ZOOM_FACTOR * 72)
     PAGE_NUMBER_PADDING = 3  # Zero-padding width (e.g., 001, 002)
 
     def __init__(self, path: Path) -> None:
@@ -200,7 +201,7 @@ class PdfArchiver(Archiver):
             max_size: Maximum size in bytes of the rendered PNG.
 
         Returns:
-            PNG image data rendered at 144 DPI (PAGE_ZOOM_FACTOR x 72).
+            PNG image data rendered at PAGE_DPI resolution.
 
         Raises:
             ArchiverReadError: If the page cannot be read or rendered.
@@ -215,7 +216,7 @@ class PdfArchiver(Archiver):
                     raise ArchiverReadError(msg)  # noqa: TRY301
 
                 page = doc[page_index]
-                # Render page to PNG at PAGE_ZOOM_FACTOR x 72 DPI
+                # Render page to PNG at PAGE_DPI (PAGE_ZOOM_FACTOR x 72)
                 mat = pymupdf.Matrix(self.PAGE_ZOOM_FACTOR, self.PAGE_ZOOM_FACTOR)
                 pix = page.get_pixmap(matrix=mat)
                 data = pix.tobytes("png")
@@ -284,7 +285,7 @@ class PdfArchiver(Archiver):
 
         Returns:
             File data as bytes:
-                - For page files: PNG image data rendered at 144 DPI
+                - For page files: PNG image data rendered at PAGE_DPI resolution
                 - For embedded files: Raw file content
 
         Raises:

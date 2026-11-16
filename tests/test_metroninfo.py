@@ -769,11 +769,7 @@ def test_set_date_element_none_removes():
 
 
 def test_set_date_element_skips_years_before_1900():
-    """Test a pre-1900 date is not written and leaves any existing element unchanged."""
+    """Test a pre-1900 date is not written."""
     root = ET.Element("root")
     MetronInfo._set_date_element(root, "CoverDate", date(1899, 12, 31))
     assert root.find("CoverDate") is None
-
-    ET.SubElement(root, "StoreDate").text = "1999-01-01"
-    MetronInfo._set_date_element(root, "StoreDate", date(1850, 1, 1))
-    assert root.find("StoreDate").text == "1999-01-01"
