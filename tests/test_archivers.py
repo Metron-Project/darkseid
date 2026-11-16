@@ -1787,3 +1787,23 @@ def _write_zip_with_encrypted_first_member(path, name, data, others=()):
     for signature, flag_offset in ((b"PK\x03\x04", 6), (b"PK\x01\x02", 8)):
         raw[raw.index(signature) + flag_offset] |= 0x1
     path.write_bytes(bytes(raw))
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("a.jpg", True),
+        ("a.JPEG", True),
+        ("dir/b.png", True),
+        ("c.gif", True),
+        ("d.webp", True),
+        ("e.jxl", True),
+        ("f.txt", False),
+        ("g.jpgx", False),
+        ("jpg", False),
+        ("h.tif", False),
+    ],
+)
+def test_image_ext_re_matches_page_image_extensions(name, expected):
+    """Test the derived image regex matches exactly the shared page image extensions."""
+    assert bool(Archiver.IMAGE_EXT_RE.search(name)) is expected

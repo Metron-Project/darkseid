@@ -51,6 +51,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
+from darkseid.constants import IMAGE_EXTENSIONS
+
 if TYPE_CHECKING:
     from collections.abc import Generator
     from typing import Self
@@ -182,7 +184,9 @@ class Archiver(ABC):
 
     """
 
-    IMAGE_EXT_RE = re.compile(r"\.(jpe?g|png|webp|gif|jxl)$", re.IGNORECASE)
+    IMAGE_EXT_RE = re.compile(
+        "(" + "|".join(re.escape(ext) for ext in sorted(IMAGE_EXTENSIONS)) + ")$", re.IGNORECASE
+    )
     MAX_READ_SIZE: ClassVar[int] = 256 * 1024 * 1024  # 256 MiB
     _DRIVE_RE = re.compile(r"^[A-Za-z]:")
 

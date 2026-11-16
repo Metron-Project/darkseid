@@ -746,3 +746,34 @@ def test_full_workflow_integration(metron_info, tmp_path):
 
     string_result = metron_info.metadata_from_string(xml_content)
     assert string_result.series.name == "Integration Test"
+
+
+def test_set_date_element_formats_and_replaces():
+    """Test dates are written as YYYY-MM-DD, replacing any existing value."""
+    root = ET.Element("root")
+    ET.SubElement(root, "CoverDate").text = "1999-01-01"
+
+    MetronInfo._set_date_element(root, "CoverDate", date(2024, 3, 5))
+
+    assert [e.text for e in root.findall("CoverDate")] == ["2024-03-05"]
+
+
+def test_set_date_element_none_removes():
+    """Test a None date removes the element."""
+    root = ET.Element("root")
+    ET.SubElement(root, "CoverDate").text = "1999-01-01"
+
+    MetronInfo._set_date_element(root, "CoverDate", None)
+
+    assert root.find("CoverDate") is None
+
+
+def test_set_date_element_skips_years_before_1900():
+    """Test a pre-1900 date is not written and leaves any existing element unchanged."""
+    root = ET.Element("root")
+    MetronInfo._set_date_element(root, "CoverDate", date(1899, 12, 31))
+    assert root.find("CoverDate") is None
+
+    ET.SubElement(root, "StoreDate").text = "1999-01-01"
+    MetronInfo._set_date_element(root, "StoreDate", date(1850, 1, 1))
+    assert root.find("StoreDate").text == "1999-01-01"
