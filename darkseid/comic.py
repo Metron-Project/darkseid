@@ -167,7 +167,7 @@ class MetadataFormatRegistry:
         entry = self._registry.get(fmt)
         return entry["filename"] if entry else None
 
-    def get_reader(self, fmt: MetadataFormat) -> Callable[[], Metadata] | None:
+    def get_reader(self, fmt: MetadataFormat) -> Callable[..., Metadata] | None:
         """Get the reader function for a metadata format."""
         entry = self._registry.get(fmt)
         return entry["reader"] if entry else None
@@ -655,15 +655,24 @@ class Comic:
             self._cache.page_count = len(self.get_page_name_list())
         return self._cache.page_count
 
-    def read_metadata(self, metadata_format: MetadataFormat) -> Metadata:
+    def read_metadata(self, metadata_format: MetadataFormat, *, strict: bool = False) -> Metadata:
         """Read metadata from the archive in the specified format.
 
         Args:
             metadata_format: The format of metadata to read (COMIC_INFO or METRON_INFO).
+            strict: If True, raise ComicMetadataError when the archive contains a metadata
+                file for this format that can't be read, decoded, or parsed. If False (the
+                default), such errors are logged and an empty Metadata instance is returned.
 
         Returns:
             Metadata: The parsed metadata object, or an empty Metadata instance
-                     if the format is not recognized or parsing fails.
+                     if the format is not recognized, the archive has no metadata in this
+                     format, or (in non-strict mode) the metadata couldn't be parsed.
+
+        Raises:
+            ComicMetadataError: If ``strict`` is True and the metadata file exists but
+                can't be read, decoded, or parsed (e.g. malformed XML). The original
+                exception is available as ``__cause__``.
 
         Examples:
             >>> comic = Comic(Path("example.cbz"))
@@ -676,6 +685,8 @@ class Comic:
             - The result is cached after first read
             - Page list validation is performed to ensure consistency
             - Returns empty Metadata object if format is unsupported
+            - Metadata that fails to parse is not cached, so a later strict call
+              still reports the error
 
         """
         reader = self._metadata_registry.get_reader(metadata_format)
@@ -683,33 +694,68 @@ class Comic:
             logger.warning("Unknown metadata format: %s", metadata_format)
             return Metadata()
 
-        return reader()
+        return reader(strict=strict)
 
-    def _read_comicinfo(self) -> Metadata:
+    def _read_comicinfo(self, *, strict: bool = False) -> Metadata:
         """Read and parse ComicInfo metadata from the archive.
+
+        Args:
+            strict: Raise ComicMetadataError instead of returning empty metadata on failure.
 
         Returns:
             Metadata: The parsed ComicInfo metadata.
 
         """
-        if self._cache.metadata is not None:
-            return self._cache.metadata
+        return self._read_and_cache_metadata(MetadataFormat.COMIC_INFO, ComicInfo(), strict=strict)
 
-        self._cache.metadata = self._parse_metadata(self.read_raw_ci_metadata(), ComicInfo())
-        self._validate_and_fix_page_list()
-        return self._cache.metadata
-
-    def _read_metroninfo(self) -> Metadata:
+    def _read_metroninfo(self, *, strict: bool = False) -> Metadata:
         """Read and parse MetronInfo metadata from the archive.
+
+        Args:
+            strict: Raise ComicMetadataError instead of returning empty metadata on failure.
 
         Returns:
             Metadata: The parsed MetronInfo metadata.
 
         """
+        return self._read_and_cache_metadata(
+            MetadataFormat.METRON_INFO, MetronInfo(), strict=strict
+        )
+
+    def _read_and_cache_metadata(
+        self, metadata_format: MetadataFormat, parser: MetronInfo | ComicInfo, *, strict: bool
+    ) -> Metadata:
+        """Read, parse, and cache metadata in the given format.
+
+        Args:
+            metadata_format: The metadata format to read.
+            parser: The metadata parser instance (ComicInfo or MetronInfo).
+            strict: Raise ComicMetadataError instead of returning empty metadata on failure.
+
+        Returns:
+            Metadata: The parsed metadata, or empty Metadata if none exists (or, in
+                non-strict mode, if it couldn't be read or parsed).
+
+        Raises:
+            ComicMetadataError: If ``strict`` is True and the metadata can't be read or parsed.
+
+        """
         if self._cache.metadata is not None:
             return self._cache.metadata
 
-        self._cache.metadata = self._parse_metadata(self.read_raw_mi_metadata(), MetronInfo())
+        try:
+            metadata = self._parse_metadata(self._load_raw_metadata(metadata_format), parser)
+        except ComicMetadataError:
+            if strict:
+                raise
+            logger.exception("Error reading %s metadata from %s", metadata_format, self._path)
+            # Don't cache the failure; a later strict read must still see the error.
+            # Still give the empty result a default page list, as a successful read would.
+            metadata = Metadata()
+            metadata.set_default_page_list(self.get_number_of_pages())
+            return metadata
+
+        self._cache.metadata = metadata
         self._validate_and_fix_page_list()
         return self._cache.metadata
 
@@ -721,17 +767,21 @@ class Comic:
             parser: The metadata parser instance (ComicInfo or MetronInfo).
 
         Returns:
-            Metadata: Parsed metadata object or empty Metadata if parsing fails.
+            Metadata: Parsed metadata object, or empty Metadata if there is no raw metadata.
+
+        Raises:
+            ComicMetadataError: If the raw metadata can't be parsed, including when the
+                metadata file exists but is empty.
 
         """
-        if not raw_metadata:
+        if raw_metadata is None:
             return Metadata()
 
         try:
             return parser.metadata_from_string(raw_metadata)
-        except Exception:
-            logger.exception("Error parsing metadata from %s", self._path)
-            return Metadata()
+        except Exception as e:
+            msg = f"Unable to parse metadata from {self._path}: {e}"
+            raise ComicMetadataError(msg) from e
 
     def _validate_and_fix_page_list(self) -> None:
         """Validate and fix inconsistencies in the metadata page list.
@@ -770,6 +820,25 @@ class Comic:
             str | None: The raw XML metadata as a string, or None if not found or error.
 
         """
+        try:
+            return self._load_raw_metadata(metadata_format)
+        except ComicMetadataError:
+            logger.exception("Error reading raw metadata from %s", self._path)
+            return None
+
+    def _load_raw_metadata(self, metadata_format: MetadataFormat) -> str | None:
+        """Read raw metadata XML from the archive, raising on read or decode errors.
+
+        Args:
+            metadata_format: The format of metadata to read.
+
+        Returns:
+            str | None: The raw XML metadata as a string, or None if the archive has none.
+
+        Raises:
+            ComicMetadataError: If the metadata file exists but can't be read or decoded.
+
+        """
         if not self.has_metadata(metadata_format):
             return None
 
@@ -780,12 +849,12 @@ class Comic:
         try:
             raw_bytes = self._archiver.read_file(filename, max_size=MAX_METADATA_SIZE)
             return raw_bytes.decode("utf-8")
-        except ArchiverReadError:
-            logger.exception("Error reading raw metadata from %s", self._path)
-            return None
-        except UnicodeDecodeError:
-            logger.exception("Error decoding metadata from %s", self._path)
-            return None
+        except ArchiverReadError as e:
+            msg = f"Unable to read {filename} from {self._path}: {e}"
+            raise ComicMetadataError(msg) from e
+        except UnicodeDecodeError as e:
+            msg = f"Unable to decode {filename} from {self._path} as UTF-8: {e}"
+            raise ComicMetadataError(msg) from e
 
     def _get_metadata_filename(self, metadata_format: MetadataFormat) -> str | None:
         """Get the standard filename for the specified metadata format.

@@ -22,6 +22,7 @@ from darkseid.comic import (
     ComicMetadataError,
     MetadataFormat,
 )
+from darkseid.metadata import XmlError
 from darkseid.metadata.data_classes import ImageMetadata, Metadata
 from darkseid.validate import SchemaVersion
 
@@ -572,6 +573,97 @@ def test_read_metadata_parse_error(sample_cbz_file):
         ):
             metadata = comic.read_metadata(MetadataFormat.COMIC_INFO)
             assert isinstance(metadata, Metadata)
+            assert metadata.is_empty
+
+
+def _write_cbz(path, metadata_files):
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr("01.jpg", b"")
+        for name, content in metadata_files.items():
+            zf.writestr(name, content)
+    return path
+
+
+@pytest.mark.parametrize(
+    ("metadata_format", "filename", "content"),
+    [
+        (MetadataFormat.COMIC_INFO, "ComicInfo.xml", "<ComicInfo><Series>Aquaman"),
+        (MetadataFormat.METRON_INFO, "MetronInfo.xml", "<MetronInfo><Series><Name>Aquaman"),
+    ],
+)
+def test_read_metadata_malformed_xml_strict_raises(tmp_path, metadata_format, filename, content):
+    """Strict mode reports malformed XML instead of returning empty metadata."""
+    comic = Comic(_write_cbz(tmp_path / "test.cbz", {filename: content}))
+
+    assert comic.has_metadata(metadata_format)
+    with pytest.raises(ComicMetadataError) as exc_info:
+        comic.read_metadata(metadata_format, strict=True)
+    assert isinstance(exc_info.value.__cause__, XmlError)
+
+
+@pytest.mark.parametrize(
+    ("metadata_format", "filename", "content"),
+    [
+        (MetadataFormat.COMIC_INFO, "ComicInfo.xml", "<ComicInfo><Series>Aquaman"),
+        (MetadataFormat.METRON_INFO, "MetronInfo.xml", "<MetronInfo><Series><Name>Aquaman"),
+    ],
+)
+def test_read_metadata_malformed_xml_non_strict(tmp_path, metadata_format, filename, content):
+    """Non-strict mode keeps returning empty metadata for malformed XML."""
+    comic = Comic(_write_cbz(tmp_path / "test.cbz", {filename: content}))
+
+    assert comic.read_metadata(metadata_format).is_empty
+
+
+def test_read_metadata_failure_not_cached(tmp_path):
+    """A non-strict failed read must not hide the error from a later strict read."""
+    comic = Comic(_write_cbz(tmp_path / "test.cbz", {"ComicInfo.xml": "<ComicInfo><Series>"}))
+
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO).is_empty
+    with pytest.raises(ComicMetadataError):
+        comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True)
+
+
+def test_read_metadata_malformed_xml_non_strict_sets_default_page_list(tmp_path):
+    """Non-strict failure still returns a default page list, as before strict mode existed."""
+    comic = Comic(_write_cbz(tmp_path / "test.cbz", {"ComicInfo.xml": "<ComicInfo><Series>"}))
+
+    metadata = comic.read_metadata(MetadataFormat.COMIC_INFO)
+    assert len(metadata.pages) == comic.get_number_of_pages() == 1
+
+
+@pytest.mark.parametrize("filename", ["ComicInfo.xml", "MetronInfo.xml"])
+def test_read_metadata_zero_byte_file_strict_raises(tmp_path, filename):
+    """An existing but empty metadata file is malformed, not missing."""
+    comic = Comic(_write_cbz(tmp_path / "test.cbz", {filename: ""}))
+    metadata_format = (
+        MetadataFormat.COMIC_INFO if filename == "ComicInfo.xml" else MetadataFormat.METRON_INFO
+    )
+
+    assert comic.has_metadata(metadata_format)
+    assert comic.read_metadata(metadata_format).is_empty
+    with pytest.raises(ComicMetadataError):
+        comic.read_metadata(metadata_format, strict=True)
+
+
+def test_read_metadata_invalid_utf8_strict_raises(tmp_path):
+    """Strict mode reports metadata that isn't valid UTF-8."""
+    comic = Comic(_write_cbz(tmp_path / "test.cbz", {"ComicInfo.xml": b"\xff\xfe<ComicInfo/>"}))
+
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO).is_empty
+    with pytest.raises(ComicMetadataError) as exc_info:
+        comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True)
+    assert isinstance(exc_info.value.__cause__, UnicodeDecodeError)
+
+
+def test_read_metadata_strict_valid_and_missing(tmp_path):
+    """Strict mode doesn't raise for valid or absent metadata."""
+    xml = "<ComicInfo><Series>Aquaman</Series></ComicInfo>"
+    comic = Comic(_write_cbz(tmp_path / "valid.cbz", {"ComicInfo.xml": xml}))
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True).series.name == "Aquaman"
+
+    comic = Comic(_write_cbz(tmp_path / "none.cbz", {}))
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True).is_empty
 
 
 def test_read_raw_metadata_not_found(sample_cbz_file):
