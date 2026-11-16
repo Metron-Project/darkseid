@@ -7,7 +7,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 from decimal import Decimal
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeGuard
 from xml.etree.ElementTree import ParseError
 
 from defusedxml.ElementTree import fromstring
@@ -319,7 +319,7 @@ class MetronInfo(BaseMetadataHandler):
         return root
 
     @staticmethod
-    def _is_valid_info_source(source: str | None) -> bool:
+    def _is_valid_info_source(source: str | None) -> TypeGuard[str]:
         """Check if info source is valid.
 
         Args:

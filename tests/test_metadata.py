@@ -303,6 +303,18 @@ def test_metadata_get_cover_page_index_list():
     assert cover_indices_empty == [0]
 
 
+def test_metadata_page_index_without_image_attribute():
+    """Test that pages without an Image attribute don't raise KeyError."""
+    md = Metadata()
+    md.pages = [
+        ImageMetadata(Type=PageType.FrontCover),
+        ImageMetadata(Image=3, Type=PageType.FrontCover),
+    ]
+    assert md.get_archive_page_index(0) == 0
+    assert md.get_archive_page_index(1) == 3
+    assert md.get_cover_page_index_list() == [3]
+
+
 def test_metadata_existing_credit():
     """Test _existing_credit method."""
     md = Metadata()
@@ -565,6 +577,20 @@ def test_metadata_str_with_data():
     assert "Issue: 1" in result
     assert "Publisher: DC Comics" in result
     assert "22 pages" in result
+
+
+def test_metadata_str_imprint_without_publisher_name():
+    """Test that an imprint without a publisher name doesn't raise TypeError."""
+    md = Metadata(series=Series("Sandman"), publisher=Publisher(None, imprint=Basic("Vertigo")))
+    assert "Publisher: (Vertigo)" in str(md)
+
+
+def test_series_and_publisher_allow_missing_name():
+    """Test that Series and Publisher keep their positional fields with an optional name."""
+    series = Series(None, 5, volume=2)
+    assert (series.name, series.id_, series.volume) == (None, 5, 2)
+    publisher = Publisher(None, "abc", Basic("Vertigo"))
+    assert (publisher.name, publisher.id_, publisher.imprint) == (None, "abc", Basic("Vertigo"))
 
 
 def test_page_type_constants():
