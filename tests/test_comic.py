@@ -1,6 +1,7 @@
 # ruff: noqa: SLF001
 """Tests for the Comic class using function-based pytest approach."""
 
+import copy
 import io
 import tarfile
 import tempfile
@@ -2100,3 +2101,38 @@ def test_write_metadata_replaces_case_variant_in_pdf(tmp_path):
     assert "ComicInfo.xml" in names
     assert "comicinfo.xml" not in names
     assert "<Custom>keep me</Custom>" in comic.read_raw_ci_metadata()
+
+
+def _metadata_with_pages(page_count):
+    metadata = _metadata_with_series("X")
+    metadata.set_default_page_list(page_count)
+    return metadata
+
+
+def test_failed_write_leaves_caller_metadata_unchanged(tmp_path):
+    """Test a failed write doesn't leave page count or page sizes in the caller's object."""
+    comic = Comic(_write_archive(tmp_path / "test.cbz", {"01.jpg": "x" * 10}))
+    metadata = _metadata_with_pages(1)
+    before = copy.deepcopy(metadata)
+
+    with patch.object(comic._archiver, "write_file", return_value=False):
+        assert comic.write_metadata(metadata, MetadataFormat.COMIC_INFO) is False
+
+    assert metadata == before
+
+
+def test_successful_write_leaves_caller_metadata_unchanged(tmp_path):
+    """Test a write doesn't modify the caller's object; the page info is in the file."""
+    comic = Comic(_write_archive(tmp_path / "test.cbz", {"01.jpg": "x" * 10}))
+    metadata = _metadata_with_pages(1)
+    before = copy.deepcopy(metadata)
+
+    assert comic.write_metadata(metadata, MetadataFormat.COMIC_INFO)
+
+    assert metadata == before
+    assert metadata.page_count is None
+    assert metadata.pages[0]["Image"] == 0  # not converted to a string by the serializer
+    assert "ImageSize" not in metadata.pages[0]
+    written = comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True)
+    assert written.page_count == 1
+    assert written.pages[0]["ImageSize"] == "10"
