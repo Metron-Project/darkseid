@@ -25,7 +25,7 @@ import io
 import logging
 import os
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
@@ -119,7 +119,7 @@ class ComicCache:
     has_mi: bool | None = None
     page_count: int | None = None
     page_list: list[str] | None = None
-    metadata: Metadata | None = None
+    metadata: dict[MetadataFormat, Metadata] = field(default_factory=dict)
 
     def reset(self) -> None:
         """Clear all cached data to ensure fresh reads."""
@@ -127,7 +127,7 @@ class ComicCache:
         self.has_mi = None
         self.page_count = None
         self.page_list = None
-        self.metadata = None
+        self.metadata.clear()
 
 
 class MetadataFormatRegistry:
@@ -740,8 +740,9 @@ class Comic:
             ComicMetadataError: If ``strict`` is True and the metadata can't be read or parsed.
 
         """
-        if self._cache.metadata is not None:
-            return self._cache.metadata
+        cached = self._cache.metadata.get(metadata_format)
+        if cached is not None:
+            return cached
 
         try:
             metadata = self._parse_metadata(self._load_raw_metadata(metadata_format), parser)
@@ -755,9 +756,9 @@ class Comic:
             metadata.set_default_page_list(self.get_number_of_pages())
             return metadata
 
-        self._cache.metadata = metadata
-        self._validate_and_fix_page_list()
-        return self._cache.metadata
+        self._validate_and_fix_page_list(metadata)
+        self._cache.metadata[metadata_format] = metadata
+        return metadata
 
     def _parse_metadata(self, raw_metadata: str | None, parser: MetronInfo | ComicInfo) -> Metadata:
         """Parse raw metadata XML using the appropriate parser.
@@ -783,18 +784,19 @@ class Comic:
             msg = f"Unable to parse metadata from {self._path}: {e}"
             raise ComicMetadataError(msg) from e
 
-    def _validate_and_fix_page_list(self) -> None:
+    def _validate_and_fix_page_list(self, metadata: Metadata) -> None:
         """Validate and fix inconsistencies in the metadata page list.
 
         This method ensures that the page count in metadata matches the actual
         number of image files in the archive. If there's a mismatch, it resets
         the page list to default values.
-        """
-        if self._cache.metadata is None:
-            return
 
+        Args:
+            metadata: The metadata whose page list is checked and fixed in place.
+
+        """
         actual_page_count = self.get_number_of_pages()
-        metadata_page_count = len(self._cache.metadata.pages)
+        metadata_page_count = len(metadata.pages)
 
         # If page counts don't match, reset the page list
         if metadata_page_count not in (0, actual_page_count):
@@ -804,11 +806,11 @@ class Comic:
                 metadata_page_count,
                 actual_page_count,
             )
-            self._cache.metadata.pages = []
+            metadata.pages = []
 
         # Set default page list if empty
-        if not self._cache.metadata.pages:
-            self._cache.metadata.set_default_page_list(actual_page_count)
+        if not metadata.pages:
+            metadata.set_default_page_list(actual_page_count)
 
     def _read_raw_metadata(self, metadata_format: MetadataFormat) -> str | None:
         """Read raw metadata XML from the archive.
@@ -1007,7 +1009,7 @@ class Comic:
                 elif filename == METRON_INFO_FILENAME:
                     self._cache.has_mi = True
 
-            return self._successful_write(write_success, metadata)
+            return self._successful_write(write_success)
 
         except Exception:
             logger.exception("Error writing metadata to %s", self._path)
@@ -1104,7 +1106,7 @@ class Comic:
             if MetadataFormat.COMIC_INFO in formats_to_remove:
                 self._cache.has_ci = False
 
-        return self._successful_write(write_success, None)
+        return self._successful_write(write_success)
 
     def remove_pages(self, pages_index: list[int]) -> bool:
         """Remove pages from the comic archive by their indices (0-based).
@@ -1165,7 +1167,7 @@ class Comic:
                 self._cache.has_mi = False
                 self._cache.has_ci = False
 
-            return self._successful_write(write_success, None)
+            return self._successful_write(write_success)
 
         except ValueError:
             logger.exception("Invalid page index for removal")
@@ -1174,19 +1176,20 @@ class Comic:
             logger.exception("Error removing pages from %s", self._path)
             return False
 
-    def _successful_write(self, write_success: bool, metadata: Metadata | None) -> bool:  # noqa: FBT001
-        """Update the state based on the success of a write operation.
+    def _successful_write(self, write_success: bool) -> bool:  # noqa: FBT001
+        """Clear the cache after a write operation.
+
+        The cache is cleared whether or not the write succeeded, since a failed write
+        may still have changed the archive. Metadata is re-read and re-parsed on the
+        next read_metadata() call.
 
         Args:
             write_success: Indicates if the write operation was successful.
-            metadata: The metadata object.
 
         Returns:
             The success status of the write operation.
 
         """
-        if write_success:
-            self._cache.metadata = metadata
         self._reset_cache()
         return write_success
 
