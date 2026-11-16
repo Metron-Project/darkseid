@@ -930,7 +930,9 @@ class Comic:
         """Write metadata in a specific format to the archive.
 
         Existing XML for the format is read first so the serializer can preserve
-        elements it doesn't manage.
+        elements it doesn't manage. The canonical filename (e.g. "ComicInfo.xml") is
+        written, then any other root-level copy differing only in case (e.g.
+        "comicinfo.xml") is removed, so the archive doesn't keep a stale duplicate.
 
         Args:
             metadata: The metadata to write.
@@ -938,7 +940,8 @@ class Comic:
             spec: The format's filename, handler and page-size setting.
 
         Returns:
-            bool: True if successful, False otherwise.
+            bool: True if the metadata was written, False otherwise. Failing to remove
+                a stale copy is logged but doesn't make the write fail.
 
         """
         raw_metadata = self._read_raw_metadata(metadata_format)
@@ -947,13 +950,34 @@ class Comic:
 
             raw_bytes = raw_metadata.encode("utf-8") if raw_metadata else None
             md_string = spec.handler().string_from_metadata(metadata, raw_bytes)
-            return self._archiver.write_file(spec.filename, md_string)
+            written = self._archiver.write_file(spec.filename, md_string)
         except (ArchiverError, OSError, ValueError, XmlError):
             logger.exception("Error writing metadata to %s", self._path)
             return False
+        else:
+            if written:
+                self._remove_stale_metadata_copies(spec.filename)
+            return written
         finally:
             # A failed or partial write may still have changed the archive.
             self._reset_cache()
+
+    def _remove_stale_metadata_copies(self, filename: str) -> None:
+        """Remove root-level metadata files that differ from ``filename`` only in case.
+
+        Called after ``filename`` has been written, so the new metadata is already in
+        place; a failure here leaves a stale duplicate behind, which is logged.
+
+        Args:
+            filename: The canonical metadata filename that was just written.
+
+        """
+        try:
+            stale = [m for m in self._find_metadata_members(filename) if m != filename]
+            if stale and not self._archiver.remove_files(stale):
+                logger.warning("Could not remove stale %s from %s", stale, self._path)
+        except (ArchiverError, OSError):
+            logger.warning("Could not remove stale copies of %s from %s", filename, self._path)
 
     def remove_metadata(self, metadata_format_list: list[MetadataFormat]) -> bool:
         """Remove metadata from the comic archive.
