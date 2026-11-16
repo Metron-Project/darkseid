@@ -225,7 +225,7 @@ class TarArchiver(Archiver):
                 tarinfo.mtime = int(time.time())
                 out.addfile(tarinfo, io.BytesIO(data))
 
-        self._invalidate_cache()
+        self.invalidate_cache()
 
     def write_file(self, archive_file: str, data: str | bytes) -> bool:
         """Write data to a file in the TAR archive.

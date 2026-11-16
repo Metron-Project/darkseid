@@ -197,7 +197,6 @@ class RarArchiver(Archiver):
             with rarfile.RarFile(self.path) as rf:
                 return sorted(rf.namelist())
         except (rarfile.RarCannotExec, rarfile.BadRarFile) as e:
-            self._handle_error("list", "", e)
             msg = f"Cannot read RAR archive: {e}"
             raise ArchiverReadError(msg) from e
 

@@ -317,7 +317,7 @@ class SevenZipArchiver(Archiver):
             for filename, content in files.items():
                 write_archive.writestr(content, filename)
 
-        self._invalidate_cache()
+        self.invalidate_cache()
 
     def write_file(self, archive_file: str, data: str | bytes) -> bool:
         """Write a file to the 7z archive.
@@ -433,7 +433,7 @@ class SevenZipArchiver(Archiver):
         if not remaining:
             # If no files to keep, remove the archive.
             self._path.unlink(missing_ok=True)
-            self._invalidate_cache()
+            self.invalidate_cache()
             return True
 
         # Rewrite archive without the removed files, replacing the original once complete

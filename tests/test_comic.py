@@ -1781,3 +1781,26 @@ def test_comic_corrupt_archive_listing_error_is_handled(tmp_path):
     assert not comic.has_metadata(MetadataFormat.COMIC_INFO)
     assert comic.read_metadata(MetadataFormat.COMIC_INFO).is_empty
     assert comic.validate_metadata(MetadataFormat.COMIC_INFO) == SchemaVersion.UNKNOWN
+
+
+def test_comic_reset_cache_clears_archiver_listing(tmp_path):
+    """Test Comic's cache reset also makes the archiver re-read the archive."""
+    cbz = _write_cbz(tmp_path / "test.cbz", {})
+    comic = Comic(cbz)
+    assert not comic.has_metadata(MetadataFormat.COMIC_INFO)
+
+    with zipfile.ZipFile(cbz, "a") as zf:
+        zf.writestr("ComicInfo.xml", VALID_COMICINFO)
+    comic._reset_cache()
+
+    assert comic.has_metadata(MetadataFormat.COMIC_INFO)
+
+
+def test_comic_corrupt_archive_listing_logged_once(tmp_path, caplog):
+    """Test an unlistable archive produces one error log, not one per layer."""
+    corrupt = tmp_path / "corrupt.cbz"
+    corrupt.write_text("not a zip file")
+
+    Comic(corrupt).get_page_name_list()
+
+    assert len([r for r in caplog.records if r.levelname == "ERROR"]) == 1

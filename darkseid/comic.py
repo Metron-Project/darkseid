@@ -383,8 +383,10 @@ class Comic:
 
         This method is called after every attempt to modify the archive, whether it
         succeeded, failed or raised, so cached data never outlives a change to the archive.
+        The archiver's own file-list cache is cleared too.
         """
         self._cache.reset()
+        self._archiver.invalidate_cache()
 
     def _validate_page_index(self, index: int) -> None:
         """Validate that a page index is within the valid range.

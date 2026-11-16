@@ -219,6 +219,15 @@ class Archiver(ABC):
             >>> archiver = MyArchiver(Path("new_archive.cbz"))
 
         """
+        cls = type(self)
+        if (
+            cls._list_files is Archiver._list_files
+            and cls.get_filename_list is Archiver.get_filename_list
+        ):
+            # Fail where a missing abstract method would, not later when listing.
+            msg = f"Can't instantiate {cls.__name__} without implementing _list_files()"
+            raise TypeError(msg)
+
         self._path = path
         self._filename_list_cache: list[str] | None = None
         self._validate_path()
@@ -412,17 +421,19 @@ class Archiver(ABC):
         Returns a complete list of all files contained in the archive.
         The returned paths use forward slashes as separators and are
         relative to the archive root. A successful result is cached until the
-        archive is modified through this archiver or the ``with`` block exits;
-        a failed listing is not cached.
+        archive is modified through this archiver, the ``with`` block exits, or
+        invalidate_cache() is called; a failed listing is not cached.
 
         Returns:
-            List of file paths within the archive. The list is sorted
+            A new list of file paths within the archive, so changing it doesn't
+                affect the cache. The list is sorted
                 alphabetically by most implementations. Returns an empty list
                 if the archive is empty or doesn't exist.
 
         Raises:
             ArchiverReadError: If the archive exists but can't be listed (e.g. it
                 is corrupt), so a broken archive is never mistaken for an empty one.
+                The error isn't logged here; the caller decides whether to.
 
         Examples:
             >>> files = archive.get_filename_list()
@@ -441,23 +452,18 @@ class Archiver(ABC):
             Subclasses implement ``_list_files()`` rather than overriding this method.
 
         """
-        if self._filename_list_cache is not None:
-            return self._filename_list_cache
-        if not self._path.exists():
-            self._filename_list_cache = []
-            return self._filename_list_cache
-
-        try:
-            files = self._list_files()
-        except (ArchiverReadError, NotImplementedError):
-            raise
-        except Exception as e:
-            self._handle_error("list", "", e)
-            msg = f"Cannot list files in {self._path}: {e}"
-            raise ArchiverReadError(msg) from e
-
-        self._filename_list_cache = files
-        return files
+        if self._filename_list_cache is None:
+            if not self._path.exists():
+                self._filename_list_cache = []
+            else:
+                try:
+                    self._filename_list_cache = list(self._list_files())
+                except (ArchiverReadError, NotImplementedError):
+                    raise
+                except Exception as e:
+                    msg = f"Cannot list files in {self._path}: {e}"
+                    raise ArchiverReadError(msg) from e
+        return list(self._filename_list_cache)
 
     def _list_files(self) -> list[str]:
         """Read the archive's file list; called by ``get_filename_list()`` on a cache miss.
@@ -473,8 +479,13 @@ class Archiver(ABC):
         msg = f"{type(self).__name__} must implement _list_files()"
         raise NotImplementedError(msg)
 
-    def _invalidate_cache(self) -> None:
-        """Forget the cached file list after the archive has been modified."""
+    def invalidate_cache(self) -> None:
+        """Forget the cached file list, so the next listing re-reads the archive.
+
+        The archiver calls this itself after modifying the archive. Call it directly
+        if the archive file may have been changed some other way, such as by
+        another process or another archiver instance.
+        """
         self._filename_list_cache = None
 
     @abstractmethod
@@ -549,7 +560,7 @@ class Archiver(ABC):
             exc_tb: The exception traceback if an exception was raised, None otherwise.
 
         """
-        self._invalidate_cache()
+        self.invalidate_cache()
 
     @contextmanager
     def _atomic_replace(self) -> Generator[Path]:

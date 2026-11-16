@@ -190,7 +190,7 @@ class PdfArchiver(Archiver):
         try:
             doc.save(doc.name, incremental=True, encryption=pymupdf.PDF_ENCRYPT_KEEP)
         finally:
-            self._invalidate_cache()
+            self.invalidate_cache()
 
     def _read_page(self, archive_file: str, max_size: int) -> bytes:
         """Read and render a page as PNG.
@@ -446,7 +446,6 @@ class PdfArchiver(Archiver):
                 ]
                 return page_files + sorted(doc.embfile_names())
         except pymupdf.FileDataError as e:
-            self._handle_error("list", "", e)
             msg = f"Corrupt or invalid PDF file: {e}"
             raise ArchiverReadError(msg) from e
 

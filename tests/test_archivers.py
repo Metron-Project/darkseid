@@ -1651,10 +1651,75 @@ def test_custom_archiver_overriding_get_filename_list_still_works(sample_zip_pat
     assert LegacyArchiver(sample_zip_path).get_filename_list() == ["legacy.jpg"]
 
 
-def test_custom_archiver_without_listing_raises_not_implemented(sample_zip_path):
-    """Test an archiver that implements neither listing method fails loudly."""
-    with pytest.raises(NotImplementedError, match="_list_files"):
-        _MinimalArchiver(sample_zip_path).get_filename_list()
+def test_custom_archiver_without_listing_fails_at_construction(sample_zip_path):
+    """Test an archiver that implements neither listing method fails like an abstract class."""
+    with pytest.raises(TypeError, match="_list_files"):
+        _MinimalArchiver(sample_zip_path)
+
+
+def test_get_filename_list_returns_a_copy(sample_zip_path):
+    """Test changing the returned list doesn't corrupt the cached listing."""
+    archiver = ZipArchiver(sample_zip_path)
+    files = archiver.get_filename_list()
+    files.clear()
+
+    assert archiver.get_filename_list() == ["file1.txt", "file2.jpg", "dir/file3.txt"]
+    assert archiver.exists("file1.txt")
+
+
+def test_invalidate_cache_rereads_archive(sample_zip_path):
+    """Test invalidate_cache() picks up changes made outside the archiver."""
+    archiver = ZipArchiver(sample_zip_path)
+    archiver.get_filename_list()
+    with zipfile.ZipFile(sample_zip_path, "a") as zf:
+        zf.writestr("added.txt", "x")
+
+    assert "added.txt" not in archiver.get_filename_list()
+    archiver.invalidate_cache()
+    assert "added.txt" in archiver.get_filename_list()
+
+
+def test_zip_failed_write_still_invalidates_cache(sample_zip_path):
+    """Test a write that fails after removing the old member doesn't leave a stale listing."""
+    archiver = ZipArchiver(sample_zip_path)
+    assert "file1.txt" in archiver.get_filename_list()
+
+    with patch("zipremove.ZipFile.writestr", side_effect=OSError("disk full")):
+        assert not archiver.write_file("file1.txt", "replacement")
+
+    with zipfile.ZipFile(sample_zip_path) as zf:
+        assert archiver.get_filename_list() == zf.namelist()
+
+
+def test_zip_failed_remove_still_invalidates_cache(sample_zip_path):
+    """Test a removal that fails part way through doesn't leave a stale listing."""
+    archiver = ZipArchiver(sample_zip_path)
+    archiver.get_filename_list()
+
+    with patch("zipremove.ZipFile.repack", side_effect=OSError("disk full")):
+        assert not archiver.remove_files(["file1.txt"])
+
+    with zipfile.ZipFile(sample_zip_path) as zf:
+        assert archiver.get_filename_list() == zf.namelist()
+
+
+def test_zip_copy_from_archive_invalidates_cache(sample_zip_path, temp_dir):
+    """Test the target's cached listing reflects the copied files."""
+    target = ZipArchiver(temp_dir / "target.cbz")
+    assert target.get_filename_list() == []
+
+    assert target.copy_from_archive(ZipArchiver(sample_zip_path))
+    assert target.get_filename_list() == ["file1.txt", "file2.jpg", "dir/file3.txt"]
+
+
+def test_zip_copy_from_unlistable_source_leaves_target_untouched(sample_zip_path, temp_dir):
+    """Test a source that can't be listed fails cleanly without truncating the target."""
+    corrupt_source = temp_dir / "corrupt.cbz"
+    corrupt_source.write_text("not a zip file")
+    original = sample_zip_path.read_bytes()
+
+    assert not ZipArchiver(sample_zip_path).copy_from_archive(ZipArchiver(corrupt_source))
+    assert sample_zip_path.read_bytes() == original
 
 
 def test_list_files_library_errors_wrapped(sample_zip_path):

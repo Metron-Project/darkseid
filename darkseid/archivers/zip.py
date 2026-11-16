@@ -182,8 +182,10 @@ class ZipArchiver(Archiver):
             self._handle_error("write", archive_file, e)
             return False
         else:
-            self._invalidate_cache()
             return True
+        finally:
+            # ZIP files are edited in place, so even a failed write may have changed them.
+            self.invalidate_cache()
 
     def remove_files(self, filename_list: list[str]) -> bool:
         """Remove multiple files from the ZIP archive in a single operation.
@@ -205,9 +207,8 @@ class ZipArchiver(Archiver):
 
         Note:
             - Non-existent files are silently ignored
-            - All removals are performed in a single transaction
-            - If any error occurs, no files are removed
-            - The archive is repacked once after all removals
+            - The archive is edited in place and repacked once after all removals,
+              so a failure part way through can leave some files removed
 
         Examples:
             >>> archiver = ZipArchiver(Path("batch_cleanup.cbz"))
@@ -220,24 +221,28 @@ class ZipArchiver(Archiver):
         if not filename_list:
             return True
 
+        # Only attempt to remove files that actually exist
         try:
-            # Only attempt to remove files that actually exist
             existing_files = set(self.get_filename_list())
-            files_to_remove = [f for f in filename_list if f in existing_files]
-            if not files_to_remove:
-                return True
+        except ArchiverReadError as e:
+            self._handle_error("remove_multiple", str(filename_list), e)
+            return False
+        files_to_remove = [f for f in filename_list if f in existing_files]
+        if not files_to_remove:
+            return True
 
+        try:
             with ZipFile(self.path, "a") as zf:
                 zf_infos = [zf.remove(filename) for filename in files_to_remove]
                 zf.repack(zf_infos)
-        except ArchiverReadError:
-            return False  # Already logged by get_filename_list()
         except (BadZipfile, OSError) as e:
-            self._handle_error("remove_multiple", str(filename_list), e)
+            self._handle_error("remove_multiple", str(files_to_remove), e)
             return False
         else:
-            self._invalidate_cache()
             return True
+        finally:
+            # ZIP files are edited in place, so even a failed removal may have changed them.
+            self.invalidate_cache()
 
     def _list_files(self) -> list[str]:
         """List all entries in the ZIP archive, including any directory entries.
@@ -268,8 +273,9 @@ class ZipArchiver(Archiver):
         """Copy files from another archive to the ZIP archive.
 
         Creates a new ZIP archive containing all files from the source archive.
-        This completely replaces the current ZIP file's contents. The operation
-        is atomic - if any error occurs, the original archive is left unchanged.
+        This completely replaces the current ZIP file's contents. If the source
+        can't be listed, the ZIP file is left untouched; if copying fails after
+        that, the incomplete ZIP file is deleted.
 
         Files are copied with appropriate compression: image files are stored
         uncompressed while other files are compressed using deflate. Bad or
@@ -303,9 +309,15 @@ class ZipArchiver(Archiver):
 
         """
         try:
+            source_files = self._safe_source_files(other_archive)
+        except ArchiverReadError as e:
+            self._handle_error("copy", str(other_archive.path), e)
+            return False
+
+        try:
             with ZipFile(self.path, mode="w", allowZip64=True) as zout:
                 try:
-                    for filename in self._safe_source_files(other_archive):
+                    for filename in source_files:
                         data = other_archive.read_file(filename)
                         if data is not None:
                             # Apply same compression logic as write_file
@@ -325,6 +337,9 @@ class ZipArchiver(Archiver):
             return False
         else:
             return True
+        finally:
+            # The ZIP file was replaced or deleted, so its old listing no longer applies.
+            self.invalidate_cache()
 
     def _cleanup_partial_file(self) -> None:
         """Remove partially created archive file.
