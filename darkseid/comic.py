@@ -1148,6 +1148,9 @@ class Comic:
     ) -> None:
         """Apply page information from the archive to the metadata.
 
+        When ``calc_page_sizes`` is set, each page's ImageSize (its size in bytes) is
+        filled in, plus ImageWidth/ImageHeight when Pillow is installed.
+
         Args:
             metadata: The metadata object to update.
             calc_page_sizes: Whether to calculate page sizes. Default is False.
@@ -1161,9 +1164,9 @@ class Comic:
 
         if not PILLOW_AVAILABLE:
             logger.warning(
-                "Unable to calculate page sizes since Pillow is not available: %s", self._path.name
+                "Unable to calculate page dimensions since Pillow is not available: %s",
+                self._path.name,
             )
-            return
 
         self._calculate_all_page_info(metadata)
 
@@ -1185,8 +1188,14 @@ class Comic:
 
     @staticmethod
     def _should_calculate_page_info(page: ImageMetadata) -> bool:
-        """Determine if page information should be calculated."""
-        required_keys = {"ImageSize", "ImageHeight", "ImageWidth"}
+        """Determine if page information should be calculated.
+
+        Without Pillow only ImageSize can be filled in, so pages that already have it
+        are skipped rather than re-read on every write.
+        """
+        required_keys = (
+            {"ImageSize", "ImageHeight", "ImageWidth"} if PILLOW_AVAILABLE else {"ImageSize"}
+        )
         return any(key not in page for key in required_keys)
 
     def _calculate_page_info(self, page: ImageMetadata) -> None:
