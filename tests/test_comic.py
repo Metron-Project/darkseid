@@ -23,7 +23,7 @@ from darkseid.comic import (
     MetadataFormat,
 )
 from darkseid.metadata import XmlError
-from darkseid.metadata.data_classes import ImageMetadata, Metadata
+from darkseid.metadata.data_classes import ImageMetadata, Metadata, Series
 from darkseid.validate import SchemaVersion
 
 
@@ -644,6 +644,119 @@ def test_read_metadata_zero_byte_file_strict_raises(tmp_path, filename):
     assert comic.read_metadata(metadata_format).is_empty
     with pytest.raises(ComicMetadataError):
         comic.read_metadata(metadata_format, strict=True)
+
+
+def _metadata_with_series(name):
+    metadata = Metadata()
+    metadata.series = Series(name)
+    metadata.issue = "1"
+    return metadata
+
+
+def _write_cbz_with_both_formats(path):
+    _write_cbz(path, {})
+    Comic(path).write_metadata(_metadata_with_series("From ComicInfo"), MetadataFormat.COMIC_INFO)
+    Comic(path).write_metadata(_metadata_with_series("From MetronInfo"), MetadataFormat.METRON_INFO)
+    return path
+
+
+@pytest.mark.parametrize(
+    "read_order",
+    [
+        (MetadataFormat.COMIC_INFO, MetadataFormat.METRON_INFO),
+        (MetadataFormat.METRON_INFO, MetadataFormat.COMIC_INFO),
+    ],
+)
+def test_read_metadata_each_format_returns_its_own_data(tmp_path, read_order):
+    """Reading one format must not make a later read of the other format return its data."""
+    comic = Comic(_write_cbz_with_both_formats(tmp_path / "test.cbz"))
+    expected = {
+        MetadataFormat.COMIC_INFO: "From ComicInfo",
+        MetadataFormat.METRON_INFO: "From MetronInfo",
+    }
+
+    for metadata_format in read_order:
+        assert comic.read_metadata(metadata_format).series.name == expected[metadata_format]
+    # Cached reads also keep the formats apart.
+    for metadata_format in read_order:
+        assert comic.read_metadata(metadata_format).series.name == expected[metadata_format]
+
+
+def test_read_metadata_strict_not_masked_by_other_format_cache(tmp_path):
+    """A cached valid ComicInfo must not hide a malformed MetronInfo from a strict read."""
+    xml = "<ComicInfo><Series>Aquaman</Series></ComicInfo>"
+    comic = Comic(
+        _write_cbz(
+            tmp_path / "test.cbz",
+            {"ComicInfo.xml": xml, "MetronInfo.xml": "<MetronInfo><Series>"},
+        )
+    )
+
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO).series.name == "Aquaman"
+    with pytest.raises(ComicMetadataError):
+        comic.read_metadata(MetadataFormat.METRON_INFO, strict=True)
+
+
+@pytest.mark.parametrize("metadata_format", [MetadataFormat.COMIC_INFO, MetadataFormat.METRON_INFO])
+def test_read_metadata_after_write_returns_new_data(tmp_path, metadata_format):
+    """Writing metadata clears the cache so the next read sees the new data."""
+    comic = Comic(_write_cbz_with_both_formats(tmp_path / "test.cbz"))
+    comic.read_metadata(MetadataFormat.COMIC_INFO)
+    comic.read_metadata(MetadataFormat.METRON_INFO)
+
+    assert comic.write_metadata(_metadata_with_series("Updated"), metadata_format)
+    assert comic.read_metadata(metadata_format).series.name == "Updated"
+
+
+def _cached_comic_with_both_formats(path):
+    comic = Comic(_write_cbz_with_both_formats(path))
+    comic.read_metadata(MetadataFormat.COMIC_INFO)
+    comic.read_metadata(MetadataFormat.METRON_INFO)
+    assert set(comic._cache.metadata) == {MetadataFormat.COMIC_INFO, MetadataFormat.METRON_INFO}
+    return comic
+
+
+def test_write_metadata_exception_clears_cache(tmp_path):
+    """A write that raises may have changed the archive, so the cache is cleared."""
+    comic = _cached_comic_with_both_formats(tmp_path / "test.cbz")
+
+    with patch.object(comic._archiver, "write_file", side_effect=OSError("disk full")):
+        assert not comic.write_metadata(_metadata_with_series("X"), MetadataFormat.COMIC_INFO)
+
+    assert comic._cache.metadata == {}
+    assert comic._cache.has_ci is None
+
+
+def test_remove_metadata_exception_clears_cache(tmp_path):
+    """A metadata removal that raises may have changed the archive, so the cache is cleared."""
+    comic = _cached_comic_with_both_formats(tmp_path / "test.cbz")
+
+    with patch.object(comic._archiver, "remove_files", side_effect=OSError("disk full")):
+        assert not comic.remove_metadata([MetadataFormat.METRON_INFO])
+
+    assert comic._cache.metadata == {}
+    assert comic._cache.has_mi is None
+
+
+def test_remove_pages_exception_clears_cache(tmp_path):
+    """A page removal that raises may have changed the archive, so the cache is cleared."""
+    comic = _cached_comic_with_both_formats(tmp_path / "test.cbz")
+
+    with patch.object(comic._archiver, "remove_files", side_effect=OSError("disk full")):
+        assert not comic.remove_pages([0])
+
+    assert comic._cache.metadata == {}
+    assert comic._cache.page_list is None
+
+
+def test_remove_metadata_then_has_metadata_is_false(tmp_path):
+    """After removing a format, has_metadata() reflects the archive, not stale flags."""
+    comic = _cached_comic_with_both_formats(tmp_path / "test.cbz")
+
+    assert comic.remove_metadata([MetadataFormat.METRON_INFO])
+    assert not comic.has_metadata(MetadataFormat.METRON_INFO)
+    assert comic.has_metadata(MetadataFormat.COMIC_INFO)
+    assert comic.read_metadata(MetadataFormat.METRON_INFO).is_empty
 
 
 def test_read_metadata_invalid_utf8_strict_raises(tmp_path):
@@ -1326,7 +1439,7 @@ def test_reset_cache(sample_cbz_file):
         assert comic._cache.page_list is None
         assert comic._cache.has_ci is None
         assert comic._cache.has_mi is None
-        assert comic._cache.metadata is None
+        assert comic._cache.metadata == {}
 
 
 # Test page validation
@@ -1378,13 +1491,13 @@ def test_validate_and_fix_page_list_mismatch(sample_cbz_file):
         comic = Comic(sample_cbz_file)
 
         # Create metadata with wrong page count
-        comic._cache.metadata = Metadata()
-        comic._cache.metadata.pages = [ImageMetadata()]  # Only 1 page in metadata
+        metadata = Metadata()
+        metadata.pages = [ImageMetadata()]  # Only 1 page in metadata
 
-        comic._validate_and_fix_page_list()
+        comic._validate_and_fix_page_list(metadata)
 
         # Pages should be reset and default list created
-        assert len(comic._cache.metadata.pages) == 2  # Should match actual page count
+        assert len(metadata.pages) == 2  # Should match actual page count
 
 
 def test_validate_and_fix_page_list_empty_pages(sample_cbz_file):
@@ -1397,24 +1510,12 @@ def test_validate_and_fix_page_list_empty_pages(sample_cbz_file):
         comic = Comic(sample_cbz_file)
 
         # Create metadata with empty pages
-        comic._cache.metadata = Metadata()
-        comic._cache.metadata.pages = []
+        metadata = Metadata()
+        metadata.pages = []
 
-        with patch.object(comic._cache.metadata, "set_default_page_list") as mock_set_default:
-            comic._validate_and_fix_page_list()
+        with patch.object(metadata, "set_default_page_list") as mock_set_default:
+            comic._validate_and_fix_page_list(metadata)
             mock_set_default.assert_called_once_with(2)
-
-
-def test_validate_and_fix_page_list_none_metadata(sample_cbz_file):
-    """Test page list validation when metadata is None."""
-    with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
-        mock_factory.return_value = Mock()
-        comic = Comic(sample_cbz_file)
-
-        comic._metadata = None
-
-        # Should not raise exception
-        comic._validate_and_fix_page_list()
 
 
 # Test error handling in exception classes
