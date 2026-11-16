@@ -844,7 +844,7 @@ class Metadata:
 
         """
 
-        def assign(cur: str, new: any) -> None:
+        def assign(cur: str, new: object) -> None:
             if new is not None:
                 if isinstance(new, str) and len(new) == 0:
                     setattr(self, cur, None)
@@ -864,10 +864,10 @@ class Metadata:
         assign("cover_date", new_md.cover_date)
         assign("store_date", new_md.store_date)
         if len(new_md.prices) > 0:
-            assign("price", new_md.prices)
+            assign("prices", new_md.prices)
         assign("gtin", new_md.gtin)
         if len(new_md.genres) > 0:
-            assign("genre", new_md.genres)
+            assign("genres", new_md.genres)
         assign("community_rating", new_md.community_rating)
         assign("rating_count", new_md.rating_count)
         assign("main_character_or_team", new_md.main_character_or_team)
@@ -910,10 +910,9 @@ class Metadata:
     def overlay_credits(self: Metadata, new_credits: list[Credit]) -> None:
         """Overlays the credits from a new metadata object on the current metadata object.
 
-        The method iterates over the new credits and removes any credit role if the person is
-        blank. If the person is not blank, the "primary" attribute of the credit is set based
-        on the presence of the "primary" key in the credit dictionary. The credit is then
-        added to the current metadata object using the "add_credit" method.
+        Credits whose person is blank are skipped. Every other credit is merged into the
+        current metadata object using the "add_credit" method. The ``new_credits`` list is
+        not modified.
 
         Args:
             self (Metadata): The current metadata object.
@@ -932,10 +931,7 @@ class Metadata:
 
         """
         for credit in new_credits:
-            # Remove credit role if person is blank
-            if credit.person == "":
-                new_credits.remove(credit)
-            else:
+            if credit.person:
                 self.add_credit(credit)
 
     def set_default_page_list(self: Metadata, count: int) -> None:
