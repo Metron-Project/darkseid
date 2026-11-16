@@ -21,6 +21,7 @@ from __future__ import annotations
 
 __all__ = ["Comic", "ComicArchiveError", "ComicError", "ComicMetadataError", "MetadataFormat"]
 
+import copy
 import io
 import logging
 import os
@@ -901,13 +902,17 @@ class Comic:
                 are not converted to False.
 
         Note:
-            ComicInfo writes include page size calculations (slower for large archives).
-            MetronInfo writes skip page calculations (faster).
+            - ``metadata`` itself is never modified, whether the write succeeds or fails.
+              The archive's page count and (for ComicInfo) page sizes are added to a copy
+              before it's written; read the metadata back to get them.
+            - ComicInfo writes include page size calculations (slower for large archives).
+              MetronInfo writes skip page calculations (faster).
 
         Examples:
             >>> comic = Comic("example.cbz")
             >>> metadata = Metadata(series=Series(name="Amazing Spider-Man"), issue="1")
             >>> comic.write_metadata(metadata, MetadataFormat.COMIC_INFO)
+            >>> written = comic.read_metadata(MetadataFormat.COMIC_INFO)  # with page info
 
         """
         if not self.is_writable():
@@ -922,7 +927,9 @@ class Comic:
         if metadata is None:
             return False
 
-        return self._write_metadata_format(metadata, metadata_format, spec)
+        # Work on a copy so archive details (page count, page sizes) and serializer
+        # changes never leak into the caller's object, even when the write fails.
+        return self._write_metadata_format(copy.deepcopy(metadata), metadata_format, spec)
 
     def _write_metadata_format(
         self, metadata: Metadata, metadata_format: MetadataFormat, spec: _FormatSpec
