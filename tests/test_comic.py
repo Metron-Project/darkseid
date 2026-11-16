@@ -2,6 +2,7 @@
 """Tests for the Comic class using function-based pytest approach."""
 
 import io
+import tarfile
 import tempfile
 import zipfile
 from pathlib import Path
@@ -1925,3 +1926,177 @@ def test_write_comicinfo_without_pillow_fills_image_size(tmp_path):
                 comic.read_metadata(MetadataFormat.COMIC_INFO), MetadataFormat.COMIC_INFO
             )
         get_page.assert_not_called()
+
+
+def _write_archive(path, members):
+    """Write members ({name: str}) to a CBZ, CBT or CB7 archive chosen by suffix."""
+    if path.suffix == ".cbz":
+        with zipfile.ZipFile(path, "w") as zf:
+            for name, content in members.items():
+                zf.writestr(name, content)
+    elif path.suffix == ".cbt":
+        with tarfile.open(path, "w") as tf:
+            for name, content in members.items():
+                data = content.encode()
+                info = tarfile.TarInfo(name)
+                info.size = len(data)
+                tf.addfile(info, io.BytesIO(data))
+    else:
+        with py7zr.SevenZipFile(path, "w") as sz:
+            for name, content in members.items():
+                sz.writestr(content, name)
+    return path
+
+
+STALE_COMICINFO = "<ComicInfo><Series>Old</Series><Custom>keep me</Custom></ComicInfo>"
+
+
+@pytest.mark.parametrize("suffix", [".cbz", ".cbt", ".cb7"])
+def test_write_metadata_replaces_case_variant_copy(tmp_path, suffix):
+    """Test writing ComicInfo.xml removes a stale comicinfo.xml, keeping its extra elements."""
+    archive = _write_archive(
+        tmp_path / f"test{suffix}", {"01.jpg": "x", "comicinfo.xml": STALE_COMICINFO}
+    )
+    comic = Comic(archive)
+
+    assert comic.write_metadata(_metadata_with_series("New"), MetadataFormat.COMIC_INFO)
+
+    names = comic._archiver.get_filename_list()
+    assert "ComicInfo.xml" in names
+    assert "comicinfo.xml" not in names
+    raw = comic.read_raw_ci_metadata()
+    assert "<Series>New</Series>" in raw
+    assert "<Custom>keep me</Custom>" in raw  # preserved from the old file
+
+
+def test_write_metron_info_replaces_case_variant_copy(tmp_path):
+    """Test the cleanup applies to MetronInfo.xml too."""
+    archive = _write_archive(
+        tmp_path / "test.cbz",
+        {
+            "01.jpg": "x",
+            "METRONINFO.XML": "<MetronInfo><Series><Name>Old</Name></Series></MetronInfo>",
+        },
+    )
+    comic = Comic(archive)
+
+    assert comic.write_metadata(_metadata_with_series("New"), MetadataFormat.METRON_INFO)
+
+    names = comic._archiver.get_filename_list()
+    assert "MetronInfo.xml" in names
+    assert "METRONINFO.XML" not in names
+
+
+def test_write_metadata_leaves_nested_copies_alone(tmp_path):
+    """Test only root-level copies are removed, matching how metadata is found."""
+    archive = _write_archive(
+        tmp_path / "test.cbz", {"01.jpg": "x", "sub/comicinfo.xml": STALE_COMICINFO}
+    )
+    comic = Comic(archive)
+
+    assert comic.write_metadata(_metadata_with_series("New"), MetadataFormat.COMIC_INFO)
+
+    assert "sub/comicinfo.xml" in comic._archiver.get_filename_list()
+
+
+def test_write_metadata_succeeds_when_stale_copy_cannot_be_removed(tmp_path, caplog):
+    """Test a failed cleanup is a warning; the new metadata is written and read first."""
+    archive = _write_archive(
+        tmp_path / "test.cbz", {"01.jpg": "x", "comicinfo.xml": STALE_COMICINFO}
+    )
+    comic = Comic(archive)
+
+    with patch.object(comic._archiver, "remove_files", return_value=False):
+        assert comic.write_metadata(_metadata_with_series("New"), MetadataFormat.COMIC_INFO)
+
+    assert "Could not remove replaced" in caplog.text
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True).series.name == "New"
+
+
+def test_write_metadata_keeps_variant_when_canonical_file_exists(tmp_path):
+    """Test a case variant that wasn't read is kept, so its unique content isn't lost."""
+    archive = _write_archive(
+        tmp_path / "test.cbz",
+        {
+            "01.jpg": "x",
+            "ComicInfo.xml": "<ComicInfo><Series>Current</Series></ComicInfo>",
+            "comicinfo.xml": STALE_COMICINFO,
+        },
+    )
+    comic = Comic(archive)
+
+    assert comic.write_metadata(_metadata_with_series("New"), MetadataFormat.COMIC_INFO)
+
+    assert {"ComicInfo.xml", "comicinfo.xml"} <= set(comic._archiver.get_filename_list())
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True).series.name == "New"
+
+
+def test_write_metadata_removes_only_the_variant_it_read(tmp_path):
+    """Test with several variants, only the one merged into the write is removed."""
+    archive = _write_archive(
+        tmp_path / "test.cbz",
+        {
+            "01.jpg": "x",
+            "COMICINFO.XML": "<ComicInfo><Upper>a</Upper></ComicInfo>",
+            "comicinfo.xml": "<ComicInfo><Lower>b</Lower></ComicInfo>",
+        },
+    )
+    comic = Comic(archive)
+
+    assert comic.write_metadata(_metadata_with_series("New"), MetadataFormat.COMIC_INFO)
+
+    variants = {"COMICINFO.XML": "<Upper>a</Upper>", "comicinfo.xml": "<Lower>b</Lower>"}
+    names = set(comic._archiver.get_filename_list())
+    kept = [v for v in variants if v in names]
+    removed = [v for v in variants if v not in names]
+    assert "ComicInfo.xml" in names
+    assert len(kept) == 1
+    assert len(removed) == 1
+    raw = comic.read_raw_ci_metadata()
+    assert variants[removed[0]] in raw  # the removed variant's content was merged
+    assert variants[kept[0]] not in raw  # the kept one was never read
+
+
+def test_write_metadata_keeps_variant_that_could_not_be_read(tmp_path):
+    """Test an unreadable variant isn't deleted, since its contents weren't carried over."""
+    cbz = tmp_path / "enc.cbz"
+    _write_zip_with_encrypted_first_member(cbz, "comicinfo.xml", STALE_COMICINFO, ["01.jpg"])
+    comic = Comic(cbz)
+
+    assert comic.write_metadata(_metadata_with_series("New"), MetadataFormat.COMIC_INFO)
+
+    assert {"ComicInfo.xml", "comicinfo.xml"} <= set(comic._archiver.get_filename_list())
+
+
+def test_write_metadata_succeeds_when_removing_replaced_copy_raises(tmp_path, caplog):
+    """Test a cleanup that raises is logged with its error and doesn't fail the write."""
+    archive = _write_archive(
+        tmp_path / "test.cbz", {"01.jpg": "x", "comicinfo.xml": STALE_COMICINFO}
+    )
+    comic = Comic(archive)
+
+    with patch.object(comic._archiver, "remove_files", side_effect=OSError("permission denied")):
+        assert comic.write_metadata(_metadata_with_series("New"), MetadataFormat.COMIC_INFO)
+
+    assert "Could not remove replaced comicinfo.xml" in caplog.text
+    assert "permission denied" in caplog.text  # the error itself is logged
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True).series.name == "New"
+
+
+def test_write_metadata_replaces_case_variant_in_pdf(tmp_path):
+    """Test PDFs, whose embedded file names are case-sensitive, get the same cleanup."""
+    pymupdf = pytest.importorskip("pymupdf")
+    pdf = tmp_path / "test.pdf"
+    doc = pymupdf.open()
+    doc.new_page()
+    doc.embfile_add("comicinfo.xml", STALE_COMICINFO.encode())
+    doc.save(pdf)
+    doc.close()
+    comic = Comic(pdf)
+
+    assert comic.write_metadata(_metadata_with_series("New"), MetadataFormat.COMIC_INFO)
+
+    names = comic._archiver.get_filename_list()
+    assert "ComicInfo.xml" in names
+    assert "comicinfo.xml" not in names
+    assert "<Custom>keep me</Custom>" in comic.read_raw_ci_metadata()

@@ -930,7 +930,14 @@ class Comic:
         """Write metadata in a specific format to the archive.
 
         Existing XML for the format is read first so the serializer can preserve
-        elements it doesn't manage.
+        elements it doesn't manage, and the result is written to the canonical filename
+        (e.g. "ComicInfo.xml"). If the existing XML came from a copy differing only in
+        case (e.g. "comicinfo.xml"), that copy is removed afterwards, since its contents
+        now live in the canonical file. Other copies were never read, so they're left
+        alone rather than deleted along with anything only they contain.
+
+        The write and the removal are separate archive operations: if the process stops
+        between them, both files remain, and reads keep preferring the canonical one.
 
         Args:
             metadata: The metadata to write.
@@ -938,22 +945,61 @@ class Comic:
             spec: The format's filename, handler and page-size setting.
 
         Returns:
-            bool: True if successful, False otherwise.
+            bool: True if the metadata was written, False otherwise. Failing to remove
+                the replaced copy is logged but doesn't make the write fail.
 
         """
         raw_metadata = self._read_raw_metadata(metadata_format)
+        merged_from = None if raw_metadata is None else self._metadata_source(spec.filename)
         try:
             self._apply_archive_info_to_metadata(metadata, calc_page_sizes=spec.calc_page_sizes)
 
             raw_bytes = raw_metadata.encode("utf-8") if raw_metadata else None
             md_string = spec.handler().string_from_metadata(metadata, raw_bytes)
-            return self._archiver.write_file(spec.filename, md_string)
+            written = self._archiver.write_file(spec.filename, md_string)
         except (ArchiverError, OSError, ValueError, XmlError):
             logger.exception("Error writing metadata to %s", self._path)
             return False
+        else:
+            if written and merged_from is not None and merged_from != spec.filename:
+                self._remove_replaced_metadata_file(merged_from)
+            return written
         finally:
             # A failed or partial write may still have changed the archive.
             self._reset_cache()
+
+    def _metadata_source(self, filename: str) -> str | None:
+        """Return the archive member existing metadata is read from, or None if there is none.
+
+        This is the same best match that _read_metadata_file() reads.
+
+        Args:
+            filename: The canonical metadata filename (e.g., "ComicInfo.xml").
+
+        """
+        try:
+            members = self._find_metadata_members(filename)
+        except ArchiverReadError:
+            return None
+        return members[0] if members else None
+
+    def _remove_replaced_metadata_file(self, member: str) -> None:
+        """Remove a case-variant metadata file whose contents were merged into a write.
+
+        Called after the canonical file has been written, so the new metadata is already
+        in place; a failure here leaves the old copy behind, which is logged.
+
+        Args:
+            member: The archive member the existing metadata was read from.
+
+        """
+        try:
+            if not self._archiver.remove_files([member]):
+                logger.warning("Could not remove replaced %s from %s", member, self._path)
+        except (ArchiverError, OSError):
+            logger.warning(
+                "Could not remove replaced %s from %s", member, self._path, exc_info=True
+            )
 
     def remove_metadata(self, metadata_format_list: list[MetadataFormat]) -> bool:
         """Remove metadata from the comic archive.
