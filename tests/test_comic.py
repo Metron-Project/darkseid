@@ -1680,7 +1680,7 @@ def test_read_metadata_rejects_oversized_metadata(temp_dir, monkeypatch):
 VALID_COMICINFO = "<ComicInfo><Series>Aquaman</Series><Number>1</Number></ComicInfo>"
 
 
-@pytest.mark.parametrize("member", ["comicinfo.xml", "COMICINFO.XML", "sub/ComicInfo.xml"])
+@pytest.mark.parametrize("member", ["comicinfo.xml", "COMICINFO.XML"])
 def test_non_canonical_metadata_name_is_read_and_validated(tmp_path, member):
     """Metadata found under a non-canonical name must also be readable and validatable."""
     comic = Comic(_write_cbz(tmp_path / "test.cbz", {member: VALID_COMICINFO}))
@@ -1692,8 +1692,39 @@ def test_non_canonical_metadata_name_is_read_and_validated(tmp_path, member):
     assert comic.validate_metadata(MetadataFormat.COMIC_INFO) != SchemaVersion.UNKNOWN
 
 
+@pytest.mark.parametrize(
+    "members",
+    [
+        ["sub/ComicInfo.xml"],
+        ["Issue1/ComicInfo.xml", "Issue2/ComicInfo.xml"],
+        ["sub\\ComicInfo.xml"],
+        ["extras/ComicInfo.xml/"],
+    ],
+)
+def test_metadata_outside_archive_root_is_ignored(tmp_path, members):
+    """Only root-level metadata counts, so per-folder metadata in a bundle isn't misread."""
+    cbz = _write_cbz(tmp_path / "test.cbz", dict.fromkeys(members, VALID_COMICINFO))
+    comic = Comic(cbz)
+
+    assert not comic.has_metadata(MetadataFormat.COMIC_INFO)
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True).is_empty
+    assert comic.remove_metadata([MetadataFormat.COMIC_INFO])
+    with zipfile.ZipFile(cbz) as zf:
+        assert set(members) <= set(zf.namelist())
+
+
+def test_strict_read_raises_when_detected_metadata_disappears(tmp_path):
+    """A stale has_metadata() result must not turn a strict read into empty metadata."""
+    comic = Comic(_write_cbz(tmp_path / "test.cbz", {"ComicInfo.xml": VALID_COMICINFO}))
+
+    with patch.object(comic, "has_metadata", return_value=True):
+        comic._archiver._filename_list_cache = ["01.jpg"]
+        with pytest.raises(ComicMetadataError):
+            comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True)
+
+
 def test_canonical_metadata_name_preferred_over_others(tmp_path):
-    """The exact root-level name wins when several members match."""
+    """The exact-case root-level name wins over other matches and nested files."""
     comic = Comic(
         _write_cbz(
             tmp_path / "test.cbz",
@@ -1709,17 +1740,21 @@ def test_canonical_metadata_name_preferred_over_others(tmp_path):
 
 
 def test_remove_metadata_removes_every_matching_member(tmp_path):
-    """Removal deletes all members matching the metadata name, not just one."""
+    """Removal deletes all root-level matches, not just one, and leaves nested files alone."""
     cbz = _write_cbz(
         tmp_path / "test.cbz",
-        {"ComicInfo.xml": VALID_COMICINFO, "sub/comicinfo.xml": VALID_COMICINFO},
+        {
+            "ComicInfo.xml": VALID_COMICINFO,
+            "comicinfo.xml": VALID_COMICINFO,
+            "sub/ComicInfo.xml": VALID_COMICINFO,
+        },
     )
     comic = Comic(cbz)
 
     assert comic.remove_metadata([MetadataFormat.COMIC_INFO])
     assert not comic.has_metadata(MetadataFormat.COMIC_INFO)
     with zipfile.ZipFile(cbz) as zf:
-        assert zf.namelist() == ["01.jpg"]
+        assert zf.namelist() == ["01.jpg", "sub/ComicInfo.xml"]
 
 
 def test_validate_metadata_unreadable_returns_unknown(sample_cbz_file):

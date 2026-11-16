@@ -856,7 +856,11 @@ class Comic:
 
         try:
             raw_bytes = self._read_metadata_file(filename)
-            return None if raw_bytes is None else raw_bytes.decode("utf-8")
+            if raw_bytes is None:
+                # has_metadata() said the file exists, so not finding it now is an error.
+                msg = f"{filename} not found in {self._path}"
+                raise ComicMetadataError(msg)
+            return raw_bytes.decode("utf-8")
         except ArchiverReadError as e:
             msg = f"Unable to read {filename} from {self._path}: {e}"
             raise ComicMetadataError(msg) from e
@@ -877,11 +881,12 @@ class Comic:
         return self._metadata_registry.get_filename(metadata_format)
 
     def _find_metadata_members(self, filename: str) -> list[str]:
-        """Find every archive member matching a metadata filename, best match first.
+        """Find every root-level archive member matching a metadata filename, best match first.
 
-        Matching ignores case and directories, so ``comicinfo.xml`` and
-        ``sub/ComicInfo.xml`` both match ``ComicInfo.xml``. An exact root-level match
-        sorts first, then shallower paths before deeper ones.
+        Matching ignores case, so ``comicinfo.xml`` matches ``ComicInfo.xml``. Only members
+        at the archive root count: ``sub/ComicInfo.xml`` does not, so a bundle of issues
+        with per-folder metadata is not mistaken for one comic. An exact-case match sorts
+        first.
 
         Args:
             filename: The standard metadata filename (e.g., "ComicInfo.xml").
@@ -892,14 +897,9 @@ class Comic:
         """
         target = filename.lower()
         matches = [
-            str(path)
-            for path in self._archiver.get_filename_list()
-            if Path(str(path)).name.lower() == target
+            str(path) for path in self._archiver.get_filename_list() if str(path).lower() == target
         ]
-        return sorted(
-            matches,
-            key=lambda member: (member != filename, member.replace("\\", "/").count("/"), member),
-        )
+        return sorted(matches, key=lambda member: (member != filename, member))
 
     def _read_metadata_file(self, filename: str) -> bytes | None:
         """Read the best-matching archive member for a metadata filename.
