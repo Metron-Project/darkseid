@@ -420,15 +420,17 @@ class MetronInfo(BaseMetadataHandler):
     def _set_date_element(root: ET.Element, tag: str, date_val: date | None = None) -> None:
         """Set date element in YYYY-MM-DD format.
 
+        A date before EARLIEST_YEAR isn't written. Like a None date, it removes any
+        existing element, so the XML never keeps a date the metadata no longer has.
+
         Args:
             root: Root element.
             tag: Element tag name.
             date_val: Date value.
 
         """
-        # Skip dates with invalid years. Note: an existing element is currently left in place.
         if date_val is not None and date_val.year < EARLIEST_YEAR:
-            return
+            date_val = None
         MetronInfo._set_element_text(
             root, tag, None if date_val is None else date_val.strftime("%Y-%m-%d")
         )
