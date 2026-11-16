@@ -145,18 +145,11 @@ class UnknownArchiver(Archiver):
         """
         return False
 
-    def get_filename_list(self) -> list[str]:
-        """Return a list of filenames in the archive.
-
-        For unknown archive types, this always returns an empty list since the
-        archive format cannot be parsed.
-
-        Returns:
-            list[str]: Always an empty list, as filenames cannot be determined for unknown archive types.
+    def _list_files(self) -> list[str]:
+        """Return no files, since an unknown archive format can't be parsed.
 
         Examples:
-            >>> archiver = UnknownArchiver(Path("file.unknown"))
-            >>> archiver.get_filename_list()
+            >>> UnknownArchiver(Path("file.unknown")).get_filename_list()
             []
 
         """

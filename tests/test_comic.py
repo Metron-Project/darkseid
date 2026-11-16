@@ -13,6 +13,7 @@ from py7zr import py7zr
 
 from darkseid.archivers import ArchiverReadError
 from darkseid.comic import (
+    _FORMAT_SPECS,
     COMIC_RACK_FILENAME,
     METRON_INFO_FILENAME,
     SUPPORTED_IMAGE_EXTENSIONS,
@@ -741,7 +742,7 @@ def test_write_metadata_exception_clears_cache(tmp_path):
         assert not comic.write_metadata(_metadata_with_series("X"), MetadataFormat.COMIC_INFO)
 
     assert comic._cache.metadata == {}
-    assert comic._cache.has_ci is None
+    assert comic._cache.metadata_present == {}
 
 
 def test_remove_metadata_exception_clears_cache(tmp_path):
@@ -752,7 +753,7 @@ def test_remove_metadata_exception_clears_cache(tmp_path):
         assert not comic.remove_metadata([MetadataFormat.METRON_INFO])
 
     assert comic._cache.metadata == {}
-    assert comic._cache.has_mi is None
+    assert comic._cache.metadata_present == {}
 
 
 def test_remove_pages_exception_clears_cache(tmp_path):
@@ -1483,8 +1484,7 @@ def test_reset_cache(sample_cbz_file):
         # Verify cache is cleared
         assert comic._cache.page_count is None
         assert comic._cache.page_list is None
-        assert comic._cache.has_ci is None
-        assert comic._cache.has_mi is None
+        assert comic._cache.metadata_present == {}
         assert comic._cache.metadata == {}
 
 
@@ -1762,3 +1762,45 @@ def test_validate_metadata_unreadable_returns_unknown(sample_cbz_file):
     comic = Comic(sample_cbz_file)
     with patch.object(comic._archiver, "read_file", side_effect=ArchiverReadError("boom")):
         assert comic.validate_metadata(MetadataFormat.COMIC_INFO) == SchemaVersion.UNKNOWN
+
+
+def test_every_metadata_format_has_a_spec():
+    """Each real MetadataFormat must be readable, writable and checkable by Comic."""
+    assert set(_FORMAT_SPECS) == set(MetadataFormat) - {MetadataFormat.UNKNOWN}
+    assert _FORMAT_SPECS[MetadataFormat.COMIC_INFO].filename == COMIC_RACK_FILENAME
+    assert _FORMAT_SPECS[MetadataFormat.METRON_INFO].filename == METRON_INFO_FILENAME
+
+
+def test_comic_corrupt_archive_listing_error_is_handled(tmp_path):
+    """Test Comic still treats an unlistable archive as having no pages or metadata."""
+    corrupt = tmp_path / "corrupt.cbz"
+    corrupt.write_text("not a zip file")
+    comic = Comic(corrupt)
+
+    assert comic.get_page_name_list() == []
+    assert not comic.has_metadata(MetadataFormat.COMIC_INFO)
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO).is_empty
+    assert comic.validate_metadata(MetadataFormat.COMIC_INFO) == SchemaVersion.UNKNOWN
+
+
+def test_comic_reset_cache_clears_archiver_listing(tmp_path):
+    """Test Comic's cache reset also makes the archiver re-read the archive."""
+    cbz = _write_cbz(tmp_path / "test.cbz", {})
+    comic = Comic(cbz)
+    assert not comic.has_metadata(MetadataFormat.COMIC_INFO)
+
+    with zipfile.ZipFile(cbz, "a") as zf:
+        zf.writestr("ComicInfo.xml", VALID_COMICINFO)
+    comic._reset_cache()
+
+    assert comic.has_metadata(MetadataFormat.COMIC_INFO)
+
+
+def test_comic_corrupt_archive_listing_logged_once(tmp_path, caplog):
+    """Test an unlistable archive produces one error log, not one per layer."""
+    corrupt = tmp_path / "corrupt.cbz"
+    corrupt.write_text("not a zip file")
+
+    Comic(corrupt).get_page_name_list()
+
+    assert len([r for r in caplog.records if r.levelname == "ERROR"]) == 1

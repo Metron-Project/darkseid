@@ -53,6 +53,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from typing import Self
 
 logger = logging.getLogger(__name__)
 
@@ -109,20 +110,16 @@ class ArchiverFileTooLargeError(ArchiverReadError):
 
 
 class ArchiverWriteError(ArchiverError):
-    """Raised when writing to archive fails.
+    """Error type for archive write failures.
 
-    This exception is raised when:
-
-    - The archive is read-only
-    - Disk space is insufficient
-    - Permission issues prevent writing
-    - The archive format doesn't support the operation
+    The built-in archivers don't raise this: their write_file(), remove_files()
+    and copy_from_archive() methods log failures and return False. It remains
+    available for custom archivers and for callers that want to raise it
+    themselves after a False result.
 
     Examples:
-        >>> try:
-        ...     archive.write_file("new.txt", "content")
-        ... except ArchiverWriteError as e:
-        ...     print(f"Failed to write file: {e}")
+        >>> if not archive.write_file("new.txt", "content"):
+        ...     raise ArchiverWriteError("Failed to write new.txt")
 
     """
 
@@ -222,7 +219,17 @@ class Archiver(ABC):
             >>> archiver = MyArchiver(Path("new_archive.cbz"))
 
         """
+        cls = type(self)
+        if (
+            cls._list_files is Archiver._list_files
+            and cls.get_filename_list is Archiver.get_filename_list
+        ):
+            # Fail where a missing abstract method would, not later when listing.
+            msg = f"Can't instantiate {cls.__name__} without implementing _list_files()"
+            raise TypeError(msg)
+
         self._path = path
+        self._filename_list_cache: list[str] | None = None
         self._validate_path()
 
     def _validate_path(self) -> None:
@@ -352,14 +359,9 @@ class Archiver(ABC):
                 will be encoded as UTF-8) or bytes for binary data.
 
         Returns:
-            True if the write operation was successful, False otherwise.
-                Note that returning False doesn't necessarily mean an error
-                occurred - check the logs for detailed error information.
-
-        Raises:
-            ArchiverWriteError: If the write operation fails due to serious
-                errors such as disk full, permission denied, or archive
-                format limitations.
+            True if the write operation was successful, False otherwise. Failures
+                (I/O errors, a corrupt archive, or a format that can't be written)
+                are logged and reported as False rather than raised.
 
         Examples:
             >>> # Writing text content
@@ -413,18 +415,25 @@ class Archiver(ABC):
 
         """
 
-    @abstractmethod
     def get_filename_list(self) -> list[str]:
         """Get a list of all files in the archive.
 
         Returns a complete list of all files contained in the archive.
         The returned paths use forward slashes as separators and are
-        relative to the archive root.
+        relative to the archive root. A successful result is cached until the
+        archive is modified through this archiver, the ``with`` block exits, or
+        invalidate_cache() is called; a failed listing is not cached.
 
         Returns:
-            List of file paths within the archive. The list is sorted
+            A new list of file paths within the archive, so changing it doesn't
+                affect the cache. The list is sorted
                 alphabetically by most implementations. Returns an empty list
                 if the archive is empty or doesn't exist.
+
+        Raises:
+            ArchiverReadError: If the archive exists but can't be listed (e.g. it
+                is corrupt), so a broken archive is never mistaken for an empty one.
+                The error isn't logged here; the caller decides whether to.
 
         Examples:
             >>> files = archive.get_filename_list()
@@ -439,12 +448,45 @@ class Archiver(ABC):
             >>> text_files = [f for f in files if f.endswith('.txt')]
             >>> image_files = [f for f in files if archive.IMAGE_EXT_RE.search(f)]
 
-        Performance Note:
-            This method may be expensive for large archives as it typically
-            requires reading the archive's central directory. Consider caching
-            the result if you need to call this method multiple times.
+        Note:
+            Subclasses implement ``_list_files()`` rather than overriding this method.
 
         """
+        if self._filename_list_cache is None:
+            if not self._path.exists():
+                self._filename_list_cache = []
+            else:
+                try:
+                    self._filename_list_cache = list(self._list_files())
+                except (ArchiverReadError, NotImplementedError):
+                    raise
+                except Exception as e:
+                    msg = f"Cannot list files in {self._path}: {e}"
+                    raise ArchiverReadError(msg) from e
+        return list(self._filename_list_cache)
+
+    def _list_files(self) -> list[str]:
+        """Read the archive's file list; called by ``get_filename_list()`` on a cache miss.
+
+        Only called when the archive file exists. Implementations should raise on
+        failure, either ``ArchiverReadError`` with a format-specific message or the
+        underlying library error, which is wrapped in ``ArchiverReadError``.
+
+        Returns:
+            The file paths within the archive.
+
+        """
+        msg = f"{type(self).__name__} must implement _list_files()"
+        raise NotImplementedError(msg)
+
+    def invalidate_cache(self) -> None:
+        """Forget the cached file list, so the next listing re-reads the archive.
+
+        The archiver calls this itself after modifying the archive. Call it directly
+        if the archive file may have been changed some other way, such as by
+        another process or another archiver instance.
+        """
+        self._filename_list_cache = None
 
     @abstractmethod
     def test(self) -> bool:
@@ -490,7 +532,7 @@ class Archiver(ABC):
 
         """
 
-    def __enter__(self):  # noqa: ANN204
+    def __enter__(self) -> Self:
         """Context manager entry.
 
         Enables the archiver to be used in a 'with' statement for automatic
@@ -505,23 +547,20 @@ class Archiver(ABC):
         """
         return self
 
-    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:  # noqa: B027
+    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
         """Context manager exit.
 
-        Performs cleanup when exiting a 'with' statement. This method should
-        be overridden by concrete implementations to release any resources
-        such as file handles, network connections, or temporary files.
+        Clears the cached file list, so the archiver re-reads the archive if it is
+        used again after the ``with`` block. Archives are opened per operation, so
+        there are no other resources to release.
 
         Args:
             exc_type: The exception type if an exception was raised, None otherwise.
             exc_val: The exception value if an exception was raised, None otherwise.
             exc_tb: The exception traceback if an exception was raised, None otherwise.
 
-        Note:
-            This base implementation does nothing. Concrete implementations
-            should override this method to perform proper cleanup.
-
         """
+        self.invalidate_cache()
 
     @contextmanager
     def _atomic_replace(self) -> Generator[Path]:
@@ -715,6 +754,9 @@ class Archiver(ABC):
         Returns:
             True if the file exists in the archive, False otherwise.
 
+        Raises:
+            ArchiverReadError: If the archive can't be listed.
+
         Examples:
             >>> # Check before reading
             >>> if archive.exists("config.txt"):
@@ -726,10 +768,8 @@ class Archiver(ABC):
             >>> if not archive.exists("backup.txt"):
             ...     archive.write_file("backup.txt", "backup data")
 
-        Performance Note:
-            This method calls get_filename_list() internally, which may be
-            expensive for large archives. Consider caching the file list
-            if you need to check existence of multiple files.
+        Note:
+            This method uses get_filename_list(), whose result is cached.
 
         """
         return archive_file in self.get_filename_list()

@@ -50,11 +50,10 @@ except ImportError:
 
 from typing import TYPE_CHECKING
 
-from darkseid.archivers import Archiver, ArchiverReadError, ArchiverWriteError
+from darkseid.archivers.archiver import Archiver, ArchiverReadError
 
 if TYPE_CHECKING:
     from pathlib import Path
-    from typing import Self
 
     from py7zr import FileInfo, SevenZipFile
 
@@ -93,8 +92,9 @@ class SevenZipArchiver(Archiver):
         See darkseid.archivers.archiver.Archiver for the full contract.
 
     Error Handling:
-        All operations can raise ArchiverReadError or ArchiverWriteError exceptions.
-        The class includes comprehensive error handling and logging for troubleshooting.
+        read_file() and get_filename_list() raise ArchiverReadError on failure.
+        write_file(), remove_files() and copy_from_archive() log the error and
+        return False.
 
     Examples:
         Writing to a cbz archive:
@@ -150,19 +150,20 @@ class SevenZipArchiver(Archiver):
 
         Error handling:
 
-        >>> from darkseid.archivers import ArchiverReadError, ArchiverWriteError
+        >>> from darkseid.archivers import ArchiverReadError
         >>>
         >>> try:
         ...     with SevenZipArchiver(Path("nonexistent.cb7")) as archive:
         ...         content = archive.read_file("missing.txt")
         ... except ArchiverReadError as e:
         ...     print(f"Read error: {e}")
-        ... except ArchiverWriteError as e:
-        ...     print(f"Write error: {e}")
+        >>>
+        >>> # Writes report failure with a False return instead of raising
+        >>> if not SevenZipArchiver(Path("archive.cb7")).write_file("a.txt", "data"):
+        ...     print("Write failed")
 
     Attributes:
         path (Path): Path to the 7-Zip archive file
-        _filename_list_cache (list[str] | None): Cached list of filenames
 
     """
 
@@ -188,37 +189,6 @@ class SevenZipArchiver(Archiver):
 
         """
         super().__init__(path)
-        self._filename_list_cache: list[str] | None = None
-
-    def __enter__(self) -> Self:
-        """Context manager entry for 7-Zip archive operations.
-
-        Returns:
-            Self: The archiver instance for use in the context.
-
-        Examples:
-            >>> with SevenZipArchiver(Path("archive.cb7")) as archive:
-            ...     # Use archive here
-            ...     files = archive.get_filename_list()
-
-        """
-        return self
-
-    def __exit__(self, *_: object) -> None:
-        """Context manager exit with proper cleanup.
-
-        Ensures the archive caches are cleared to prevent memory leaks and resource issues.
-
-        Args:
-            *_: Exception information (ignored)
-
-        Note:
-            This method is called automatically when exiting a 'with' block.
-            It handles exceptions gracefully and always cleans up resources.
-
-        """
-        # Clear filename cache to free memory
-        self._filename_list_cache = None
 
     def read_file(self, archive_file: str, max_size: int | None = None) -> bytes:
         """Read a file from the 7z archive.
@@ -347,8 +317,7 @@ class SevenZipArchiver(Archiver):
             for filename, content in files.items():
                 write_archive.writestr(content, filename)
 
-        # Invalidate filename cache since the archive contents changed
-        self._filename_list_cache = None
+        self.invalidate_cache()
 
     def write_file(self, archive_file: str, data: str | bytes) -> bool:
         """Write a file to the 7z archive.
@@ -364,14 +333,10 @@ class SevenZipArchiver(Archiver):
             data: Data to write. Can be a string (will be UTF-8 encoded) or bytes.
 
         Returns:
-            True if the write operation was successful.
-
-        Raises:
-            ArchiverWriteError: If the write operation fails due to permissions,
-                               disk space, or other I/O errors. The original
-                               archive is left untouched.
-            ArchiverReadError: If the existing archive cannot be read, or one of
-                              its files exceeds MAX_READ_SIZE.
+            True if the write operation was successful. False if the existing
+                archive can't be read, one of its files exceeds MAX_READ_SIZE, or
+                the write fails (permissions, disk space, other I/O errors). The
+                original archive is left untouched on failure.
 
         Examples:
             >>> with SevenZipArchiver(Path("archive.cb7")) as archive:
@@ -405,20 +370,16 @@ class SevenZipArchiver(Archiver):
                         if not info.is_directory and info.filename != normalized_path
                     ]
                     files = self._extract_files(archive, keep)
-            except ArchiverReadError:
-                raise
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - convert any py7zr failure to a bool result
                 self._handle_error("open_for_read", str(self._path), e)
-                msg = f"Failed to open archive for reading: {self._path}"
-                raise ArchiverReadError(msg) from e
+                return False
 
         files[normalized_path] = new_data
         try:
             self._write_archive(files)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - convert any py7zr failure to a bool result
             self._handle_error("write", archive_file, e)
-            msg = f"Failed to write file {archive_file}"
-            raise ArchiverWriteError(msg) from e
+            return False
         else:
             return True
 
@@ -472,7 +433,7 @@ class SevenZipArchiver(Archiver):
         if not remaining:
             # If no files to keep, remove the archive.
             self._path.unlink(missing_ok=True)
-            self._filename_list_cache = None
+            self.invalidate_cache()
             return True
 
         # Rewrite archive without the removed files, replacing the original once complete
@@ -484,55 +445,15 @@ class SevenZipArchiver(Archiver):
         else:
             return True
 
-    def get_filename_list(self) -> list[str]:
-        """Get list of all files in the 7z archive.
-
-        Returns a sorted list of all file paths contained in the archive.
-        The list is cached for performance and updated when files are
-        added or removed.
+    def _list_files(self) -> list[str]:
+        """List the files in the 7z archive; directories are left out.
 
         Returns:
-            List of file paths in the archive, sorted alphabetically.
-                Returns empty list if archive doesn't exist or is empty.
-
-        Examples:
-            >>> with SevenZipArchiver(Path("archive.cb7")) as archive:
-            ...     files = archive.get_filename_list()
-            ...     print(f"Archive contains {len(files)} files:")
-            ...     for file in files:
-            ...         print(f"  - {file}")
-            ...
-            ...     # Check if specific file exists
-            ...     if "config.txt" in files:
-            ...         print("Config file found")
-
-        Performance:
-            The filename list is cached after first access, so subsequent
-            calls are very fast. Cache is invalidated when files are added
-            or removed.
-
-        Note:
-            File paths use forward slashes regardless of platform.
+            The file paths, sorted alphabetically, using forward slashes.
 
         """
-        if self._filename_list_cache is not None:
-            return self._filename_list_cache
-
-        if not self._path.exists():
-            self._filename_list_cache = []
-            return self._filename_list_cache
-
-        try:
-            with py7zr.SevenZipFile(self._path, mode="r") as archive:
-                # Get file list from archive
-                file_list = [file_.filename for file_ in archive.list() if not file_.is_directory]
-                self._filename_list_cache = sorted(file_list)
-        except Exception as e:  # noqa: BLE001 - convert any py7zr failure to an empty list
-            self._handle_error("get_filename_list", str(self._path), e)
-            self._filename_list_cache = []
-            return self._filename_list_cache
-        else:
-            return self._filename_list_cache
+        with py7zr.SevenZipFile(self._path, mode="r") as archive:
+            return sorted(file_.filename for file_ in archive.list() if not file_.is_directory)
 
     def test(self) -> bool:
         """Test whether the 7z archive is valid.

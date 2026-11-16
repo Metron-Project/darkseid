@@ -25,7 +25,6 @@ from darkseid.archivers.archiver import (
     Archiver,
     ArchiverFileTooLargeError,
     ArchiverReadError,
-    ArchiverWriteError,
 )
 from darkseid.archivers.pdf import PYMUPDF_AVAILABLE
 
@@ -98,8 +97,10 @@ def empty_zip_path(temp_dir):
 
 @pytest.fixture
 def sample_rar_path(temp_dir):
-    """Create a mock RAR file path."""
-    return temp_dir / "test.rar"
+    """Create a placeholder RAR file; tests mock rarfile for its contents."""
+    path = temp_dir / "test.rar"
+    path.touch()
+    return path
 
 
 @pytest.fixture
@@ -540,13 +541,18 @@ def test_zip_get_filename_list_empty(empty_zip_path):
 
 
 def test_zip_get_filename_list_corrupted(temp_dir):
-    """Test getting filename list from corrupted ZIP returns empty list."""
+    """Test listing a corrupted ZIP raises instead of looking like an empty archive."""
     corrupted_path = temp_dir / "corrupted.cbz"
     corrupted_path.write_text("not a zip file")
 
     archiver = ZipArchiver(corrupted_path)
-    files = archiver.get_filename_list()
-    assert files == []
+    with pytest.raises(ArchiverReadError):
+        archiver.get_filename_list()
+
+    # The failure isn't cached: once the file is valid, the next call lists it.
+    with zipfile.ZipFile(corrupted_path, "w") as zf:
+        zf.writestr("page1.jpg", b"")
+    assert archiver.get_filename_list() == ["page1.jpg"]
 
 
 # Specific 7ZIP tests
@@ -558,13 +564,19 @@ def test_seven_zip_test(sample_seven_zip_path):
 
 # Specific TAR tests
 def test_tar_get_filename_list_corrupted(temp_dir):
-    """Test getting filename list from corrupted TAR returns empty list."""
+    """Test listing a corrupted TAR raises instead of looking like an empty archive."""
     corrupted_path = temp_dir / "corrupted.cbt"
     corrupted_path.write_text("not a cbt file")
 
     archiver = TarArchiver(corrupted_path)
-    files = archiver.get_filename_list()
-    assert files == []
+    with pytest.raises(ArchiverReadError):
+        archiver.get_filename_list()
+
+    # The failure isn't cached: once the file is valid, the next call lists it.
+    with tarfile.open(corrupted_path, "w") as tf:
+        info = tarfile.TarInfo("page1.jpg")
+        tf.addfile(info, io.BytesIO(b""))
+    assert archiver.get_filename_list() == ["page1.jpg"]
 
 
 def test_tar_test(sample_tar_path):
@@ -1279,19 +1291,16 @@ def test_write_file_through_symlink_keeps_link(
 
 
 @pytest.mark.parametrize(
-    ("archive_type", "archiver_class", "expected_error"),
-    [("tar", TarArchiver, ArchiverWriteError), ("seven_zip", SevenZipArchiver, ArchiverReadError)],
+    ("archive_type", "archiver_class"),
+    [("tar", TarArchiver), ("seven_zip", SevenZipArchiver)],
 )
-def test_write_file_corrupt_archive_left_untouched(
-    temp_dir, archive_type, archiver_class, expected_error
-):
-    """Test writing to an unreadable archive raises instead of replacing its contents."""
+def test_write_file_corrupt_archive_left_untouched(temp_dir, archive_type, archiver_class):
+    """Test writing to an unreadable archive fails instead of replacing its contents."""
     archive_path = temp_dir / ("test.cbt" if archive_type == "tar" else "test.cb7")
     original = b"this is not a valid archive" * 100
     archive_path.write_bytes(original)
 
-    with pytest.raises(expected_error):
-        archiver_class(archive_path).write_file("ComicInfo.xml", "<ComicInfo/>")
+    assert not archiver_class(archive_path).write_file("ComicInfo.xml", "<ComicInfo/>")
     assert archive_path.read_bytes() == original
     assert list(temp_dir.iterdir()) == [archive_path]
 
@@ -1310,8 +1319,8 @@ def test_write_file_failure_leaves_original(
     archive_path = request.getfixturevalue(f"sample_{archive_type}_path")
     original = archive_path.read_bytes()
 
-    with patch(patch_target, side_effect=OSError("disk full")), pytest.raises(ArchiverWriteError):
-        archiver_class(archive_path).write_file("new.txt", "new")
+    with patch(patch_target, side_effect=OSError("disk full")):
+        assert not archiver_class(archive_path).write_file("new.txt", "new")
 
     assert archive_path.read_bytes() == original
     assert list(temp_dir.iterdir()) == [archive_path]
@@ -1342,11 +1351,8 @@ def test_tar_write_file_failure_on_new_archive_removes_partial(temp_dir):
     """Test a failed write to a new TAR archive doesn't leave a partial file."""
     archive_path = temp_dir / "new.cbt"
 
-    with (
-        patch("tarfile.TarFile.addfile", side_effect=OSError("disk full")),
-        pytest.raises(ArchiverWriteError),
-    ):
-        TarArchiver(archive_path).write_file("new.txt", "new")
+    with patch("tarfile.TarFile.addfile", side_effect=OSError("disk full")):
+        assert not TarArchiver(archive_path).write_file("new.txt", "new")
 
     assert not archive_path.exists()
 
@@ -1384,8 +1390,7 @@ def test_seven_zip_write_file_rejects_oversized_member(sample_seven_zip_path, mo
     original = sample_seven_zip_path.read_bytes()
     monkeypatch.setattr(SevenZipArchiver, "MAX_READ_SIZE", 10)
 
-    with pytest.raises(ArchiverFileTooLargeError):
-        SevenZipArchiver(sample_seven_zip_path).write_file("new.txt", "new")
+    assert not SevenZipArchiver(sample_seven_zip_path).write_file("new.txt", "new")
     assert sample_seven_zip_path.read_bytes() == original
 
 
@@ -1408,11 +1413,10 @@ def mid_corrupt_tar_path(temp_dir):
 
 
 def test_tar_write_file_corrupt_member_header_left_untouched(mid_corrupt_tar_path):
-    """Test a corrupt header part way through the archive raises instead of dropping members."""
+    """Test a corrupt header part way through the archive fails instead of dropping members."""
     original = mid_corrupt_tar_path.read_bytes()
 
-    with pytest.raises(ArchiverWriteError):
-        TarArchiver(mid_corrupt_tar_path).write_file("ComicInfo.xml", "<ComicInfo/>")
+    assert not TarArchiver(mid_corrupt_tar_path).write_file("ComicInfo.xml", "<ComicInfo/>")
     assert mid_corrupt_tar_path.read_bytes() == original
 
 
@@ -1542,3 +1546,189 @@ def test_copy_from_archive_skips_unsafe_names(temp_dir, archiver_class, filename
     assert {call.args[0] for call in source.read_file.call_args_list} == set(SAFE_COPY_NAMES)
     for name in UNSAFE_COPY_NAMES:
         assert repr(name) in caplog.text
+
+
+# Shared Archiver file-list caching and error contract
+def test_seven_zip_get_filename_list_corrupted(temp_dir):
+    """Test listing a corrupted 7z raises and the failure isn't cached as an empty list."""
+    corrupted_path = temp_dir / "corrupted.cb7"
+    corrupted_path.write_text("not a 7z file")
+
+    archiver = SevenZipArchiver(corrupted_path)
+    with pytest.raises(ArchiverReadError):
+        archiver.get_filename_list()
+    with pytest.raises(ArchiverReadError):
+        archiver.get_filename_list()
+
+
+@pytest.mark.parametrize("ext", ["cbz", "cbt", "cb7", "cbr", "pdf"])
+def test_get_filename_list_missing_archive_is_empty(temp_dir, ext):
+    """Test every backend lists a not-yet-created archive as empty."""
+    if ext == "pdf" and not PYMUPDF_AVAILABLE:
+        pytest.skip("pymupdf not available")
+    archiver = ArchiverFactory.create_archiver(temp_dir / f"missing.{ext}")
+    assert archiver.get_filename_list() == []
+
+
+@pytest.mark.parametrize("archive_type", ["zip", "tar", "seven_zip"])
+def test_get_filename_list_cache_invalidated_by_writes(archive_type, request):
+    """Test the cached file list reflects writes and removals made through the archiver."""
+    archive_path = request.getfixturevalue(f"sample_{archive_type}_path")
+    archiver = ArchiverFactory.create_archiver(archive_path)
+    before = archiver.get_filename_list()
+
+    assert archiver.write_file("new.txt", "new")
+    assert sorted(archiver.get_filename_list()) == sorted([*before, "new.txt"])
+    assert archiver.remove_files(["new.txt"])
+    assert sorted(archiver.get_filename_list()) == sorted(before)
+
+
+def test_pdf_get_filename_list_cache_invalidated_by_writes(sample_pdf_path):
+    """Test the PDF file list, now cached, picks up embedded files added and removed."""
+    archiver = PdfArchiver(sample_pdf_path)
+    pages = archiver.get_filename_list()
+
+    assert archiver.write_file("ComicInfo.xml", "<ComicInfo/>")
+    assert archiver.get_filename_list() == [*pages, "ComicInfo.xml"]
+    assert archiver.remove_files(["ComicInfo.xml"])
+    assert archiver.get_filename_list() == pages
+
+
+@patch("rarfile.RarFile")
+def test_rar_get_filename_list_cached(mock_rar_file, sample_rar_path):
+    """Test RAR listings are cached, so the archive is opened once."""
+    mock_rar_file.return_value.__enter__.return_value.namelist.return_value = ["a.jpg"]
+    archiver = RarArchiver(sample_rar_path)
+
+    assert archiver.get_filename_list() == ["a.jpg"]
+    assert archiver.get_filename_list() == ["a.jpg"]
+    mock_rar_file.assert_called_once()
+
+
+def test_context_manager_exit_clears_cache(sample_zip_path):
+    """Test leaving the with block makes the next listing re-read the archive."""
+    with ZipArchiver(sample_zip_path) as archiver:
+        archiver.get_filename_list()
+    with zipfile.ZipFile(sample_zip_path, "a") as zf:
+        zf.writestr("added.txt", "x")
+    assert "added.txt" in archiver.get_filename_list()
+
+
+def test_zip_remove_files_corrupt_archive_returns_false(temp_dir):
+    """Test remove_files reports an unlistable archive as a failure instead of raising."""
+    corrupted_path = temp_dir / "corrupted.cbz"
+    corrupted_path.write_text("not a zip file")
+
+    assert not ZipArchiver(corrupted_path).remove_files(["file1.txt"])
+
+
+class _MinimalArchiver(Archiver):
+    """Implements only the abstract methods, plus optional overrides set per test."""
+
+    def read_file(self, archive_file, max_size=None):
+        raise NotImplementedError
+
+    def write_file(self, archive_file, data):
+        return False
+
+    def remove_files(self, filename_list):
+        return False
+
+    def test(self):
+        return True
+
+    def copy_from_archive(self, other_archive):
+        return False
+
+
+def test_custom_archiver_overriding_get_filename_list_still_works(sample_zip_path):
+    """Test a third-party archiver written against the old abstract method keeps working."""
+
+    class LegacyArchiver(_MinimalArchiver):
+        def get_filename_list(self):
+            return ["legacy.jpg"]
+
+    assert LegacyArchiver(sample_zip_path).get_filename_list() == ["legacy.jpg"]
+
+
+def test_custom_archiver_without_listing_fails_at_construction(sample_zip_path):
+    """Test an archiver that implements neither listing method fails like an abstract class."""
+    with pytest.raises(TypeError, match="_list_files"):
+        _MinimalArchiver(sample_zip_path)
+
+
+def test_get_filename_list_returns_a_copy(sample_zip_path):
+    """Test changing the returned list doesn't corrupt the cached listing."""
+    archiver = ZipArchiver(sample_zip_path)
+    files = archiver.get_filename_list()
+    files.clear()
+
+    assert archiver.get_filename_list() == ["file1.txt", "file2.jpg", "dir/file3.txt"]
+    assert archiver.exists("file1.txt")
+
+
+def test_invalidate_cache_rereads_archive(sample_zip_path):
+    """Test invalidate_cache() picks up changes made outside the archiver."""
+    archiver = ZipArchiver(sample_zip_path)
+    archiver.get_filename_list()
+    with zipfile.ZipFile(sample_zip_path, "a") as zf:
+        zf.writestr("added.txt", "x")
+
+    assert "added.txt" not in archiver.get_filename_list()
+    archiver.invalidate_cache()
+    assert "added.txt" in archiver.get_filename_list()
+
+
+def test_zip_failed_write_still_invalidates_cache(sample_zip_path):
+    """Test a write that fails after removing the old member doesn't leave a stale listing."""
+    archiver = ZipArchiver(sample_zip_path)
+    assert "file1.txt" in archiver.get_filename_list()
+
+    with patch("zipremove.ZipFile.writestr", side_effect=OSError("disk full")):
+        assert not archiver.write_file("file1.txt", "replacement")
+
+    with zipfile.ZipFile(sample_zip_path) as zf:
+        assert archiver.get_filename_list() == zf.namelist()
+
+
+def test_zip_failed_remove_still_invalidates_cache(sample_zip_path):
+    """Test a removal that fails part way through doesn't leave a stale listing."""
+    archiver = ZipArchiver(sample_zip_path)
+    archiver.get_filename_list()
+
+    with patch("zipremove.ZipFile.repack", side_effect=OSError("disk full")):
+        assert not archiver.remove_files(["file1.txt"])
+
+    with zipfile.ZipFile(sample_zip_path) as zf:
+        assert archiver.get_filename_list() == zf.namelist()
+
+
+def test_zip_copy_from_archive_invalidates_cache(sample_zip_path, temp_dir):
+    """Test the target's cached listing reflects the copied files."""
+    target = ZipArchiver(temp_dir / "target.cbz")
+    assert target.get_filename_list() == []
+
+    assert target.copy_from_archive(ZipArchiver(sample_zip_path))
+    assert target.get_filename_list() == ["file1.txt", "file2.jpg", "dir/file3.txt"]
+
+
+def test_zip_copy_from_unlistable_source_leaves_target_untouched(sample_zip_path, temp_dir):
+    """Test a source that can't be listed fails cleanly without truncating the target."""
+    corrupt_source = temp_dir / "corrupt.cbz"
+    corrupt_source.write_text("not a zip file")
+    original = sample_zip_path.read_bytes()
+
+    assert not ZipArchiver(sample_zip_path).copy_from_archive(ZipArchiver(corrupt_source))
+    assert sample_zip_path.read_bytes() == original
+
+
+def test_list_files_library_errors_wrapped(sample_zip_path):
+    """Test unexpected listing errors surface as ArchiverReadError."""
+
+    class BrokenArchiver(_MinimalArchiver):
+        def _list_files(self):
+            msg = "boom"
+            raise RuntimeError(msg)
+
+    with pytest.raises(ArchiverReadError, match="boom"):
+        BrokenArchiver(sample_zip_path).get_filename_list()

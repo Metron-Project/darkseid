@@ -183,10 +183,14 @@ class PdfArchiver(Archiver):
 
         Note:
             Uses incremental save to preserve existing content and maintain
-            existing encryption settings.
+            existing encryption settings. The cached file list is cleared even if
+            the save fails, since a partial save may still have changed the file.
 
         """
-        doc.save(doc.name, incremental=True, encryption=pymupdf.PDF_ENCRYPT_KEEP)
+        try:
+            doc.save(doc.name, incremental=True, encryption=pymupdf.PDF_ENCRYPT_KEEP)
+        finally:
+            self.invalidate_cache()
 
     def _read_page(self, archive_file: str, max_size: int) -> bytes:
         """Read and render a page as PNG.
@@ -424,54 +428,25 @@ class PdfArchiver(Archiver):
             logger.warning("Failed to remove embedded files from PDF: %s", e)
             return False
 
-    def get_filename_list(self) -> list[str]:
-        """Get a list of all files in the PDF (pages and embedded files).
+    def _list_files(self) -> list[str]:
+        """List the PDF's virtual page files followed by its embedded files.
 
         Returns:
-            A list of filenames including:
-                - Virtual page files: 'page_NNN.png' (zero-padded, starting from 001)
-                - Embedded files: e.g., 'ComicInfo.xml', 'MetronInfo.xml'
+            Virtual page files ('page_001.png', ...; generated on demand when read),
+                then embedded files such as 'ComicInfo.xml', sorted alphabetically.
 
         Raises:
-            ArchiverReadError: If the PDF cannot be read due to:
-
-                - Corrupt or invalid PDF file
-                - File system or permission errors
-                - PDF processing errors
-
-        Examples:
-            >>> archiver = PdfArchiver(Path("document.pdf"))
-            >>> files = archiver.get_filename_list()
-            >>> print(files)
-            >>> # Output: ['page_001.png', 'page_002.png', 'ComicInfo.xml']
-
-        Note:
-            - Page PNG files are virtual and generated on-demand when read
-            - Embedded files are actual PDF attachments
-            - The list is sorted with pages first, then embedded files alphabetically
+            ArchiverReadError: If the PDF is corrupt or invalid.
 
         """
         try:
             with self._open_pdf() as doc:
-                page_count = len(doc)
-                # Generate page filenames with zero-padding (page_001.png, page_002.png, etc.)
                 page_files = [
-                    f"page_{i + 1:0{self.PAGE_NUMBER_PADDING}d}.png" for i in range(page_count)
+                    f"page_{i + 1:0{self.PAGE_NUMBER_PADDING}d}.png" for i in range(len(doc))
                 ]
-
-                # Get embedded file names
-                embedded_files = sorted(doc.embfile_names())
-
-                # Return pages first, then embedded files
-                return page_files + embedded_files
-
+                return page_files + sorted(doc.embfile_names())
         except pymupdf.FileDataError as e:
-            self._handle_error("list", "", e)
             msg = f"Corrupt or invalid PDF file: {e}"
-            raise ArchiverReadError(msg) from e
-        except Exception as e:
-            self._handle_error("list", "", e)
-            msg = f"Cannot read PDF file: {e}"
             raise ArchiverReadError(msg) from e
 
     def test(self) -> bool:

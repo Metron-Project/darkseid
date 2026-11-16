@@ -44,12 +44,11 @@ import tarfile
 import time
 from typing import TYPE_CHECKING
 
-from darkseid.archivers.archiver import Archiver, ArchiverReadError, ArchiverWriteError
+from darkseid.archivers.archiver import Archiver, ArchiverReadError
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
     from pathlib import Path
-    from typing import Self
 
 logger = logging.getLogger(__name__)
 
@@ -98,38 +97,6 @@ class TarArchiver(Archiver):
         """
         super().__init__(path)
         self._mode = self._determine_mode()
-        self._filename_list_cache: list[str] | None = None
-
-    def __enter__(self) -> Self:
-        """Context manager entry for Tar archive operations.
-
-        Returns:
-            Self: The archiver instance for use in the context.
-
-        Examples:
-            >>> with TarArchiver(Path("archive.cbt")) as archive:
-            ...     # Use archive here
-            ...     files = archive.get_filename_list()
-
-        """
-        return self
-
-    def __exit__(self, *_: object) -> None:
-        """Context manager exit with proper cleanup.
-
-        Ensures the archive is properly closed and caches are cleared
-        to prevent memory leaks and resource issues.
-
-        Args:
-            *_: Exception information (ignored)
-
-        Note:
-            This method is called automatically when exiting a 'with' block.
-            It handles exceptions gracefully and always cleans up resources.
-
-        """
-        # Clear filename cache to free memory
-        self._filename_list_cache = None
 
     def _determine_mode(self) -> str:  # noqa: PLR0911
         """Determine the appropriate tarfile mode based on file extension.
@@ -258,8 +225,7 @@ class TarArchiver(Archiver):
                 tarinfo.mtime = int(time.time())
                 out.addfile(tarinfo, io.BytesIO(data))
 
-        # Invalidate filename cache since the archive contents changed
-        self._filename_list_cache = None
+        self.invalidate_cache()
 
     def write_file(self, archive_file: str, data: str | bytes) -> bool:
         """Write data to a file in the TAR archive.
@@ -272,10 +238,9 @@ class TarArchiver(Archiver):
             data: Data to write to the file.
 
         Returns:
-            True if the write operation was successful.
-
-        Raises:
-            ArchiverWriteError: If the existing archive can't be read or the write fails.
+            True if the write operation was successful, False if the existing archive
+                can't be read or the write fails. The original archive is left
+                untouched on failure.
 
         """
         # Convert string to bytes if necessary
@@ -286,8 +251,7 @@ class TarArchiver(Archiver):
             self._rewrite({archive_file}, [(archive_file, data)])
         except (tarfile.TarError, OSError) as e:
             self._handle_error("write", archive_file, e)
-            msg = f"Failed to write file '{archive_file}': {e}"
-            raise ArchiverWriteError(msg) from e
+            return False
         else:
             return True
 
@@ -313,54 +277,15 @@ class TarArchiver(Archiver):
         else:
             return True
 
-    def get_filename_list(self) -> list[str]:
-        """Get list of all files in the Tar archive.
-
-        Returns a sorted list of all file paths contained in the archive.
-        The list is cached for performance and updated when files are
-        added or removed.
+    def _list_files(self) -> list[str]:
+        """List the regular files in the TAR archive; directories are left out.
 
         Returns:
-            List of file paths in the archive, sorted alphabetically.
-                Returns empty list if archive doesn't exist or is empty.
-
-        Examples:
-            >>> with TarArchiver(Path("archive.cbt")) as archive:
-            ...     files = archive.get_filename_list()
-            ...     print(f"Archive contains {len(files)} files:")
-            ...     for file in files:
-            ...         print(f"  - {file}")
-            ...
-            ...     # Check if specific file exists
-            ...     if "config.txt" in files:
-            ...         print("Config file found")
-
-        Performance:
-            The filename list is cached after first access, so subsequent
-            calls are very fast. Cache is invalidated when files are added
-            or removed.
-
-        Note:
-            File paths use forward slashes regardless of platform.
+            The file paths, sorted alphabetically.
 
         """
-        if self._filename_list_cache is not None:
-            return self._filename_list_cache
-
-        if not self._path.exists():
-            self._filename_list_cache = []
-            return self._filename_list_cache
-
-        try:
-            with tarfile.open(self._path, mode=self._read_mode()) as tar:
-                # Only return regular files, not directories
-                filenames = [member.name for member in tar.getmembers() if member.isfile()]
-                self._filename_list_cache = sorted(filenames)
-        except (tarfile.TarError, OSError, ArchiverReadError) as e:
-            self._handle_error("get_filename_list", str(self._path), e)
-            return []
-        else:
-            return self._filename_list_cache
+        with tarfile.open(self._path, mode=self._read_mode()) as tar:
+            return sorted(member.name for member in tar.getmembers() if member.isfile())
 
     def test(self) -> bool:
         """Test whether the TAR archive is valid.

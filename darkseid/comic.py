@@ -28,10 +28,7 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
+from typing import TYPE_CHECKING, Final
 
 from natsort import natsorted, ns
 
@@ -115,8 +112,7 @@ class ComicCache:
     manage cache invalidation and state.
     """
 
-    has_ci: bool | None = None
-    has_mi: bool | None = None
+    metadata_present: dict[MetadataFormat, bool] = field(default_factory=dict)
     page_count: int | None = None
     page_list: list[str] | None = None
     unsorted_page_list: list[str] | None = None
@@ -124,74 +120,37 @@ class ComicCache:
 
     def reset(self) -> None:
         """Clear all cached data to ensure fresh reads."""
-        self.has_ci = None
-        self.has_mi = None
+        self.metadata_present.clear()
         self.page_count = None
         self.page_list = None
         self.unsorted_page_list = None
         self.metadata.clear()
 
 
-class MetadataFormatRegistry:
-    """Registry for metadata format handlers to consolidate format-specific operations.
+@dataclass(frozen=True)
+class _FormatSpec:
+    """Everything format-specific that Comic needs to read, write, or check a metadata format.
 
-    This class centralizes all metadata format mappings, reducing duplication
-    and making it easier to add new metadata formats in the future.
+    Attributes:
+        filename: The metadata filename at the archive root.
+        handler: The parser/serializer class for the format.
+        calc_page_sizes: Whether writes fill in page sizes and dimensions.
+
     """
 
-    def __init__(self, comic: Comic) -> None:
-        """Initialize registry with references to comic instance methods.
+    filename: str
+    handler: type[ComicInfo | MetronInfo]
+    calc_page_sizes: bool
 
-        Args:
-            comic: The Comic instance this registry belongs to.
 
-        """
-        self._comic = comic
-        self._registry: dict[MetadataFormat, dict[str, Any]] = {
-            MetadataFormat.COMIC_INFO: {
-                "filename": COMIC_RACK_FILENAME,
-                "reader": comic._read_comicinfo,  # noqa: SLF001
-                "writer": comic._write_ci,  # noqa: SLF001
-                "checker": comic._has_comicinfo,  # noqa: SLF001
-                "calc_page_sizes": True,
-            },
-            MetadataFormat.METRON_INFO: {
-                "filename": METRON_INFO_FILENAME,
-                "reader": comic._read_metroninfo,  # noqa: SLF001
-                "writer": comic._write_mi,  # noqa: SLF001
-                "checker": comic._has_metroninfo,  # noqa: SLF001
-                "calc_page_sizes": False,
-            },
-        }
-
-    def get_filename(self, fmt: MetadataFormat) -> str | None:
-        """Get the filename for a metadata format."""
-        entry = self._registry.get(fmt)
-        return entry["filename"] if entry else None
-
-    def get_reader(self, fmt: MetadataFormat) -> Callable[..., Metadata] | None:
-        """Get the reader function for a metadata format."""
-        entry = self._registry.get(fmt)
-        return entry["reader"] if entry else None
-
-    def get_writer(self, fmt: MetadataFormat) -> Callable[[Metadata | None], bool] | None:
-        """Get the writer function for a metadata format."""
-        entry = self._registry.get(fmt)
-        return entry["writer"] if entry else None
-
-    def get_checker(self, fmt: MetadataFormat) -> Callable[[], bool] | None:
-        """Get the checker function for a metadata format."""
-        entry = self._registry.get(fmt)
-        return entry["checker"] if entry else None
-
-    def get_calc_page_sizes(self, fmt: MetadataFormat) -> bool:
-        """Get whether to calculate page sizes for a metadata format."""
-        entry = self._registry.get(fmt)
-        return entry.get("calc_page_sizes", False) if entry else False
-
-    def is_supported(self, fmt: MetadataFormat) -> bool:
-        """Check if a metadata format is supported."""
-        return fmt in self._registry
+# The single source of format-specific settings used by Comic. Every MetadataFormat
+# except UNKNOWN must have an entry.
+_FORMAT_SPECS: Final[dict[MetadataFormat, _FormatSpec]] = {
+    MetadataFormat.COMIC_INFO: _FormatSpec(COMIC_RACK_FILENAME, ComicInfo, calc_page_sizes=True),
+    MetadataFormat.METRON_INFO: _FormatSpec(
+        METRON_INFO_FILENAME, MetronInfo, calc_page_sizes=False
+    ),
+}
 
 
 class ComicError(Exception):
@@ -335,9 +294,7 @@ class Comic:
 
     def _initialize_attributes(self) -> None:
         """Initialize instance attributes and set up caching system."""
-        # Initialize cache and metadata format registry
         self._cache = ComicCache()
-        self._metadata_registry = MetadataFormatRegistry(self)
 
     def __str__(self) -> str:
         """Return the name of the comic file.
@@ -426,8 +383,10 @@ class Comic:
 
         This method is called after every attempt to modify the archive, whether it
         succeeded, failed or raised, so cached data never outlives a change to the archive.
+        The archiver's own file-list cache is cleared too.
         """
         self._cache.reset()
+        self._archiver.invalidate_cache()
 
     def _validate_page_index(self, index: int) -> None:
         """Validate that a page index is within the valid range.
@@ -695,38 +654,12 @@ class Comic:
               still reports the error
 
         """
-        reader = self._metadata_registry.get_reader(metadata_format)
-        if reader is None:
+        spec = _FORMAT_SPECS.get(metadata_format)
+        if spec is None:
             logger.warning("Unknown metadata format: %s", metadata_format)
             return Metadata()
 
-        return reader(strict=strict)
-
-    def _read_comicinfo(self, *, strict: bool = False) -> Metadata:
-        """Read and parse ComicInfo metadata from the archive.
-
-        Args:
-            strict: Raise ComicMetadataError instead of returning empty metadata on failure.
-
-        Returns:
-            Metadata: The parsed ComicInfo metadata.
-
-        """
-        return self._read_and_cache_metadata(MetadataFormat.COMIC_INFO, ComicInfo(), strict=strict)
-
-    def _read_metroninfo(self, *, strict: bool = False) -> Metadata:
-        """Read and parse MetronInfo metadata from the archive.
-
-        Args:
-            strict: Raise ComicMetadataError instead of returning empty metadata on failure.
-
-        Returns:
-            Metadata: The parsed MetronInfo metadata.
-
-        """
-        return self._read_and_cache_metadata(
-            MetadataFormat.METRON_INFO, MetronInfo(), strict=strict
-        )
+        return self._read_and_cache_metadata(metadata_format, spec.handler(), strict=strict)
 
     def _read_and_cache_metadata(
         self, metadata_format: MetadataFormat, parser: MetronInfo | ComicInfo, *, strict: bool
@@ -878,7 +811,8 @@ class Comic:
             str | None: The filename for the metadata format, or None if unknown.
 
         """
-        return self._metadata_registry.get_filename(metadata_format)
+        spec = _FORMAT_SPECS.get(metadata_format)
+        return spec.filename if spec else None
 
     def _find_metadata_members(self, filename: str) -> list[str]:
         """Find every root-level archive member matching a metadata filename, best match first.
@@ -974,82 +908,40 @@ class Comic:
             logger.warning("Cannot write metadata to read-only archive: %s", self._path)
             return False
 
-        writer = self._metadata_registry.get_writer(metadata_format)
-        if writer is None:
+        spec = _FORMAT_SPECS.get(metadata_format)
+        if spec is None:
             msg = f"Unsupported metadata format: {metadata_format}"
             raise ComicMetadataError(msg)
 
-        return writer(metadata)
-
-    def _write_ci(self, metadata: Metadata | None) -> bool:
-        """Write ComicInfo metadata to the archive.
-
-        Args:
-            metadata: The metadata to write.
-
-        Returns:
-            bool: True if successful, False otherwise.
-
-        """
         if metadata is None:
             return False
 
-        return self._write_metadata_format(
-            metadata,
-            ComicInfo(),
-            COMIC_RACK_FILENAME,
-            self.read_raw_ci_metadata(),
-            calc_page_sizes=True,
-        )
-
-    def _write_mi(self, metadata: Metadata | None) -> bool:
-        """Write MetronInfo metadata to the archive.
-
-        Args:
-            metadata: The metadata to write.
-
-        Returns:
-            bool: True if successful, False otherwise.
-
-        """
-        if metadata is None:
-            return False
-
-        return self._write_metadata_format(
-            metadata,
-            MetronInfo(),
-            METRON_INFO_FILENAME,
-            self.read_raw_mi_metadata(),
-            calc_page_sizes=False,
-        )
+        return self._write_metadata_format(metadata, metadata_format, spec)
 
     def _write_metadata_format(
-        self,
-        metadata: Metadata,
-        formatter: MetronInfo | ComicInfo,
-        filename: str,
-        raw_metadata: str | None,
-        calc_page_sizes: bool = False,  # noqa: FBT002, FBT001
+        self, metadata: Metadata, metadata_format: MetadataFormat, spec: _FormatSpec
     ) -> bool:
         """Write metadata in a specific format to the archive.
 
+        Existing XML for the format is read first so the serializer can preserve
+        elements it doesn't manage.
+
         Args:
             metadata: The metadata to write.
-            formatter: The metadata formatter instance.
-            filename: The filename to write to in the archive.
-            raw_metadata: Existing raw metadata string for preservation.
-            calc_page_sizes: Whether to calculate page sizes and dimensions.
+            metadata_format: The format being written.
+            spec: The format's filename, handler and page-size setting.
 
         Returns:
             bool: True if successful, False otherwise.
 
         """
+        raw_metadata = self._read_raw_metadata(metadata_format)
         try:
-            self._apply_archive_info_to_metadata(metadata, calc_page_sizes=calc_page_sizes)
+            self._apply_archive_info_to_metadata(metadata, calc_page_sizes=spec.calc_page_sizes)
 
             raw_bytes = raw_metadata.encode("utf-8") if raw_metadata else None
-            md_string = formatter.string_from_metadata(metadata, raw_bytes)
-            return self._archiver.write_file(filename, md_string)
+            md_string = spec.handler().string_from_metadata(metadata, raw_bytes)
+            return self._archiver.write_file(spec.filename, md_string)
         except Exception:
             logger.exception("Error writing metadata to %s", self._path)
             return False
@@ -1079,9 +971,7 @@ class Comic:
             - All metadata files matching the format are removed (case-insensitive)
 
         """
-        supported_formats = {MetadataFormat.COMIC_INFO, MetadataFormat.METRON_INFO}
-
-        if not any(fmt in supported_formats for fmt in metadata_format_list):
+        if not any(fmt in _FORMAT_SPECS for fmt in metadata_format_list):
             logger.warning("Unsupported metadata formats for removal: %s", metadata_format_list)
             return False
 
@@ -1124,12 +1014,10 @@ class Comic:
             if filename is not None:
                 metadata_format_filenames.append(filename)
 
-        all_metadata_present = self._metadata_present(metadata_format_filenames)
-
-        if not all_metadata_present:
-            return True  # No files to remove
-
         try:
+            all_metadata_present = self._metadata_present(metadata_format_filenames)
+            if not all_metadata_present:
+                return True  # No files to remove
             return self._archiver.remove_files(all_metadata_present)
         except Exception:
             logger.exception("Error removing metadata from %s", self._path)
@@ -1206,55 +1094,23 @@ class Comic:
             # A failed or partial removal may still have changed the archive.
             self._reset_cache()
 
-    def _has_metadata_file(self, cache_attr: str, filename: str) -> bool:
-        """Check if a metadata file exists in the archive.
+    def _check_metadata_present(self, filename: str) -> bool:
+        """Check the archive for a metadata file, without using the cache.
 
         Args:
-            cache_attr: The cache attribute name for the cached result (e.g., 'has_ci').
             filename: The metadata filename to check for.
 
         Returns:
-            True if the metadata file exists, False otherwise.
+            True if the archive looks like a comic and has the file, False otherwise.
 
         """
-        cached_result = getattr(self._cache, cache_attr)
-        if cached_result is not None:
-            return cached_result
-
         if not self.seems_to_be_a_comic_archive():
-            setattr(self._cache, cache_attr, False)
             return False
-
-        return self._check_metadata_file_exists(cache_attr, filename)
-
-    def _check_metadata_file_exists(self, cache_attr: str, filename: str) -> bool:
-        """Check if metadata file exists in archive.
-
-        Args:
-            cache_attr: The cache attribute name for caching the result.
-            filename: The metadata filename to check for.
-
-        Returns:
-            True if file exists, False otherwise.
-
-        """
         try:
-            result = bool(self._find_metadata_members(filename))
-            setattr(self._cache, cache_attr, result)
+            return bool(self._find_metadata_members(filename))
         except Exception:
             logger.exception("Error checking for metadata file in %s", self._path)
-            setattr(self._cache, cache_attr, False)
             return False
-        else:
-            return result
-
-    def _has_comicinfo(self) -> bool:
-        """Check if the archive contains ComicInfo metadata."""
-        return self._has_metadata_file("has_ci", COMIC_RACK_FILENAME)
-
-    def _has_metroninfo(self) -> bool:
-        """Check if the archive contains MetronInfo metadata."""
-        return self._has_metadata_file("has_mi", METRON_INFO_FILENAME)
 
     def has_metadata(self, fmt: MetadataFormat) -> bool:
         """Check if the archive contains metadata in the specified format.
@@ -1268,8 +1124,14 @@ class Comic:
             bool: True if metadata exists, False otherwise.
 
         """
-        checker = self._metadata_registry.get_checker(fmt)
-        return checker() if checker else False
+        spec = _FORMAT_SPECS.get(fmt)
+        if spec is None:
+            return False
+
+        cached = self._cache.metadata_present.get(fmt)
+        if cached is None:
+            cached = self._cache.metadata_present[fmt] = self._check_metadata_present(spec.filename)
+        return cached
 
     def _apply_archive_info_to_metadata(
         self,
@@ -1398,12 +1260,7 @@ class Comic:
             A set of MetadataFormat enums representing the available metadata.
 
         """
-        format_checkers = [
-            (MetadataFormat.COMIC_INFO, self.has_metadata),
-            (MetadataFormat.METRON_INFO, self.has_metadata),
-        ]
-
-        return {fmt for fmt, checker in format_checkers if checker(fmt)}
+        return {fmt for fmt in _FORMAT_SPECS if self.has_metadata(fmt)}
 
     def validate_metadata(self, metadata_format: MetadataFormat) -> SchemaVersion:
         """Validate metadata XML and return its schema version.
@@ -1415,20 +1272,11 @@ class Comic:
             SchemaVersion: Detected schema version, or SchemaVersion.UNKNOWN if invalid/not found.
 
         """
-        metadata_handlers = {
-            MetadataFormat.METRON_INFO: (self._has_metroninfo, METRON_INFO_FILENAME),
-            MetadataFormat.COMIC_INFO: (self._has_comicinfo, COMIC_RACK_FILENAME),
-        }
-
-        if metadata_format not in metadata_handlers:
+        spec = _FORMAT_SPECS.get(metadata_format)
+        if spec is None or not self.has_metadata(metadata_format):
             return SchemaVersion.UNKNOWN
 
-        has_metadata_func, filename = metadata_handlers[metadata_format]
-
-        if not has_metadata_func():
-            return SchemaVersion.UNKNOWN
-
-        return self._validate_metadata_xml(metadata_format, filename)
+        return self._validate_metadata_xml(metadata_format, spec.filename)
 
     def _validate_metadata_xml(
         self, metadata_format: MetadataFormat, filename: str
