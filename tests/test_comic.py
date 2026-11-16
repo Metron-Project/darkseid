@@ -1193,7 +1193,7 @@ def test_apply_archive_info_to_metadata_basic(sample_cbz_file, sample_metadata):
 def test_pillow_missing_warning_only_when_page_sizes_needed(
     temp_dir, caplog, suffix, calc_page_sizes, expect_warning
 ):
-    """The missing-Pillow warning fires only when page sizes would actually be calculated."""
+    """Without Pillow, sizes are still calculated when needed, with a dimensions warning."""
     path = temp_dir / f"test{suffix}"
     path.write_bytes(b"")
     sample_metadata = Metadata()
@@ -1206,7 +1206,8 @@ def test_pillow_missing_warning_only_when_page_sizes_needed(
         with patch.object(comic, "_calculate_all_page_info") as mock_calc:
             comic._apply_archive_info_to_metadata(sample_metadata, calc_page_sizes=calc_page_sizes)
 
-        mock_calc.assert_not_called()
+        # Page sizes are calculated whenever they're needed, even without Pillow.
+        assert mock_calc.called is expect_warning
     assert ("Pillow is not available" in caplog.text) is expect_warning
     assert sample_metadata.page_count == 1
 
@@ -1900,3 +1901,27 @@ def _write_zip_with_encrypted_first_member(path, name, data, others=()):
     for signature, flag_offset in ((b"PK\x03\x04", 6), (b"PK\x01\x02", 8)):
         raw[raw.index(signature) + flag_offset] |= 0x1
     path.write_bytes(bytes(raw))
+
+
+def test_write_comicinfo_without_pillow_fills_image_size(tmp_path):
+    """Test ImageSize is written without Pillow, and pages that have it aren't re-read."""
+    cbz = tmp_path / "test.cbz"
+    with zipfile.ZipFile(cbz, "w") as zf:
+        zf.writestr("01.jpg", b"x" * 10)
+        zf.writestr("02.jpg", b"y" * 25)
+    metadata = _metadata_with_series("X")
+    metadata.set_default_page_list(2)
+
+    with patch("darkseid.comic.PILLOW_AVAILABLE", new=False):
+        comic = Comic(cbz)
+        assert comic.write_metadata(metadata, MetadataFormat.COMIC_INFO)
+        pages = comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True).pages
+
+        assert [p["ImageSize"] for p in pages] == ["10", "25"]
+        assert not any("ImageWidth" in p or "ImageHeight" in p for p in pages)
+
+        with patch.object(comic, "get_page", wraps=comic.get_page) as get_page:
+            assert comic.write_metadata(
+                comic.read_metadata(MetadataFormat.COMIC_INFO), MetadataFormat.COMIC_INFO
+            )
+        get_page.assert_not_called()
