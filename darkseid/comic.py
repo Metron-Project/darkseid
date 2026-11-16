@@ -32,13 +32,16 @@ from typing import TYPE_CHECKING, Final
 
 from natsort import natsorted, ns
 
+# Pyright treats the module as always bound; at runtime it's only used when available.
+if TYPE_CHECKING:
+    from PIL import Image
+
 try:
     from PIL import Image
 
     PILLOW_AVAILABLE = True
 except ImportError:
     PILLOW_AVAILABLE = False
-    Image = None
 
 
 from darkseid.archivers import ArchiverError, ArchiverFactory, ArchiverReadError

@@ -24,6 +24,7 @@ import lzma
 import zlib
 from contextlib import suppress
 from pathlib import Path
+from typing import Any
 from zipfile import is_zipfile
 
 import rarfile
@@ -33,6 +34,21 @@ from darkseid.archivers.archiver import Archiver, ArchiverReadError
 from darkseid.constants import IMAGE_EXTENSIONS
 
 logger = logging.getLogger(__name__)
+
+
+def _remove_members(zf: ZipFile, names: list[str]) -> None:
+    """Remove members from an open ZIP file and reclaim their space.
+
+    zipremove adds ``ZipFile.remove()`` and ``ZipFile.repack()`` to the standard
+    library's ``ZipFile`` at import time, so type checkers can't see them.
+
+    Args:
+        zf: The ZIP file, opened in append mode.
+        names: The member names to remove.
+
+    """
+    patched: Any = zf
+    patched.repack([patched.remove(name) for name in names])
 
 
 class ZipArchiver(Archiver):
@@ -189,8 +205,7 @@ class ZipArchiver(Archiver):
             with ZipFile(self.path, "a") as zf:
                 # Remove existing file if present to avoid duplicates
                 if archive_file in set(zf.namelist()):
-                    zf_infos = [zf.remove(archive_file)]
-                    zf.repack(zf_infos)
+                    _remove_members(zf, [archive_file])
                 zf.writestr(archive_file, data, compress_type=compress_type, compresslevel=9)
         except (BadZipfile, OSError) as e:
             self._handle_error("write", archive_file, e)
@@ -247,8 +262,7 @@ class ZipArchiver(Archiver):
 
         try:
             with ZipFile(self.path, "a") as zf:
-                zf_infos = [zf.remove(filename) for filename in files_to_remove]
-                zf.repack(zf_infos)
+                _remove_members(zf, files_to_remove)
         except (BadZipfile, OSError) as e:
             self._handle_error("remove_multiple", str(files_to_remove), e)
             return False
@@ -330,6 +344,7 @@ class ZipArchiver(Archiver):
 
         try:
             with ZipFile(self.path, mode="w", allowZip64=True) as zout:
+                filename = ""
                 try:
                     for filename in source_files:
                         data = other_archive.read_file(filename)

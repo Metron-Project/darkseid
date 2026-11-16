@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from enum import Enum, auto, unique
 from importlib.resources import as_file, files
 from io import BytesIO
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, TypedDict
 
 from xmlschema import XMLResourceError, XMLSchema10, XMLSchema11, XMLSchemaValidationError
 
@@ -62,6 +62,14 @@ class SchemaVersion(Enum):
         return re.sub(r"(\d) (\d)", r"\1.\2", title)
 
 
+class _SchemaConfig(TypedDict):
+    """Where a schema file lives and which xmlschema class parses it."""
+
+    module_path: str
+    file_name: str
+    schema_class: type[XMLSchema10 | XMLSchema11]
+
+
 class ValidateMetadata:
     """Validates XML metadata against comic archive schemas.
 
@@ -70,9 +78,7 @@ class ValidateMetadata:
     """
 
     # Class-level schema configuration for better maintainability
-    _SCHEMA_CONFIG: ClassVar[
-        dict[SchemaVersion, dict[str, str | type[XMLSchema10]] | dict[str, str | type[XMLSchema11]]]
-    ] = {
+    _SCHEMA_CONFIG: ClassVar[dict[SchemaVersion, _SchemaConfig]] = {
         SchemaVersion.COMIC_INFO_V1: {
             "module_path": "darkseid.schemas.ComicInfo.v1",
             "file_name": "ComicInfo.xsd",
