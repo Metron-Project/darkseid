@@ -773,3 +773,31 @@ def test_set_date_element_skips_years_before_1900():
     root = ET.Element("root")
     MetronInfo._set_date_element(root, "CoverDate", date(1899, 12, 31))
     assert root.find("CoverDate") is None
+
+
+def test_set_date_element_pre_1900_removes_existing_element():
+    """Test a skipped pre-1900 date removes the old element instead of keeping it."""
+    root = ET.Element("root")
+    ET.SubElement(root, "StoreDate").text = "1999-01-01"
+
+    MetronInfo._set_date_element(root, "StoreDate", date(1850, 1, 1))
+
+    assert root.find("StoreDate") is None
+
+
+def test_rewrite_with_pre_1900_dates_drops_stale_dates(metron_info):
+    """Test rewriting existing XML doesn't keep dates the metadata no longer has."""
+    existing = b"""<MetronInfo>
+        <Series><Name>Test Series</Name></Series>
+        <CoverDate>1999-01-01</CoverDate>
+        <StoreDate>1999-01-15</StoreDate>
+    </MetronInfo>"""
+    metadata = Metadata()
+    metadata.series = Series(name="Test Series")
+    metadata.cover_date = date(1899, 12, 31)
+    metadata.store_date = date(1850, 6, 1)
+
+    result = metron_info.metadata_from_string(metron_info.string_from_metadata(metadata, existing))
+
+    assert result.cover_date is None
+    assert result.store_date is None
