@@ -24,7 +24,6 @@ __all__ = ["Comic", "ComicArchiveError", "ComicError", "ComicMetadataError", "Me
 import io
 import logging
 import os
-from contextlib import suppress
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
@@ -41,9 +40,10 @@ except ImportError:
     Image = None
 
 
-from darkseid.archivers import ArchiverFactory, ArchiverReadError
+from darkseid.archivers import ArchiverError, ArchiverFactory, ArchiverReadError
 from darkseid.archivers.zip import ZipArchiver
 from darkseid.constants import CBZ, PDF
+from darkseid.metadata.base_handler import XmlError
 from darkseid.metadata.comicinfo import ComicInfo
 from darkseid.metadata.data_classes import ImageMetadata, Metadata
 from darkseid.metadata.metroninfo import MetronInfo
@@ -424,9 +424,11 @@ class Comic:
             as it actually attempts to open and validate the archive structure.
 
         """
-        with suppress(Exception):
+        try:
             return self._archiver.test()
-        return False
+        except (ArchiverError, OSError):
+            logger.exception("Error testing archive %s", self._path)
+            return False
 
     def is_writable(self) -> bool:
         """Check if the archive supports write operations.
@@ -599,7 +601,7 @@ class Comic:
             self._cache.unsorted_page_list = [
                 str(name) for name in files if self.is_image(Path(str(name)))
             ]
-        except Exception:
+        except ArchiverReadError:
             logger.exception("Error getting page list from %s", self._path)
             self._cache.unsorted_page_list = []
 
@@ -719,6 +721,8 @@ class Comic:
 
         try:
             return parser.metadata_from_string(raw_metadata)
+        # The XML is untrusted, so any parser failure is reported as ComicMetadataError
+        # (raised in strict mode, logged otherwise) rather than escaping as a bare error.
         except Exception as e:
             msg = f"Unable to parse metadata from {self._path}: {e}"
             raise ComicMetadataError(msg) from e
@@ -888,10 +892,15 @@ class Comic:
                 - COMIC_INFO: ComicRack reader standard format
                 - METRON_INFO: A new comic book metadata format
         Returns:
-            bool: True if successful, False if failed (read-only archive, I/O errors).
+            bool: True if successful. False if the archive is read-only or the write
+                fails because of an archive, I/O or metadata-value error; the error
+                is logged.
 
         Raises:
             ComicMetadataError: If metadata format is not supported.
+            TypeError, AttributeError: If ``metadata`` is malformed, for example a
+                field holding the wrong type. These indicate a bug in the caller and
+                are not converted to False.
 
         Note:
             ComicInfo writes include page size calculations (slower for large archives).
@@ -899,8 +908,7 @@ class Comic:
 
         Examples:
             >>> comic = Comic("example.cbz")
-            >>> metadata = Metadata()
-            >>> metadata.series = "Amazing Spider-Man"
+            >>> metadata = Metadata(series=Series(name="Amazing Spider-Man"), issue="1")
             >>> comic.write_metadata(metadata, MetadataFormat.COMIC_INFO)
 
         """
@@ -942,7 +950,7 @@ class Comic:
             raw_bytes = raw_metadata.encode("utf-8") if raw_metadata else None
             md_string = spec.handler().string_from_metadata(metadata, raw_bytes)
             return self._archiver.write_file(spec.filename, md_string)
-        except Exception:
+        except (ArchiverError, OSError, ValueError, XmlError):
             logger.exception("Error writing metadata to %s", self._path)
             return False
         finally:
@@ -957,7 +965,7 @@ class Comic:
 
         Returns:
             bool: True if any metadata was successfully removed or didn't exist,
-                 False if an error occurred.
+                 False if an error occurred, including when the archive can't be read.
 
         Examples:
             >>> comic = Comic(Path("example.cbz"))
@@ -973,6 +981,14 @@ class Comic:
         """
         if not any(fmt in _FORMAT_SPECS for fmt in metadata_format_list):
             logger.warning("Unsupported metadata formats for removal: %s", metadata_format_list)
+            return False
+
+        # has_metadata() reports an unreadable archive as having no metadata, which
+        # would make removal look successful, so check the archive can be listed first.
+        try:
+            self._archiver.get_filename_list()
+        except ArchiverReadError:
+            logger.exception("Cannot remove metadata from unreadable archive %s", self._path)
             return False
 
         if not any(self.has_metadata(fmt) for fmt in metadata_format_list):
@@ -1019,7 +1035,7 @@ class Comic:
             if not all_metadata_present:
                 return True  # No files to remove
             return self._archiver.remove_files(all_metadata_present)
-        except Exception:
+        except (ArchiverError, OSError):
             logger.exception("Error removing metadata from %s", self._path)
             return False
         finally:
@@ -1077,9 +1093,6 @@ class Comic:
         except ValueError:
             logger.exception("Invalid page index for removal")
             return False
-        except Exception:
-            logger.exception("Error removing pages from %s", self._path)
-            return False
 
         if not pages_to_remove:
             logger.warning("No valid pages found for removal")
@@ -1087,7 +1100,7 @@ class Comic:
 
         try:
             return self._archiver.remove_files(pages_to_remove)
-        except Exception:
+        except (ArchiverError, OSError):
             logger.exception("Error removing pages from %s", self._path)
             return False
         finally:
@@ -1108,7 +1121,7 @@ class Comic:
             return False
         try:
             return bool(self._find_metadata_members(filename))
-        except Exception:
+        except ArchiverReadError:
             logger.exception("Error checking for metadata file in %s", self._path)
             return False
 
@@ -1170,7 +1183,7 @@ class Comic:
             if self._should_calculate_page_info(page):
                 try:
                     self._calculate_page_info(page)
-                except Exception:
+                except Exception:  # Page data is untrusted; sizing is best effort
                     logger.exception(
                         "Error calculating page info for page %s", page.get("Image", "unknown")
                     )
@@ -1249,7 +1262,7 @@ class Comic:
         try:
             zip_archiver = ZipArchiver(zip_filename)
             return zip_archiver.copy_from_archive(self._archiver)
-        except Exception:
+        except (ArchiverError, OSError):
             logger.exception("Error exporting %s to ZIP format", self._path)
             return False
 
@@ -1316,6 +1329,6 @@ class Comic:
                 and self.is_archive_valid()
                 and self.seems_to_be_a_comic_archive()
             )
-        except Exception:
+        except OSError:
             logger.exception("Error validating comic %s", self._path)
             return False

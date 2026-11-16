@@ -207,7 +207,7 @@ def test_is_archive_valid_exception(sample_cbz_file):
         mock_factory.return_value = Mock()
         comic = Comic(sample_cbz_file)
 
-        with patch.object(comic._archiver, "test", side_effect=Exception()):
+        with patch.object(comic._archiver, "test", side_effect=OSError()):
             assert comic.is_archive_valid() is False
 
 
@@ -491,7 +491,7 @@ def test_get_page_name_list_exception(sample_cbz_file):
     """Test page name list when exception occurs."""
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_archiver = Mock()
-        mock_archiver.get_filename_list.side_effect = Exception("Error")
+        mock_archiver.get_filename_list.side_effect = ArchiverReadError("Error")
         mock_factory.return_value = mock_archiver
 
         comic = Comic(sample_cbz_file)
@@ -826,6 +826,7 @@ def test_write_metadata_comic_rack(sample_cbz_file, sample_metadata):
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_archiver = Mock()
         mock_archiver.is_write_operation_expected.return_value = True
+        mock_archiver.get_filename_list.return_value = ["page1.jpg"]
         mock_archiver.write_file.return_value = True
         mock_factory.return_value = mock_archiver
 
@@ -877,13 +878,14 @@ def test_write_metadata_exception(sample_cbz_file, sample_metadata):
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_archiver = Mock()
         mock_archiver.is_write_operation_expected.return_value = True
+        mock_archiver.get_filename_list.return_value = ["page1.jpg"]
         mock_factory.return_value = mock_archiver
 
         comic = Comic(sample_cbz_file)
 
         with (
             patch.object(comic, "is_writable", return_value=True),
-            patch.object(comic, "_apply_archive_info_to_metadata", side_effect=Exception()),
+            patch.object(comic, "_apply_archive_info_to_metadata", side_effect=OSError()),
         ):
             result = comic.write_metadata(sample_metadata, MetadataFormat.COMIC_INFO)
             assert result is False
@@ -1013,7 +1015,7 @@ def test_remove_pages_exception(sample_cbz_file):
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_archiver = Mock()
         mock_archiver.get_filename_list.return_value = ["page1.jpg"]
-        mock_archiver.remove_files.side_effect = Exception("Error")
+        mock_archiver.remove_files.side_effect = OSError("Error")
         mock_factory.return_value = mock_archiver
 
         comic = Comic(sample_cbz_file)
@@ -1146,7 +1148,7 @@ def test_has_metadata_exception(sample_cbz_file):
     """Test metadata detection when exception occurs."""
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
         mock_archiver = Mock()
-        mock_archiver.get_filename_list.side_effect = Exception("Error")
+        mock_archiver.get_filename_list.side_effect = ArchiverReadError("Error")
         mock_factory.return_value = mock_archiver
 
         comic = Comic(sample_cbz_file)
@@ -1372,7 +1374,7 @@ def test_export_as_zip_failure(sample_seven_zip_path, temp_dir):
         comic = Comic(sample_seven_zip_path)
 
         with (
-            patch("darkseid.archivers.zip.ZipArchiver", side_effect=Exception("Error")),
+            patch("darkseid.comic.ZipArchiver", side_effect=OSError("Error")),
         ):
             result = comic.export_as_zip(temp_dir / "output.cbz")
             assert result is False
@@ -1460,7 +1462,7 @@ def test_is_valid_comic_exception(sample_cbz_file):
         mock_factory.return_value = Mock()
         comic = Comic(sample_cbz_file)
 
-        with patch.object(comic, "is_archive_valid", side_effect=Exception("Error")):
+        with patch.object(comic, "is_archive_valid", side_effect=OSError("Error")):
             assert comic.is_valid_comic() is False
 
 
@@ -1804,3 +1806,47 @@ def test_comic_corrupt_archive_listing_logged_once(tmp_path, caplog):
     Comic(corrupt).get_page_name_list()
 
     assert len([r for r in caplog.records if r.levelname == "ERROR"]) == 1
+
+
+def test_remove_metadata_corrupt_archive_returns_false(tmp_path):
+    """Test removing metadata from an unreadable archive fails instead of reporting success."""
+    corrupt = tmp_path / "corrupt.cbz"
+    corrupt.write_text("not a zip file")
+
+    assert Comic(corrupt).remove_metadata([MetadataFormat.COMIC_INFO]) is False
+
+
+def test_remove_metadata_without_metadata_still_succeeds(tmp_path):
+    """Test a readable archive with nothing to remove still reports success."""
+    comic = Comic(_write_cbz(tmp_path / "test.cbz", {}))
+
+    assert comic.remove_metadata([MetadataFormat.COMIC_INFO]) is True
+
+
+def test_write_metadata_malformed_metadata_raises(tmp_path):
+    """Test a caller bug (wrong field type) raises instead of becoming a silent False."""
+    comic = Comic(_write_cbz(tmp_path / "test.cbz", {}))
+    metadata = Metadata()
+    metadata.series = "Amazing Spider-Man"  # should be a Series
+
+    with pytest.raises(AttributeError):
+        comic.write_metadata(metadata, MetadataFormat.COMIC_INFO)
+
+
+def test_write_metadata_archive_failure_returns_false(tmp_path):
+    """Test an archive write failure is still reported as False."""
+    comic = Comic(_write_cbz(tmp_path / "test.cbz", {}))
+
+    with patch.object(comic._archiver, "write_file", side_effect=OSError("disk full")):
+        assert comic.write_metadata(_metadata_with_series("X"), MetadataFormat.COMIC_INFO) is False
+
+
+def test_unexpected_listing_error_propagates(sample_cbz_file):
+    """Test errors outside the archiver contract surface instead of looking like no pages."""
+    comic = Comic(sample_cbz_file)
+
+    with (
+        patch.object(comic._archiver, "get_filename_list", side_effect=RuntimeError("bug")),
+        pytest.raises(RuntimeError, match="bug"),
+    ):
+        comic.get_page_name_list()
