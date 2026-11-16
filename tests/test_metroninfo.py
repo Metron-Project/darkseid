@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from darkseid.metadata.base_handler import XmlError
+from darkseid.metadata.comicinfo import ComicInfo
 from darkseid.metadata.data_classes import (
     GTIN,
     AgeRatings,
@@ -30,6 +31,28 @@ from darkseid.metadata.metroninfo import MetronInfo
 @pytest.fixture
 def metron_info():
     return MetronInfo()
+
+
+MINIMAL_METRON_INFO = (
+    "<MetronInfo><Publisher><Name>DC Comics</Name></Publisher>"
+    "<Series><Name>Batman</Name></Series><Number>1</Number>{credits}</MetronInfo>"
+)
+
+
+@pytest.mark.parametrize(
+    "credits_xml",
+    [
+        pytest.param("", id="no-credits-element"),
+        pytest.param("<Credits></Credits>", id="empty-credits-element"),
+    ],
+)
+def test_missing_credits_read_as_empty_list(metron_info, credits_xml):
+    """Test that credits are an empty list, not None, when there are none."""
+    md = metron_info.metadata_from_string(MINIMAL_METRON_INFO.format(credits=credits_xml))
+    assert md.credits == []
+    # Converting to ComicInfo used to raise TypeError on None credits.
+    xml = ComicInfo().string_from_metadata(md)
+    assert "<Series>Batman</Series>" in xml
 
 
 # Test data fixtures

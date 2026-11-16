@@ -496,31 +496,33 @@ class ComicInfo(BaseMetadataHandler):
         return [item.strip() for item in re.split(r',|"(.*?)"', string) if item and item.strip()]
 
     @staticmethod
-    def _string_to_resource(string: str | None) -> list[Basic] | None:
+    def _string_to_resource(string: str | None) -> list[Basic]:
         """Convert a string to a list of Basic objects.
 
         Args:
             string: The string to convert to Basic objects.
 
         Returns:
-            The list of Basic objects created from the string, or None if the string is None.
+            The list of Basic objects created from the string, or an empty list if the
+            string is None.
 
         """
         if string is None:
-            return None
+            return []
         return [Basic(item) for item in ComicInfo._clean_resource_list(string)]
 
     @staticmethod
-    def _string_to_arc(string: str | None) -> list[Arc] | None:
+    def _string_to_arc(string: str | None) -> list[Arc]:
         """Convert a string to a list of Arc objects.
 
         Args:
             string: The string to convert to Arc objects.
 
         Returns:
-            The list of Arc objects created from the string, or None if the string is None.
+            The list of Arc objects created from the string, or an empty list if the
+            string is None.
 
         """
         if string is None:
-            return None
+            return []
         return [Arc(item) for item in ComicInfo._clean_resource_list(string)]
