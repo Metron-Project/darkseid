@@ -119,6 +119,7 @@ class ComicCache:
     has_mi: bool | None = None
     page_count: int | None = None
     page_list: list[str] | None = None
+    unsorted_page_list: list[str] | None = None
     metadata: dict[MetadataFormat, Metadata] = field(default_factory=dict)
 
     def reset(self) -> None:
@@ -127,6 +128,7 @@ class ComicCache:
         self.has_mi = None
         self.page_count = None
         self.page_list = None
+        self.unsorted_page_list = None
         self.metadata.clear()
 
 
@@ -617,28 +619,32 @@ class Comic:
             - Only image files are included in the list
             - Hidden files (starting with '.') are excluded
             - Natural sorting ensures proper ordering (e.g., page10.jpg comes after page2.jpg)
-            - Results are cached for performance
+            - Sorted and unsorted results are cached separately, so the order returned
+              always matches ``sort_list`` regardless of call order
 
         """
-        if self._cache.page_list is not None:
-            return self._cache.page_list
+        if not sort_list:
+            return self._get_unsorted_page_list()
+
+        if self._cache.page_list is None:
+            self._cache.page_list = natsorted(self._get_unsorted_page_list(), alg=ns.IGNORECASE)
+        return self._cache.page_list
+
+    def _get_unsorted_page_list(self) -> list[str]:
+        """Get the image filenames in archive order, cached after the first read."""
+        if self._cache.unsorted_page_list is not None:
+            return self._cache.unsorted_page_list
 
         try:
-            # Get the list of file names in the archive
             files = self._archiver.get_filename_list()
-
-            # Sort files if requested (case-insensitive natural sort)
-            if sort_list:
-                files = natsorted(files, alg=ns.IGNORECASE)
-
-            # Filter for image files only
-            self._cache.page_list = [str(name) for name in files if self.is_image(Path(str(name)))]
-
+            self._cache.unsorted_page_list = [
+                str(name) for name in files if self.is_image(Path(str(name)))
+            ]
         except Exception:
             logger.exception("Error getting page list from %s", self._path)
-            self._cache.page_list = []
+            self._cache.unsorted_page_list = []
 
-        return self._cache.page_list
+        return self._cache.unsorted_page_list
 
     def get_number_of_pages(self) -> int:
         """Get the total number of pages (images) in the archive.
@@ -849,7 +855,11 @@ class Comic:
             return None
 
         try:
-            raw_bytes = self._archiver.read_file(filename, max_size=MAX_METADATA_SIZE)
+            raw_bytes = self._read_metadata_file(filename)
+            if raw_bytes is None:
+                # has_metadata() said the file exists, so not finding it now is an error.
+                msg = f"{filename} not found in {self._path}"
+                raise ComicMetadataError(msg)
             return raw_bytes.decode("utf-8")
         except ArchiverReadError as e:
             msg = f"Unable to read {filename} from {self._path}: {e}"
@@ -869,6 +879,45 @@ class Comic:
 
         """
         return self._metadata_registry.get_filename(metadata_format)
+
+    def _find_metadata_members(self, filename: str) -> list[str]:
+        """Find every root-level archive member matching a metadata filename, best match first.
+
+        Matching ignores case, so ``comicinfo.xml`` matches ``ComicInfo.xml``. Only members
+        at the archive root count: ``sub/ComicInfo.xml`` does not, so a bundle of issues
+        with per-folder metadata is not mistaken for one comic. An exact-case match sorts
+        first.
+
+        Args:
+            filename: The standard metadata filename (e.g., "ComicInfo.xml").
+
+        Returns:
+            list[str]: The actual member names in the archive, best match first.
+
+        """
+        target = filename.lower()
+        matches = [
+            str(path) for path in self._archiver.get_filename_list() if str(path).lower() == target
+        ]
+        return sorted(matches, key=lambda member: (member != filename, member))
+
+    def _read_metadata_file(self, filename: str) -> bytes | None:
+        """Read the best-matching archive member for a metadata filename.
+
+        Args:
+            filename: The standard metadata filename (e.g., "ComicInfo.xml").
+
+        Returns:
+            bytes | None: The member's contents, or None if no member matches.
+
+        Raises:
+            ArchiverReadError: If the member can't be read.
+
+        """
+        members = self._find_metadata_members(filename)
+        if not members:
+            return None
+        return self._archiver.read_file(members[0], max_size=MAX_METADATA_SIZE)
 
     def read_raw_ci_metadata(self) -> str | None:
         """Read raw ComicInfo metadata XML from the archive.
@@ -1052,14 +1101,10 @@ class Comic:
             List of actual file paths found in the archive matching the filenames.
 
         """
-        archive_files_lower = {
-            Path(str(p)).name.lower(): str(p) for p in self._archiver.get_filename_list()
-        }
-        return [
-            archive_files_lower[filename.lower()]
-            for filename in metadata_format_filenames
-            if filename.lower() in archive_files_lower
-        ]
+        members: list[str] = []
+        for filename in metadata_format_filenames:
+            members.extend(m for m in self._find_metadata_members(filename) if m not in members)
+        return members
 
     def _remove_metadata_files(self, metadata_format_list: list[MetadataFormat]) -> bool:
         """Remove metadata files from the archive.
@@ -1194,11 +1239,7 @@ class Comic:
 
         """
         try:
-            target_filename = filename.lower()
-            filenames = {
-                Path(str(path)).name.lower() for path in self._archiver.get_filename_list()
-            }
-            result = target_filename in filenames
+            result = bool(self._find_metadata_members(filename))
             setattr(self._cache, cache_attr, result)
         except Exception:
             logger.exception("Error checking for metadata file in %s", self._path)
@@ -1244,15 +1285,17 @@ class Comic:
         """
         metadata.page_count = self.get_number_of_pages()
 
+        # Do not calculate page sizes for PDF files, as it can be very slow and resource-intensive.
+        if not calc_page_sizes or self._path.suffix.lower() == PDF:
+            return
+
         if not PILLOW_AVAILABLE:
             logger.warning(
                 "Unable to calculate page sizes since Pillow is not available: %s", self._path.name
             )
             return
 
-        # Do not calculate page sizes for PDF files, as it can be very slow and resource-intensive.
-        if calc_page_sizes and self._path.suffix.lower() != PDF:
-            self._calculate_all_page_info(metadata)
+        self._calculate_all_page_info(metadata)
 
     def _calculate_all_page_info(self, metadata: Metadata) -> None:
         """Calculate page information for all pages in metadata.
@@ -1401,7 +1444,9 @@ class Comic:
 
         """
         try:
-            xml_bytes = self._archiver.read_file(filename, max_size=MAX_METADATA_SIZE)
+            xml_bytes = self._read_metadata_file(filename)
+            if xml_bytes is None:
+                return SchemaVersion.UNKNOWN
             vm = ValidateMetadata(xml_bytes)
             return vm.validate()
         except (ArchiverReadError, ValidationError):

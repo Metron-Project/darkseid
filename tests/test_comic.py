@@ -450,6 +450,23 @@ def test_get_page_name_list_no_sort(sample_cbz_file):
         assert page_list == ["page2.jpg", "page1.jpg"]
 
 
+def test_get_page_name_list_sort_flag_respected_after_caching(sample_cbz_file):
+    """Test that each sort_list value returns its own order regardless of call order."""
+    with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
+        mock_archiver = Mock()
+        mock_archiver.get_filename_list.return_value = ["page2.jpg", "page1.jpg"]
+        mock_factory.return_value = mock_archiver
+
+        comic = Comic(sample_cbz_file)
+
+        assert comic.get_page_name_list(sort_list=False) == ["page2.jpg", "page1.jpg"]
+        assert comic.get_page_name_list() == ["page1.jpg", "page2.jpg"]
+        assert comic.get_page_name_list(sort_list=False) == ["page2.jpg", "page1.jpg"]
+        # Indexed page lookups must use the sorted order even after an unsorted call
+        assert comic.get_page_name(0) == "page1.jpg"
+        mock_archiver.get_filename_list.assert_called_once()
+
+
 def test_get_page_name_list_cached(sample_cbz_file):
     """Test that page name list is cached."""
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
@@ -1160,6 +1177,35 @@ def test_apply_archive_info_to_metadata_basic(sample_cbz_file, sample_metadata):
         assert sample_metadata.page_count == 2
 
 
+@pytest.mark.parametrize(
+    ("suffix", "calc_page_sizes", "expect_warning"),
+    [
+        (".cbz", False, False),  # e.g. MetronInfo writes never calculate page sizes
+        (".pdf", True, False),  # PDFs skip page size calculation
+        (".cbz", True, True),
+    ],
+)
+def test_pillow_missing_warning_only_when_page_sizes_needed(
+    temp_dir, caplog, suffix, calc_page_sizes, expect_warning
+):
+    """The missing-Pillow warning fires only when page sizes would actually be calculated."""
+    path = temp_dir / f"test{suffix}"
+    path.write_bytes(b"")
+    sample_metadata = Metadata()
+    with (
+        patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory,
+        patch("darkseid.comic.PILLOW_AVAILABLE", new=False),
+    ):
+        mock_factory.return_value.get_filename_list.return_value = ["page1.jpg"]
+        comic = Comic(path)
+        with patch.object(comic, "_calculate_all_page_info") as mock_calc:
+            comic._apply_archive_info_to_metadata(sample_metadata, calc_page_sizes=calc_page_sizes)
+
+        mock_calc.assert_not_called()
+    assert ("Pillow is not available" in caplog.text) is expect_warning
+    assert sample_metadata.page_count == 1
+
+
 def test_apply_archive_info_to_metadata_with_page_sizes(sample_cbz_file, sample_metadata):
     """Test applying archive info with page size calculation."""
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
@@ -1629,6 +1675,86 @@ def test_read_metadata_rejects_oversized_metadata(temp_dir, monkeypatch):
     assert comic.read_raw_ci_metadata() is None
     assert not comic.read_metadata(MetadataFormat.COMIC_INFO).stories
     assert comic.validate_metadata(MetadataFormat.COMIC_INFO) == SchemaVersion.UNKNOWN
+
+
+VALID_COMICINFO = "<ComicInfo><Series>Aquaman</Series><Number>1</Number></ComicInfo>"
+
+
+@pytest.mark.parametrize("member", ["comicinfo.xml", "COMICINFO.XML"])
+def test_non_canonical_metadata_name_is_read_and_validated(tmp_path, member):
+    """Metadata found under a non-canonical name must also be readable and validatable."""
+    comic = Comic(_write_cbz(tmp_path / "test.cbz", {member: VALID_COMICINFO}))
+
+    assert comic.has_metadata(MetadataFormat.COMIC_INFO)
+    assert comic.read_raw_ci_metadata() == VALID_COMICINFO
+    metadata = comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True)
+    assert metadata.series.name == "Aquaman"
+    assert comic.validate_metadata(MetadataFormat.COMIC_INFO) != SchemaVersion.UNKNOWN
+
+
+@pytest.mark.parametrize(
+    "members",
+    [
+        ["sub/ComicInfo.xml"],
+        ["Issue1/ComicInfo.xml", "Issue2/ComicInfo.xml"],
+        ["sub\\ComicInfo.xml"],
+        ["extras/ComicInfo.xml/"],
+    ],
+)
+def test_metadata_outside_archive_root_is_ignored(tmp_path, members):
+    """Only root-level metadata counts, so per-folder metadata in a bundle isn't misread."""
+    cbz = _write_cbz(tmp_path / "test.cbz", dict.fromkeys(members, VALID_COMICINFO))
+    comic = Comic(cbz)
+
+    assert not comic.has_metadata(MetadataFormat.COMIC_INFO)
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True).is_empty
+    assert comic.remove_metadata([MetadataFormat.COMIC_INFO])
+    with zipfile.ZipFile(cbz) as zf:
+        assert set(members) <= set(zf.namelist())
+
+
+def test_strict_read_raises_when_detected_metadata_disappears(tmp_path):
+    """A stale has_metadata() result must not turn a strict read into empty metadata."""
+    comic = Comic(_write_cbz(tmp_path / "test.cbz", {"ComicInfo.xml": VALID_COMICINFO}))
+
+    with patch.object(comic, "has_metadata", return_value=True):
+        comic._archiver._filename_list_cache = ["01.jpg"]
+        with pytest.raises(ComicMetadataError):
+            comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True)
+
+
+def test_canonical_metadata_name_preferred_over_others(tmp_path):
+    """The exact-case root-level name wins over other matches and nested files."""
+    comic = Comic(
+        _write_cbz(
+            tmp_path / "test.cbz",
+            {
+                "sub/ComicInfo.xml": "<ComicInfo><Series>Wrong</Series></ComicInfo>",
+                "comicinfo.xml": "<ComicInfo><Series>Also Wrong</Series></ComicInfo>",
+                "ComicInfo.xml": VALID_COMICINFO,
+            },
+        )
+    )
+
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO).series.name == "Aquaman"
+
+
+def test_remove_metadata_removes_every_matching_member(tmp_path):
+    """Removal deletes all root-level matches, not just one, and leaves nested files alone."""
+    cbz = _write_cbz(
+        tmp_path / "test.cbz",
+        {
+            "ComicInfo.xml": VALID_COMICINFO,
+            "comicinfo.xml": VALID_COMICINFO,
+            "sub/ComicInfo.xml": VALID_COMICINFO,
+        },
+    )
+    comic = Comic(cbz)
+
+    assert comic.remove_metadata([MetadataFormat.COMIC_INFO])
+    assert not comic.has_metadata(MetadataFormat.COMIC_INFO)
+    with zipfile.ZipFile(cbz) as zf:
+        assert zf.namelist() == ["01.jpg", "sub/ComicInfo.xml"]
 
 
 def test_validate_metadata_unreadable_returns_unknown(sample_cbz_file):

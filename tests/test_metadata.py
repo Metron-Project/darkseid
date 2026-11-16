@@ -466,6 +466,39 @@ def test_metadata_overlay_remove_credit():
     assert "Stan Lee" in [item.person for item in md.credits]
 
 
+def test_metadata_overlay_prices_and_genres():
+    """Test that overlay replaces prices and genres rather than creating stray attributes."""
+    md1 = Metadata()
+    md1.prices = [Price(Decimal("3.99"), "USD")]
+    md1.genres = [Basic("Action")]
+
+    md2 = Metadata()
+    md2.prices = [Price(Decimal("4.99"), "USD")]
+    md2.genres = [Basic("Horror")]
+
+    md1.overlay(md2)
+
+    assert md1.prices[0].amount == Decimal("4.99")
+    assert [g.name for g in md1.genres] == ["Horror"]
+    assert not hasattr(md1, "price")
+    assert not hasattr(md1, "genre")
+
+
+def test_metadata_overlay_credits_consecutive_blanks():
+    """Test that consecutive blank credits are all skipped and the input list is untouched."""
+    md = Metadata()
+    new_credits = [
+        Credit("", [Role("Writer")]),
+        Credit("", [Role("Inker")]),
+        Credit("Jack Kirby", [Role("Penciller")]),
+    ]
+
+    md.overlay_credits(new_credits)
+
+    assert [c.person for c in md.credits] == ["Jack Kirby"]
+    assert len(new_credits) == 3
+
+
 def test_gtin_none_values():
     """Test GTIN with None values."""
     gtin = GTIN(None, None)
