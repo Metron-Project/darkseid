@@ -977,18 +977,18 @@ class MetronInfo(BaseMetadataHandler):
 
         return links or None
 
-    def _parse_credits_element(self, credits_element: ET.Element | None) -> list[Credit] | None:
+    def _parse_credits_element(self, credits_element: ET.Element | None) -> list[Credit]:
         """Parse Credits element into list of Credit objects.
 
         Args:
             credits_element: The Credits XML element.
 
         Returns:
-            List of Credit objects if found, None otherwise.
+            List of Credit objects, empty if the element is missing or has no valid credits.
 
         """
         if credits_element is None:
-            return None
+            return []
 
         credits_ = []
         for credit_elem in credits_element.findall("Credit"):
@@ -1008,7 +1008,7 @@ class MetronInfo(BaseMetadataHandler):
             creator_id = self._get_id_from_attrib(creator_elem.attrib)
             credits_.append(Credit(creator_elem.text, roles, creator_id))
 
-        return credits_ or None
+        return credits_
 
     def _convert_metadata_to_xml(  # noqa: C901,PLR0912
         self, metadata: Metadata, xml_bytes: bytes | None = None

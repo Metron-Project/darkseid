@@ -144,8 +144,23 @@ def test_meta_with_missing_stories(test_meta_data: Metadata, tmp_path: Path) -> 
     assert tmp_file.read_text() is not None
     assert validate(tmp_file, CI_XSD) is True
     new_md = ComicInfo().read_xml(tmp_file)
-    assert old_md.stories == new_md.stories
+    assert new_md.stories == []
     assert old_md.characters == new_md.characters
+
+
+def test_missing_list_elements_read_as_empty_lists() -> None:
+    """Test that list fields without an element are empty lists, not None."""
+    md = ComicInfo().metadata_from_string("<ComicInfo><Series>Batman</Series></ComicInfo>")
+    assert md.stories == []
+    assert md.genres == []
+    assert md.characters == []
+    assert md.teams == []
+    assert md.locations == []
+    assert md.story_arcs == []
+    # Overlaying the parsed metadata used to raise TypeError on the None lists.
+    target = Metadata()
+    target.overlay(md)
+    assert target.series.name == "Batman"
 
 
 def test_meta_with_no_imprint(test_meta_data: Metadata, tmp_path: Path) -> None:
@@ -188,7 +203,7 @@ def test_meta_write_to_existing_file(test_meta_data: Metadata, tmp_path: Path) -
     assert validate(tmp_file, CI_XSD) is True
     # Now reback the modified comicinfo.xml and verify
     new_md = ci.read_xml(tmp_file)
-    assert new_md.genres is None
+    assert new_md.genres == []
 
 
 def test_invalid_age_write_to_file(tmp_path: Path) -> None:
