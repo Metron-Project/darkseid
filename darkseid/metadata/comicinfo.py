@@ -257,7 +257,8 @@ class ComicInfo(BaseMetadataHandler):
 
         """
         tree = self._convert_metadata_to_xml(metadata, xml_bytes)
-        return ET.tostring(tree.getroot(), encoding="utf-8", xml_declaration=True).decode()
+        root = self._require_root(tree)
+        return ET.tostring(root, encoding="utf-8", xml_declaration=True).decode()
 
     @staticmethod
     def _get_root(xml_bytes: bytes | None) -> ET.Element:
@@ -272,7 +273,7 @@ class ComicInfo(BaseMetadataHandler):
         """
         if xml_bytes:
             try:
-                root = ET.ElementTree(fromstring(xml_bytes)).getroot()
+                root = fromstring(xml_bytes)
             except ET.ParseError:
                 root = ET.Element("ComicInfo")
         else:
@@ -283,15 +284,30 @@ class ComicInfo(BaseMetadataHandler):
 
         return root
 
+    @staticmethod
+    def _page_attrib_value(value: object) -> str:
+        """Convert a page attribute value to its XML string form.
+
+        Args:
+            value: The attribute value from ImageMetadata.
+
+        Returns:
+            ``"true"``/``"false"`` for a bool, as xs:boolean expects, else ``str(value)``.
+
+        """
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        return str(value)
+
     def _convert_metadata_to_xml(  # noqa: C901, PLR0912, PLR0915
         self,
-        md: Metadata,
+        metadata: Metadata,
         xml_bytes: bytes | None = None,
     ) -> ET.ElementTree:
         """Convert Metadata object to an XML representation.
 
         Args:
-            md: The Metadata object to convert.
+            metadata: The Metadata object to convert.
             xml_bytes: Additional XML content, defaults to None.
 
         Returns:
@@ -300,27 +316,27 @@ class ComicInfo(BaseMetadataHandler):
         """
         root = self._get_root(xml_bytes)
 
-        if stories_txt := self._get_resource_list(md.stories):
+        if stories_txt := self._get_resource_list(metadata.stories):
             self._set_element_text(root, "Title", stories_txt)
-        if md.series is not None:
-            self._set_element_text(root, "Series", md.series.name)
-        self._set_element_text(root, "Number", md.issue)
-        if md.series is not None and md.series.issue_count is not None:
-            self._set_element_text(root, "Count", md.series.issue_count)
-        if md.series is not None:
-            self._set_element_text(root, "Volume", md.series.volume)
+        if metadata.series is not None:
+            self._set_element_text(root, "Series", metadata.series.name)
+        self._set_element_text(root, "Number", metadata.issue)
+        if metadata.series is not None and metadata.series.issue_count is not None:
+            self._set_element_text(root, "Count", metadata.series.issue_count)
+        if metadata.series is not None:
+            self._set_element_text(root, "Volume", metadata.series.volume)
 
-        self._set_element_text(root, "AlternateSeries", md.alternate_series)
-        self._set_element_text(root, "AlternateNumber", md.alternate_number)
-        self._set_element_text(root, "SeriesGroup", md.series_group)
-        self._set_element_text(root, "AlternateCount", md.alternate_count)
-        self._set_element_text(root, "Summary", md.comments)
-        if md.notes is not None and md.notes.comic_rack:
-            self._set_element_text(root, "Notes", md.notes.comic_rack)
-        if md.cover_date is not None:
-            self._set_element_text(root, "Year", md.cover_date.year)
-            self._set_element_text(root, "Month", md.cover_date.month)
-            self._set_element_text(root, "Day", md.cover_date.day)
+        self._set_element_text(root, "AlternateSeries", metadata.alternate_series)
+        self._set_element_text(root, "AlternateNumber", metadata.alternate_number)
+        self._set_element_text(root, "SeriesGroup", metadata.series_group)
+        self._set_element_text(root, "AlternateCount", metadata.alternate_count)
+        self._set_element_text(root, "Summary", metadata.comments)
+        if metadata.notes is not None and metadata.notes.comic_rack:
+            self._set_element_text(root, "Notes", metadata.notes.comic_rack)
+        if metadata.cover_date is not None:
+            self._set_element_text(root, "Year", metadata.cover_date.year)
+            self._set_element_text(root, "Month", metadata.cover_date.month)
+            self._set_element_text(root, "Day", metadata.cover_date.day)
 
         credit_roles = {
             "Writer": self.writer_synonyms,
@@ -334,7 +350,7 @@ class ComicInfo(BaseMetadataHandler):
 
         credit_lists = {role: [] for role in credit_roles}
 
-        for credit in md.credits:
+        for credit in metadata.credits:
             for r in credit.role:
                 role_name = r.name.casefold()
                 for role, synonyms in credit_roles.items():
@@ -344,30 +360,30 @@ class ComicInfo(BaseMetadataHandler):
         for role, names in credit_lists.items():
             self._set_element_text(root, role, list_to_string(names))
 
-        if md.publisher:
-            self._set_element_text(root, "Publisher", md.publisher.name)
-            if md.publisher.imprint:
-                self._set_element_text(root, "Imprint", md.publisher.imprint.name)
-        self._set_element_text(root, "Genre", self._get_resource_list(md.genres))
-        if md.web_link:
-            self._set_element_text(root, "Web", self._create_url_string(md.web_link))
-        self._set_element_text(root, "PageCount", md.page_count)
-        if md.series is not None:
-            self._set_element_text(root, "LanguageISO", md.series.language)
-        if md.series is not None:
-            self._set_element_text(root, "Format", md.series.format)
-        self._set_element_text(root, "BlackAndWhite", "Yes" if md.black_and_white else None)
-        self._set_element_text(root, "Manga", self._validate_value(md.manga, self.ci_manga))
-        self._set_element_text(root, "Characters", self._get_resource_list(md.characters))
-        self._set_element_text(root, "Teams", self._get_resource_list(md.teams))
-        self._set_element_text(root, "Locations", self._get_resource_list(md.locations))
-        self._set_element_text(root, "ScanInformation", md.scan_info)
-        self._set_element_text(root, "StoryArc", self._get_resource_list(md.story_arcs))
-        if md.age_rating is not None and md.age_rating.comic_rack:
+        if metadata.publisher:
+            self._set_element_text(root, "Publisher", metadata.publisher.name)
+            if metadata.publisher.imprint:
+                self._set_element_text(root, "Imprint", metadata.publisher.imprint.name)
+        self._set_element_text(root, "Genre", self._get_resource_list(metadata.genres))
+        if metadata.web_link:
+            self._set_element_text(root, "Web", self._create_url_string(metadata.web_link))
+        self._set_element_text(root, "PageCount", metadata.page_count)
+        if metadata.series is not None:
+            self._set_element_text(root, "LanguageISO", metadata.series.language)
+        if metadata.series is not None:
+            self._set_element_text(root, "Format", metadata.series.format)
+        self._set_element_text(root, "BlackAndWhite", "Yes" if metadata.black_and_white else None)
+        self._set_element_text(root, "Manga", self._validate_value(metadata.manga, self.ci_manga))
+        self._set_element_text(root, "Characters", self._get_resource_list(metadata.characters))
+        self._set_element_text(root, "Teams", self._get_resource_list(metadata.teams))
+        self._set_element_text(root, "Locations", self._get_resource_list(metadata.locations))
+        self._set_element_text(root, "ScanInformation", metadata.scan_info)
+        self._set_element_text(root, "StoryArc", self._get_resource_list(metadata.story_arcs))
+        if metadata.age_rating is not None and metadata.age_rating.comic_rack:
             self._set_element_text(
                 root,
                 "AgeRating",
-                self._validate_value(md.age_rating.comic_rack, self.ci_age_ratings),
+                self._validate_value(metadata.age_rating.comic_rack, self.ci_age_ratings),
             )
 
         #  loop and add the page entries under pages node
@@ -377,15 +393,18 @@ class ComicInfo(BaseMetadataHandler):
         else:
             pages_node = ET.SubElement(root, "Pages")
 
-        for page_dict in md.pages:
-            page_dict["Image"] = str(page_dict.get("Image", ""))
-            page_node = ET.SubElement(pages_node, "Page")
-            page_node.attrib = dict(sorted(page_dict.items()))
+        for page_dict in metadata.pages:
+            page_attrib = {"Image": "", **page_dict}
+            ET.SubElement(
+                pages_node,
+                "Page",
+                {key: self._page_attrib_value(value) for key, value in sorted(page_attrib.items())},
+            )
 
         # CommunityRating comes after Pages in the schema
-        self._set_element_text(root, "CommunityRating", md.community_rating)
-        self._set_element_text(root, "MainCharacterOrTeam", md.main_character_or_team)
-        self._set_element_text(root, "Review", md.review)
+        self._set_element_text(root, "CommunityRating", metadata.community_rating)
+        self._set_element_text(root, "MainCharacterOrTeam", metadata.main_character_or_team)
+        self._set_element_text(root, "Review", metadata.review)
 
         ET.indent(root)
         return ET.ElementTree(root)

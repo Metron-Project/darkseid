@@ -254,8 +254,7 @@ class MetronInfo(BaseMetadataHandler):
             root = ET.Element("MetronInfo")
         else:
             try:
-                parsed_root = ET.ElementTree(fromstring(xml_bytes)).getroot()
-                root = ET.Element("MetronInfo") if parsed_root is None else parsed_root
+                root = fromstring(xml_bytes)
             except ParseError:
                 root = ET.Element("MetronInfo")
 
@@ -282,26 +281,6 @@ class MetronInfo(BaseMetadataHandler):
             "https://raw.githubusercontent.com/Metron-Project/metroninfo/refs/heads/master/schema/v1.2/MetronInfo.xsd"
         )
 
-        return root
-
-    @staticmethod
-    def _require_root(tree: ET.ElementTree) -> ET.Element:
-        """Return the tree's root element, raising if it is missing.
-
-        Args:
-            tree: The XML ElementTree to read the root from.
-
-        Returns:
-            The root XML element.
-
-        Raises:
-            XmlError: If the tree has no root element.
-
-        """
-        root = tree.getroot()
-        if root is None:
-            msg = "XML tree has no root element"
-            raise XmlError(msg)
         return root
 
     @staticmethod
@@ -1091,6 +1070,9 @@ class MetronInfo(BaseMetadataHandler):
 
         """
         root = tree.getroot()
+        if root is None:
+            msg = "XML tree has no root element"
+            raise ValueError(msg)
 
         if root.tag != "MetronInfo":
             msg = "XML is not a MetronInfo schema"

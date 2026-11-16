@@ -170,6 +170,26 @@ class BaseMetadataHandler(ABC):
         )
 
     @staticmethod
+    def _require_root(tree: ET.ElementTree) -> ET.Element:
+        """Return the tree's root element, raising if it is missing.
+
+        Args:
+            tree: The XML ElementTree to read the root from.
+
+        Returns:
+            The root XML element.
+
+        Raises:
+            XmlError: If the tree has no root element.
+
+        """
+        root = tree.getroot()
+        if root is None:
+            msg = "XML tree has no root element"
+            raise XmlError(msg)
+        return root
+
+    @staticmethod
     def _get_text_content(root: ET.Element, element_name: str) -> str | None:
         """Get text content from an element.
 

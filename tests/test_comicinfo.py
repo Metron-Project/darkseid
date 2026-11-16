@@ -13,6 +13,7 @@ from darkseid.metadata.data_classes import (
     Arc,
     Basic,
     Credit,
+    ImageMetadata,
     Links,
     Metadata,
     Notes,
@@ -268,6 +269,21 @@ def test_community_rating_write_and_read(tmp_path: Path) -> None:
 
     new_md = ci.read_xml(tmp_file)
     assert new_md.community_rating == Decimal("4.50")
+
+
+@pytest.mark.parametrize(("double_page", "expected"), [(True, "true"), (False, "false")])
+def test_page_bool_attribute_written_as_xs_boolean(tmp_path: Path, double_page, expected) -> None:
+    """Test that a bool page attribute is written as an xs:boolean, not a Python bool."""
+    tmp_file = tmp_path / "test-double-page.xml"
+    md = Metadata(series=Series("Aquaman"))
+    md.pages = [ImageMetadata(Image=0, DoublePage=double_page, ImageSize="100")]
+
+    ci = ComicInfo()
+    ci.write_xml(tmp_file, md)
+    assert validate(tmp_file, CI_XSD) is True
+    assert f'DoublePage="{expected}"' in tmp_file.read_text()
+    # Writing doesn't change the caller's page dict.
+    assert md.pages[0] == ImageMetadata(Image=0, DoublePage=double_page, ImageSize="100")
 
 
 def test_community_rating_none_not_written(tmp_path: Path) -> None:
