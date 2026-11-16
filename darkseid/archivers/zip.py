@@ -31,7 +31,6 @@ from darkseid.archivers.archiver import Archiver, ArchiverReadError
 
 if TYPE_CHECKING:
     from pathlib import Path
-    from typing import Self
 
 logger = logging.getLogger(__name__)
 
@@ -76,38 +75,6 @@ class ZipArchiver(Archiver):
 
         """
         super().__init__(path)
-        self._filename_list_cache: list[str] | None = None
-
-    def __enter__(self) -> Self:
-        """Context manager entry for Zip archive operations.
-
-        Returns:
-            Self: The archiver instance for use in the context.
-
-        Examples:
-            >>> with ZipArchiver(Path("archive.cbz")) as archive:
-            ...     # Use archive here
-            ...     files = archive.get_filename_list()
-
-        """
-        return self
-
-    def __exit__(self, *_: object) -> None:
-        """Context manager exit with proper cleanup.
-
-        Ensures the archive is properly closed and all caches are cleared
-        to prevent memory leaks and resource issues.
-
-        Args:
-            *_: Exception information (ignored)
-
-        Note:
-            This method is called automatically when exiting a 'with' block.
-            It handles exceptions gracefully and always cleans up resources.
-
-        """
-        # Clear caches to free memory
-        self._filename_list_cache = None
 
     def read_file(self, archive_file: str, max_size: int | None = None) -> bytes:
         """Read the contents of a file from the ZIP archive.
@@ -215,8 +182,7 @@ class ZipArchiver(Archiver):
             self._handle_error("write", archive_file, e)
             return False
         else:
-            # Update cache
-            self._filename_list_cache = None  # Invalidate filename cache
+            self._invalidate_cache()
             return True
 
     def remove_files(self, filename_list: list[str]) -> bool:
@@ -254,70 +220,34 @@ class ZipArchiver(Archiver):
         if not filename_list:
             return True
 
-        # Only attempt to remove files that actually exist
-        existing_files = set(self.get_filename_list())
-        files_to_remove = [f for f in filename_list if f in existing_files]
-
-        if not files_to_remove:
-            return True
-
         try:
+            # Only attempt to remove files that actually exist
+            existing_files = set(self.get_filename_list())
+            files_to_remove = [f for f in filename_list if f in existing_files]
+            if not files_to_remove:
+                return True
+
             with ZipFile(self.path, "a") as zf:
                 zf_infos = [zf.remove(filename) for filename in files_to_remove]
                 zf.repack(zf_infos)
+        except ArchiverReadError:
+            return False  # Already logged by get_filename_list()
         except (BadZipfile, OSError) as e:
-            self._handle_error("remove_multiple", str(files_to_remove), e)
+            self._handle_error("remove_multiple", str(filename_list), e)
             return False
         else:
-            # Update cache
-            self._filename_list_cache = None  # Invalidate filename cache
+            self._invalidate_cache()
             return True
 
-    def get_filename_list(self) -> list[str]:
-        """Get a list of all files in the ZIP archive.
-
-        Retrieves the complete list of files contained in the ZIP archive.
-        This includes all files and directories, with paths using forward
-        slashes as separators.
+    def _list_files(self) -> list[str]:
+        """List all entries in the ZIP archive, including any directory entries.
 
         Returns:
-            List of file paths within the archive. Returns an empty list
-                if the archive cannot be read or is empty. Directory entries
-                (if any) are included in the list.
-
-        Performance:
-            The filename list is cached after first access, so subsequent
-            calls are very fast. Cache is invalidated when files are added
-            or removed.
-
-        Note:
-            - Paths use forward slashes regardless of host OS
-            - Directory entries may be included depending on how the ZIP was created
-            - Returns empty list on any error (corrupt archive, file not found, etc.)
-
-        Examples:
-            >>> archiver = ZipArchiver(Path("project.cbz"))
-            >>> files = archiver.get_filename_list()
-            >>> for file in files:
-            ...     print(f"Found: {file}")
+            The member names, using forward slashes regardless of host OS.
 
         """
-        if self._filename_list_cache is not None:
-            return self._filename_list_cache
-
-        if not self._path.exists():
-            self._filename_list_cache = []
-            return self._filename_list_cache
-
-        try:
-            with ZipFile(self.path, mode="r") as zf:
-                file_list = zf.namelist()
-        except (BadZipfile, OSError) as e:
-            self._handle_error("list", "", e)
-            return []
-        else:
-            self._filename_list_cache = file_list
-            return file_list
+        with ZipFile(self.path, mode="r") as zf:
+            return zf.namelist()
 
     def test(self) -> bool:
         """Test whether the file is a valid ZIP archive.

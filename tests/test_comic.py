@@ -1769,3 +1769,15 @@ def test_every_metadata_format_has_a_spec():
     assert set(_FORMAT_SPECS) == set(MetadataFormat) - {MetadataFormat.UNKNOWN}
     assert _FORMAT_SPECS[MetadataFormat.COMIC_INFO].filename == COMIC_RACK_FILENAME
     assert _FORMAT_SPECS[MetadataFormat.METRON_INFO].filename == METRON_INFO_FILENAME
+
+
+def test_comic_corrupt_archive_listing_error_is_handled(tmp_path):
+    """Test Comic still treats an unlistable archive as having no pages or metadata."""
+    corrupt = tmp_path / "corrupt.cbz"
+    corrupt.write_text("not a zip file")
+    comic = Comic(corrupt)
+
+    assert comic.get_page_name_list() == []
+    assert not comic.has_metadata(MetadataFormat.COMIC_INFO)
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO).is_empty
+    assert comic.validate_metadata(MetadataFormat.COMIC_INFO) == SchemaVersion.UNKNOWN

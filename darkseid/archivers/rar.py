@@ -183,32 +183,14 @@ class RarArchiver(Archiver):
         logger.warning("Cannot remove files from RAR archive: %s", filename_list)
         return False
 
-    def get_filename_list(self) -> list[str]:
-        """Get a list of all files in the RAR archive.
+    def _list_files(self) -> list[str]:
+        """List the files in the RAR archive.
 
         Returns:
-            A sorted list of file paths within the archive. Paths use
-                forward slashes as separators and are relative to the archive root.
-                Empty directories may or may not be included depending on how
-                the archive was created.
+            The file paths, sorted alphabetically, using forward slashes.
 
         Raises:
-            ArchiverReadError: If the archive cannot be read due to:
-
-                - RAR command execution failure (missing unrar tool)
-                - Corrupt or invalid RAR file
-                - File system or permission errors
-
-        Examples:
-            >>> archiver = RarArchiver(Path("documents.rar"))
-            >>> files = archiver.get_filename_list()
-            >>> print(f"Archive contains {len(files)} files:")
-            >>> for file in files:
-            ...     print(f"  {file}")
-
-        Note:
-            The returned list is sorted alphabetically for consistent ordering.
-            This may differ from the order in which files were added to the archive.
+            ArchiverReadError: If the unrar tool can't be run or the archive is corrupt.
 
         """
         try:

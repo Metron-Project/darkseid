@@ -1012,12 +1012,10 @@ class Comic:
             if filename is not None:
                 metadata_format_filenames.append(filename)
 
-        all_metadata_present = self._metadata_present(metadata_format_filenames)
-
-        if not all_metadata_present:
-            return True  # No files to remove
-
         try:
+            all_metadata_present = self._metadata_present(metadata_format_filenames)
+            if not all_metadata_present:
+                return True  # No files to remove
             return self._archiver.remove_files(all_metadata_present)
         except Exception:
             logger.exception("Error removing metadata from %s", self._path)
