@@ -32,7 +32,6 @@ MAX_UPC = 17
 MAX_ISBN = 13
 COUNTRY_LEN = 2
 LANGUAGE_ALPHA_3_LEN = 3
-CURRENCY_LEN = 3
 YEAR_LEN = 4
 
 # __str__ constants
