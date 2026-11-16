@@ -66,20 +66,6 @@ VALID_AGE_RATINGS = frozenset(
     {"unknown", "everyone", "teen", "teen plus", "mature", "explicit", "adult"}
 )
 
-VALID_SERIES_FORMATS = frozenset(
-    {
-        "annual",
-        "digital chapter",
-        "graphic novel",
-        "hardcover",
-        "limited series",
-        "omnibus",
-        "one-shot",
-        "single issue",
-        "trade paperback",
-    }
-)
-
 VALID_ROLES = frozenset(
     {
         "writer",

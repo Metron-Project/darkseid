@@ -552,7 +552,7 @@ class Archiver(ABC):
         """
         return self
 
-    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
+    def __exit__(self, _exc_type: object, _exc_val: object, _exc_tb: object) -> None:
         """Context manager exit.
 
         Clears the cached file list, so the archiver re-reads the archive if it is
@@ -560,9 +560,9 @@ class Archiver(ABC):
         there are no other resources to release.
 
         Args:
-            exc_type: The exception type if an exception was raised, None otherwise.
-            exc_val: The exception value if an exception was raised, None otherwise.
-            exc_tb: The exception traceback if an exception was raised, None otherwise.
+            _exc_type: The exception type if an exception was raised, None otherwise.
+            _exc_val: The exception value if an exception was raised, None otherwise.
+            _exc_tb: The exception traceback if an exception was raised, None otherwise.
 
         """
         self.invalidate_cache()
