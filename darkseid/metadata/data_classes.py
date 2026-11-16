@@ -10,9 +10,9 @@ possible, however lossy it might be
 # Copyright 2020 Brian Pepple
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import Field, dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, ClassVar, TypedDict
 
 if TYPE_CHECKING:
     from datetime import date, datetime
@@ -180,15 +180,11 @@ def _validate_year(value: int | None, label: str) -> int | None:
 class Validations:
     """A base class for data validation in dataclasses.
 
-    This class provides initialization and post-initialization hooks for validating dataclass fields.
+    This class provides a post-initialization hook for validating dataclass fields. It's a
+    mixin for dataclasses, so ``__dataclass_fields__`` is set on the subclass by ``@dataclass``.
     """
 
-    def __init__(self) -> None:
-        """Initialize the Validations class.
-
-        This constructor sets up the initial state for the Validations class, preparing it for use in data validation.
-        """
-        self.__dataclass_fields__ = None
+    __dataclass_fields__: ClassVar[dict[str, Field[Any]]]
 
     def __post_init__(self: Validations) -> None:
         """Run validation methods if declared.
@@ -205,8 +201,12 @@ class Validations:
 
         Example:
             ```python
-            validations = Validations()
-            validations.__post_init__()
+            @dataclass
+            class Example(Validations):
+                year: int
+
+                @staticmethod
+                def validate_year(value: int, **_: Any) -> int: ...
             ```
 
         """
@@ -367,14 +367,14 @@ class AlternativeNames(Basic, Validations):
         language (str | None): The BCP 47 language tag, defaults to None.
 
     Static Methods:
-        validate_language(value: str, **_: any) -> str | None: Validates a language value.
+        validate_language(value: str, **_: Any) -> str | None: Validates a language value.
 
     """
 
     language: str | None = None
 
     @staticmethod
-    def validate_language(value: str, **_: any) -> str | None:
+    def validate_language(value: str, **_: Any) -> str | None:
         """Validate a language value.
 
         Args:
@@ -392,12 +392,12 @@ class AlternativeNames(Basic, Validations):
 
 
 @dataclass
-class Series(Basic, Validations):
+class Series(Validations):
     """A data class representing a series with basic information and validations.
 
     Attributes:
-        name (str): The name associated with the basic information.
-        id_ (int | None): The ID associated with the basic information, defaults to None.
+        name (str | None): The name of the series, or None if the source metadata has none.
+        id_ (int | str | None): The ID associated with the series, defaults to None.
         sort_name (str | None): The sort name of the series, defaults to None.
         volume (int | None): The volume of the series, defaults to None.
         format (str | None): The format of the series, defaults to None.
@@ -411,10 +411,12 @@ class Series(Basic, Validations):
         summary (str | None): A description of the series.
 
     Static Methods:
-        validate_language(value: str, **_: any) -> str | None: Validates a language value.
+        validate_language(value: str, **_: Any) -> str | None: Validates a language value.
 
     """
 
+    name: str | None
+    id_: int | str | None = None
     sort_name: str | None = None
     volume: int | None = None
     format: str | None = None
@@ -428,7 +430,7 @@ class Series(Basic, Validations):
     summary: str | None = None
 
     @staticmethod
-    def validate_start_year(value: int, **_: any) -> int | None:
+    def validate_start_year(value: int, **_: Any) -> int | None:
         """Validate a start year value.
 
         This method checks if the provided value is a valid four-digit year. If the value is not present,
@@ -448,7 +450,7 @@ class Series(Basic, Validations):
         return _validate_year(value, "Start year")
 
     @staticmethod
-    def validate_end_year(value: int, **_: any) -> int | None:
+    def validate_end_year(value: int, **_: Any) -> int | None:
         """Validate an end year value.
 
         This method checks if the provided value is a valid four-digit year. If the value is not present,
@@ -480,7 +482,7 @@ class Series(Basic, Validations):
             raise ValueError(msg)
 
     @staticmethod
-    def validate_language(value: str, **_: any) -> str | None:
+    def validate_language(value: str, **_: Any) -> str | None:
         """Validate a language value.
 
         Args:
@@ -498,16 +500,18 @@ class Series(Basic, Validations):
 
 
 @dataclass
-class Publisher(Basic):
+class Publisher:
     """A data class representing a Publisher with basic information.
 
     Attributes:
-        name (str): The name associated with the basic information.
-        id_ (int | None): The ID associated with the basic information, defaults to None.
+        name (str | None): The name of the publisher, or None if the source metadata has none.
+        id_ (int | str | None): The ID associated with the publisher, defaults to None.
         imprint (Basic | None): The Imprint of a Publisher with basic information, defaults to None.
 
     """
 
+    name: str | None
+    id_: int | str | None = None
     imprint: Basic | None = None
 
 
@@ -532,13 +536,13 @@ class Credit:
     Attributes:
         person (str): The name of the person associated with the credit.
         role (list[Role]): The list of roles associated with the credit.
-        id_ (int | None): The ID associated with the credit, defaults to None.
+        id_ (int | str | None): The ID associated with the credit, defaults to None.
 
     """
 
     person: str
     role: list[Role]
-    id_: int | None = None
+    id_: int | str | None = None
 
 
 @dataclass
@@ -597,8 +601,8 @@ class GTIN(Validations):
         isbn (int | None): The ISBN (International Standard Book Number) associated with the GTIN, defaults to None.
 
     Static Methods:
-        validate_upc(value: int, **_: any) -> int | None: Validates a UPC (Universal Product Code) value.
-        validate_isbn(value: int, **_: any) -> int | None: Validates an ISBN (International Standard Book Number) value.
+        validate_upc(value: int, **_: Any) -> int | None: Validates a UPC (Universal Product Code) value.
+        validate_isbn(value: int, **_: Any) -> int | None: Validates an ISBN (International Standard Book Number) value.
 
     """
 
@@ -606,7 +610,7 @@ class GTIN(Validations):
     isbn: int | None = None
 
     @staticmethod
-    def validate_upc(value: int, **_: any) -> int | None:
+    def validate_upc(value: int, **_: Any) -> int | None:
         """Validate a UPC (Universal Product Code) value.
 
         If the value is None or not an instance of int, it returns None. Otherwise, it checks
@@ -633,7 +637,7 @@ class GTIN(Validations):
         return value
 
     @staticmethod
-    def validate_isbn(value: int, **_: any) -> int | None:
+    def validate_isbn(value: int, **_: Any) -> int | None:
         """Validate an ISBN (International Standard Book Number) value.
 
         If the value is None or not an instance of int, it returns None. Otherwise, it checks
@@ -974,7 +978,7 @@ class Metadata:
         the archive. If the displayed page number is within the range of the available pages,
         the "Image" attribute of the corresponding page in the "pages" attribute of the
         Metadata object is returned as an integer. If the displayed page number is out of
-        range, 0 is returned.
+        range, or the page has no "Image" attribute, 0 is returned.
 
         Args:
             self (Metadata): The Metadata object.
@@ -993,15 +997,18 @@ class Metadata:
 
         """
         # convert the displayed page number to the page index of the file in the archive
-        return int(self.pages[pagenum]["Image"]) if pagenum < len(self.pages) else 0
+        if pagenum >= len(self.pages):
+            return 0
+        return int(self.pages[pagenum].get("Image", 0))
 
     def get_cover_page_index_list(self: Metadata) -> list[int]:
         """Return a list of archive page indices of cover pages.
 
         The method iterates over the pages in the Metadata object and checks if a page is
         marked as a front cover by having a "Type" attribute equal to PageType.FrontCover. If a
-        front cover page is found, its "Image" attribute is added to the coverlist. If no front
-        cover pages are found, the coverlist is initialized with a single element of 0.
+        front cover page is found, its "Image" attribute is added to the coverlist. Cover pages
+        without an "Image" attribute are skipped. If no front cover pages are found, the
+        coverlist is initialized with a single element of 0.
 
         Returns:
             list[int]: The list of archive page indices of cover pages.
@@ -1016,7 +1023,9 @@ class Metadata:
 
         """
         coverlist = [
-            int(p["Image"]) for p in self.pages if "Type" in p and p["Type"] == PageType.FrontCover
+            int(p["Image"])
+            for p in self.pages
+            if p.get("Type") == PageType.FrontCover and "Image" in p
         ]
 
         if not coverlist:
@@ -1074,8 +1083,8 @@ class Metadata:
             None
 
         """
-        exist, idx = self._existing_credit(new_credit.person)
-        if exist:
+        _, idx = self._existing_credit(new_credit.person)
+        if idx is not None:
             existing_credit: Credit = self.credits[idx]
             for new_role in new_credit.role:
                 if not self._role_exists(new_role, existing_credit.role):
@@ -1114,9 +1123,9 @@ class Metadata:
 
         # Publication info
         if self.publisher:
-            pub_info = self.publisher.name
+            pub_info = self.publisher.name or ""
             if self.publisher.imprint:
-                pub_info += f" ({self.publisher.imprint.name})"
+                pub_info = f"{pub_info} ({self.publisher.imprint.name})".lstrip()
             lines.append(f"{indent}Publisher: {pub_info}")
 
         if self.cover_date:

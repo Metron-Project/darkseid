@@ -961,7 +961,7 @@ class Comic:
         try:
             self._apply_archive_info_to_metadata(metadata, calc_page_sizes=spec.calc_page_sizes)
 
-            raw_bytes = raw_metadata.encode("utf-8") if raw_metadata else None
+            raw_bytes = raw_metadata.encode("utf-8") if raw_metadata else b""
             md_string = spec.handler().string_from_metadata(metadata, raw_bytes)
             written = self._archiver.write_file(spec.filename, md_string)
         except (ArchiverError, OSError, ValueError, XmlError):
@@ -1258,10 +1258,13 @@ class Comic:
             page: The page metadata to update.
 
         """
+        image = page.get("Image")
         try:
-            idx = int(page["Image"])
-        except (KeyError, ValueError, TypeError):
-            logger.warning("Invalid page index in metadata: %s", page.get("Image"))
+            if image is None:
+                raise ValueError  # noqa: TRY301
+            idx = int(image)
+        except ValueError:
+            logger.warning("Invalid page index in metadata: %s", image)
             return
 
         data = self.get_page(idx)
