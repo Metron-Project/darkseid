@@ -855,8 +855,8 @@ class Comic:
             return None
 
         try:
-            raw_bytes = self._archiver.read_file(filename, max_size=MAX_METADATA_SIZE)
-            return raw_bytes.decode("utf-8")
+            raw_bytes = self._read_metadata_file(filename)
+            return None if raw_bytes is None else raw_bytes.decode("utf-8")
         except ArchiverReadError as e:
             msg = f"Unable to read {filename} from {self._path}: {e}"
             raise ComicMetadataError(msg) from e
@@ -875,6 +875,49 @@ class Comic:
 
         """
         return self._metadata_registry.get_filename(metadata_format)
+
+    def _find_metadata_members(self, filename: str) -> list[str]:
+        """Find every archive member matching a metadata filename, best match first.
+
+        Matching ignores case and directories, so ``comicinfo.xml`` and
+        ``sub/ComicInfo.xml`` both match ``ComicInfo.xml``. An exact root-level match
+        sorts first, then shallower paths before deeper ones.
+
+        Args:
+            filename: The standard metadata filename (e.g., "ComicInfo.xml").
+
+        Returns:
+            list[str]: The actual member names in the archive, best match first.
+
+        """
+        target = filename.lower()
+        matches = [
+            str(path)
+            for path in self._archiver.get_filename_list()
+            if Path(str(path)).name.lower() == target
+        ]
+        return sorted(
+            matches,
+            key=lambda member: (member != filename, member.replace("\\", "/").count("/"), member),
+        )
+
+    def _read_metadata_file(self, filename: str) -> bytes | None:
+        """Read the best-matching archive member for a metadata filename.
+
+        Args:
+            filename: The standard metadata filename (e.g., "ComicInfo.xml").
+
+        Returns:
+            bytes | None: The member's contents, or None if no member matches.
+
+        Raises:
+            ArchiverReadError: If the member can't be read.
+
+        """
+        members = self._find_metadata_members(filename)
+        if not members:
+            return None
+        return self._archiver.read_file(members[0], max_size=MAX_METADATA_SIZE)
 
     def read_raw_ci_metadata(self) -> str | None:
         """Read raw ComicInfo metadata XML from the archive.
@@ -1058,14 +1101,10 @@ class Comic:
             List of actual file paths found in the archive matching the filenames.
 
         """
-        archive_files_lower = {
-            Path(str(p)).name.lower(): str(p) for p in self._archiver.get_filename_list()
-        }
-        return [
-            archive_files_lower[filename.lower()]
-            for filename in metadata_format_filenames
-            if filename.lower() in archive_files_lower
-        ]
+        members: list[str] = []
+        for filename in metadata_format_filenames:
+            members.extend(m for m in self._find_metadata_members(filename) if m not in members)
+        return members
 
     def _remove_metadata_files(self, metadata_format_list: list[MetadataFormat]) -> bool:
         """Remove metadata files from the archive.
@@ -1200,11 +1239,7 @@ class Comic:
 
         """
         try:
-            target_filename = filename.lower()
-            filenames = {
-                Path(str(path)).name.lower() for path in self._archiver.get_filename_list()
-            }
-            result = target_filename in filenames
+            result = bool(self._find_metadata_members(filename))
             setattr(self._cache, cache_attr, result)
         except Exception:
             logger.exception("Error checking for metadata file in %s", self._path)
@@ -1407,7 +1442,9 @@ class Comic:
 
         """
         try:
-            xml_bytes = self._archiver.read_file(filename, max_size=MAX_METADATA_SIZE)
+            xml_bytes = self._read_metadata_file(filename)
+            if xml_bytes is None:
+                return SchemaVersion.UNKNOWN
             vm = ValidateMetadata(xml_bytes)
             return vm.validate()
         except (ArchiverReadError, ValidationError):

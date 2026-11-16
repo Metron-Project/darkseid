@@ -1648,6 +1648,51 @@ def test_read_metadata_rejects_oversized_metadata(temp_dir, monkeypatch):
     assert comic.validate_metadata(MetadataFormat.COMIC_INFO) == SchemaVersion.UNKNOWN
 
 
+VALID_COMICINFO = "<ComicInfo><Series>Aquaman</Series><Number>1</Number></ComicInfo>"
+
+
+@pytest.mark.parametrize("member", ["comicinfo.xml", "COMICINFO.XML", "sub/ComicInfo.xml"])
+def test_non_canonical_metadata_name_is_read_and_validated(tmp_path, member):
+    """Metadata found under a non-canonical name must also be readable and validatable."""
+    comic = Comic(_write_cbz(tmp_path / "test.cbz", {member: VALID_COMICINFO}))
+
+    assert comic.has_metadata(MetadataFormat.COMIC_INFO)
+    assert comic.read_raw_ci_metadata() == VALID_COMICINFO
+    metadata = comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True)
+    assert metadata.series.name == "Aquaman"
+    assert comic.validate_metadata(MetadataFormat.COMIC_INFO) != SchemaVersion.UNKNOWN
+
+
+def test_canonical_metadata_name_preferred_over_others(tmp_path):
+    """The exact root-level name wins when several members match."""
+    comic = Comic(
+        _write_cbz(
+            tmp_path / "test.cbz",
+            {
+                "sub/ComicInfo.xml": "<ComicInfo><Series>Wrong</Series></ComicInfo>",
+                "comicinfo.xml": "<ComicInfo><Series>Also Wrong</Series></ComicInfo>",
+                "ComicInfo.xml": VALID_COMICINFO,
+            },
+        )
+    )
+
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO).series.name == "Aquaman"
+
+
+def test_remove_metadata_removes_every_matching_member(tmp_path):
+    """Removal deletes all members matching the metadata name, not just one."""
+    cbz = _write_cbz(
+        tmp_path / "test.cbz",
+        {"ComicInfo.xml": VALID_COMICINFO, "sub/comicinfo.xml": VALID_COMICINFO},
+    )
+    comic = Comic(cbz)
+
+    assert comic.remove_metadata([MetadataFormat.COMIC_INFO])
+    assert not comic.has_metadata(MetadataFormat.COMIC_INFO)
+    with zipfile.ZipFile(cbz) as zf:
+        assert zf.namelist() == ["01.jpg"]
+
+
 def test_validate_metadata_unreadable_returns_unknown(sample_cbz_file):
     """Test validate_metadata returns UNKNOWN when the metadata can't be read."""
     comic = Comic(sample_cbz_file)
