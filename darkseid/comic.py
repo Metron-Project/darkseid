@@ -1285,15 +1285,17 @@ class Comic:
         """
         metadata.page_count = self.get_number_of_pages()
 
+        # Do not calculate page sizes for PDF files, as it can be very slow and resource-intensive.
+        if not calc_page_sizes or self._path.suffix.lower() == PDF:
+            return
+
         if not PILLOW_AVAILABLE:
             logger.warning(
                 "Unable to calculate page sizes since Pillow is not available: %s", self._path.name
             )
             return
 
-        # Do not calculate page sizes for PDF files, as it can be very slow and resource-intensive.
-        if calc_page_sizes and self._path.suffix.lower() != PDF:
-            self._calculate_all_page_info(metadata)
+        self._calculate_all_page_info(metadata)
 
     def _calculate_all_page_info(self, metadata: Metadata) -> None:
         """Calculate page information for all pages in metadata.

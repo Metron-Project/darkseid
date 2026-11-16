@@ -1177,6 +1177,35 @@ def test_apply_archive_info_to_metadata_basic(sample_cbz_file, sample_metadata):
         assert sample_metadata.page_count == 2
 
 
+@pytest.mark.parametrize(
+    ("suffix", "calc_page_sizes", "expect_warning"),
+    [
+        (".cbz", False, False),  # e.g. MetronInfo writes never calculate page sizes
+        (".pdf", True, False),  # PDFs skip page size calculation
+        (".cbz", True, True),
+    ],
+)
+def test_pillow_missing_warning_only_when_page_sizes_needed(
+    temp_dir, caplog, suffix, calc_page_sizes, expect_warning
+):
+    """The missing-Pillow warning fires only when page sizes would actually be calculated."""
+    path = temp_dir / f"test{suffix}"
+    path.write_bytes(b"")
+    sample_metadata = Metadata()
+    with (
+        patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory,
+        patch("darkseid.comic.PILLOW_AVAILABLE", new=False),
+    ):
+        mock_factory.return_value.get_filename_list.return_value = ["page1.jpg"]
+        comic = Comic(path)
+        with patch.object(comic, "_calculate_all_page_info") as mock_calc:
+            comic._apply_archive_info_to_metadata(sample_metadata, calc_page_sizes=calc_page_sizes)
+
+        mock_calc.assert_not_called()
+    assert ("Pillow is not available" in caplog.text) is expect_warning
+    assert sample_metadata.page_count == 1
+
+
 def test_apply_archive_info_to_metadata_with_page_sizes(sample_cbz_file, sample_metadata):
     """Test applying archive info with page size calculation."""
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
