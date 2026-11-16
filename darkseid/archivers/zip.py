@@ -20,6 +20,8 @@ Examples:
 from __future__ import annotations
 
 import logging
+import lzma
+import zlib
 from contextlib import suppress
 from typing import TYPE_CHECKING
 from zipfile import is_zipfile
@@ -101,6 +103,8 @@ class ZipArchiver(Archiver):
                 - Corrupt ZIP file (BadZipfile)
                 - File system errors (OSError)
                 - File not found in archive (KeyError)
+                - Encrypted member, unsupported compression method, or corrupt
+                  compressed data
 
         Examples:
             >>> archiver = ZipArchiver(Path("docs.cbz"))
@@ -124,6 +128,12 @@ class ZipArchiver(Archiver):
             raise ArchiverReadError(msg) from e
         except KeyError as e:
             msg = f"File not found in archive: {archive_file}"
+            raise ArchiverReadError(msg) from e
+        except (RuntimeError, NotImplementedError, EOFError, zlib.error, lzma.LZMAError) as e:
+            # zipfile reports encrypted members as RuntimeError and unsupported compression
+            # as NotImplementedError; corrupt compressed data surfaces as the codec's error.
+            self._handle_error("read", archive_file, e)
+            msg = f"Cannot read '{archive_file}' from ZIP file: {e}"
             raise ArchiverReadError(msg) from e
 
     def write_file(self, archive_file: str, data: str | bytes) -> bool:
