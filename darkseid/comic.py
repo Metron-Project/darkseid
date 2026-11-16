@@ -42,7 +42,7 @@ except ImportError:
 
 from darkseid.archivers import ArchiverError, ArchiverFactory, ArchiverReadError
 from darkseid.archivers.zip import ZipArchiver
-from darkseid.constants import CBZ, PDF
+from darkseid.constants import CBZ, IMAGE_EXTENSIONS, PDF
 from darkseid.metadata.base_handler import XmlError
 from darkseid.metadata.comicinfo import ComicInfo
 from darkseid.metadata.data_classes import ImageMetadata, Metadata
@@ -55,9 +55,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Constants
-SUPPORTED_IMAGE_EXTENSIONS: Final[frozenset[str]] = frozenset(
-    [".jpg", ".jpeg", ".png", ".gif", ".webp", ".jxl"]
-)
+SUPPORTED_IMAGE_EXTENSIONS: Final[frozenset[str]] = IMAGE_EXTENSIONS
 COMIC_RACK_FILENAME: Final[str] = "ComicInfo.xml"
 METRON_INFO_FILENAME: Final[str] = "MetronInfo.xml"
 # Metadata XML is small; refuse anything larger to guard against decompression bombs.
@@ -558,7 +556,7 @@ class Comic:
                  a hidden file (doesn't start with '.').
 
         Note:
-            Supported formats: .jpg, .jpeg, .png, .gif, .webp, .jxl
+            Supported formats are listed in darkseid.constants.IMAGE_EXTENSIONS.
             Hidden files (starting with '.') are excluded.
 
         """

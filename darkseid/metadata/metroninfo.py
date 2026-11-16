@@ -426,17 +426,12 @@ class MetronInfo(BaseMetadataHandler):
             date_val: Date value.
 
         """
-        element = root.find(tag)
-        if date_val is None:
-            if element is not None:
-                root.remove(element)
-        else:
-            # Skip dates with invalid years
-            if date_val.year < EARLIEST_YEAR:
-                return
-            if element is None:
-                element = ET.SubElement(root, tag)
-            element.text = date_val.strftime("%Y-%m-%d")
+        # Skip dates with invalid years. Note: an existing element is currently left in place.
+        if date_val is not None and date_val.year < EARLIEST_YEAR:
+            return
+        MetronInfo._set_element_text(
+            root, tag, None if date_val is None else date_val.strftime("%Y-%m-%d")
+        )
 
     def _add_basic_children(
         self, root: ET.Element, parent_tag: str, child_tag: str, items: list[Basic]

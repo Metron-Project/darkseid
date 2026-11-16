@@ -23,16 +23,14 @@ import logging
 import lzma
 import zlib
 from contextlib import suppress
-from typing import TYPE_CHECKING
+from pathlib import Path
 from zipfile import is_zipfile
 
 import rarfile
 from zipremove import ZIP_DEFLATED, ZIP_STORED, BadZipfile, ZipFile
 
 from darkseid.archivers.archiver import Archiver, ArchiverReadError
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from darkseid.constants import IMAGE_EXTENSIONS
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +75,12 @@ class ZipArchiver(Archiver):
 
         """
         super().__init__(path)
+
+    @staticmethod
+    def _compress_type(archive_file: str) -> int:
+        """Store page images uncompressed, since they're already compressed; deflate the rest."""
+        is_image = Path(archive_file).suffix.lower() in IMAGE_EXTENSIONS
+        return ZIP_STORED if is_image else ZIP_DEFLATED
 
     def read_file(self, archive_file: str, max_size: int | None = None) -> bytes:
         """Read the contents of a file from the ZIP archive.
@@ -160,7 +164,7 @@ class ZipArchiver(Archiver):
 
         Note:
             - String data is automatically encoded as UTF-8
-            - Image files (matched by IMAGE_EXT_RE) are stored uncompressed
+            - Image files (extensions in IMAGE_EXTENSIONS) are stored uncompressed
             - Other files are compressed with deflate at maximum compression level
             - Existing files are replaced, not appended to
 
@@ -179,7 +183,7 @@ class ZipArchiver(Archiver):
 
         # Choose compression based on file type
         # Images are stored uncompressed to avoid double compression
-        compress_type = ZIP_STORED if self.IMAGE_EXT_RE.search(archive_file) else ZIP_DEFLATED
+        compress_type = self._compress_type(archive_file)
 
         try:
             with ZipFile(self.path, "a") as zf:
@@ -330,10 +334,7 @@ class ZipArchiver(Archiver):
                     for filename in source_files:
                         data = other_archive.read_file(filename)
                         if data is not None:
-                            # Apply same compression logic as write_file
-                            compress_type = (
-                                ZIP_STORED if self.IMAGE_EXT_RE.search(filename) else ZIP_DEFLATED
-                            )
+                            compress_type = self._compress_type(filename)
                             zout.writestr(
                                 filename, data, compress_type=compress_type, compresslevel=9
                             )

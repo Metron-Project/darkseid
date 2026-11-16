@@ -34,8 +34,9 @@ Examples:
     ...         dest.copy_from_archive(source)
 
 Attributes:
-    IMAGE_EXT_RE: A compiled regular expression pattern for matching common
-        image file extensions (jpeg, jpg, png, webp, gif, jxl). Case-insensitive.
+    IMAGE_EXT_RE: A compiled, case-insensitive regular expression matching the page
+        image extensions in darkseid.constants.IMAGE_EXTENSIONS. Kept for
+        compatibility; darkseid itself checks the extension set directly.
 
 """
 
@@ -50,6 +51,8 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
+
+from darkseid.constants import IMAGE_EXTENSIONS
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -161,8 +164,8 @@ class Archiver(ABC):
         - Consider caching file lists in concrete implementations
 
     Attributes:
-        IMAGE_EXT_RE: Compiled regex for matching image file extensions.
-            Matches: .jpg, .jpeg, .png, .webp, .gif, .jxl (case-insensitive)
+        IMAGE_EXT_RE: Compiled regex matching the extensions in
+            darkseid.constants.IMAGE_EXTENSIONS (case-insensitive).
         MAX_READ_SIZE: Default maximum uncompressed size, in bytes, that
             read_file() will return for a single file.
 
@@ -182,7 +185,9 @@ class Archiver(ABC):
 
     """
 
-    IMAGE_EXT_RE = re.compile(r"\.(jpe?g|png|webp|gif|jxl)$", re.IGNORECASE)
+    IMAGE_EXT_RE = re.compile(
+        "(" + "|".join(re.escape(ext) for ext in sorted(IMAGE_EXTENSIONS)) + ")$", re.IGNORECASE
+    )
     MAX_READ_SIZE: ClassVar[int] = 256 * 1024 * 1024  # 256 MiB
     _DRIVE_RE = re.compile(r"^[A-Za-z]:")
 

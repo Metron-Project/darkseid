@@ -165,14 +165,9 @@ class BaseMetadataHandler(ABC):
             dt: Datetime value.
 
         """
-        element = root.find(tag)
-        if dt is None:
-            if element is not None:
-                root.remove(element)
-        else:
-            if element is None:
-                element = ET.SubElement(root, tag)
-            element.text = dt.isoformat(sep="T")
+        BaseMetadataHandler._set_element_text(
+            root, tag, None if dt is None else dt.isoformat(sep="T")
+        )
 
     @staticmethod
     def _get_text_content(root: ET.Element, element_name: str) -> str | None:

@@ -65,7 +65,7 @@ class PdfArchiver(Archiver):
         path (Path): The filesystem path to the PDF file.
 
     Note:
-        - PDF pages are read-only virtual files rendered at 150 DPI
+        - PDF pages are read-only virtual files rendered at PAGE_DPI
         - Metadata files can be embedded, read, and removed as PDF attachments
         - copy_from_archive() is not supported for PDFs
 
@@ -79,8 +79,9 @@ class PdfArchiver(Archiver):
     """
 
     # Constants for page rendering
-    PAGE_DPI = 150
-    PAGE_ZOOM_FACTOR = 2.0  # Produces 150 DPI for typical 72 DPI PDFs
+    PAGE_ZOOM_FACTOR = 2.0
+    # PDF coordinates are 72 units per inch, so the rendered resolution follows the zoom.
+    PAGE_DPI = int(PAGE_ZOOM_FACTOR * 72)
     PAGE_NUMBER_PADDING = 3  # Zero-padding width (e.g., 001, 002)
 
     def __init__(self, path: Path) -> None:
@@ -215,7 +216,7 @@ class PdfArchiver(Archiver):
                     raise ArchiverReadError(msg)  # noqa: TRY301
 
                 page = doc[page_index]
-                # Render page to PNG at configured DPI
+                # Render page to PNG at PAGE_DPI (PAGE_ZOOM_FACTOR x 72)
                 mat = pymupdf.Matrix(self.PAGE_ZOOM_FACTOR, self.PAGE_ZOOM_FACTOR)
                 pix = page.get_pixmap(matrix=mat)
                 data = pix.tobytes("png")

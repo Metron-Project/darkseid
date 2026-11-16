@@ -31,7 +31,7 @@ Note:
 """
 
 from pathlib import Path
-from typing import ClassVar, Protocol, runtime_checkable
+from typing import ClassVar
 
 from darkseid.archivers.archiver import Archiver
 from darkseid.archivers.pdf import PYMUPDF_AVAILABLE
@@ -48,18 +48,18 @@ if PY7ZR_AVAILABLE:
     from darkseid.archivers.sevenzip import SevenZipArchiver
 
 
-@runtime_checkable
-class ArchiverProtocol(Protocol):
-    """Protocol defining the interface for archiver classes."""
-
-    def __init__(self, path: Path) -> None:
-        """Initialize the archiver with a path."""
-        ...
-
-    @staticmethod
-    def name() -> str:
-        """Return the name of the archiver."""
-        ...
+def _default_archiver_map() -> dict[str, type[Archiver]]:
+    """Return the built-in extension-to-archiver map, including installed optional formats."""
+    archiver_map: dict[str, type[Archiver]] = {
+        CBZ: ZipArchiver,
+        CBR: RarArchiver,
+        CBT: TarArchiver,
+    }
+    if PYMUPDF_AVAILABLE:
+        archiver_map[PDF] = PdfArchiver
+    if PY7ZR_AVAILABLE:
+        archiver_map[CB7] = SevenZipArchiver
+    return archiver_map
 
 
 class UnknownArchiver(Archiver):
@@ -227,26 +227,14 @@ class ArchiverFactory:
 
         Registering a new archiver type:
 
-        >>> from darkseid.archivers.seven_zip import SevenZipArchiver
+        >>> from darkseid.archivers.sevenzip import SevenZipArchiver
         >>> ArchiverFactory.register_archiver(".7z", SevenZipArchiver)
         >>> archiver = ArchiverFactory.create_archiver(Path("archive.7z"))
         >>> print(archiver.name())  # "SevenZip"
 
     """
 
-    # Build the archiver map with optional dependencies
-    _ARCHIVER_MAP: ClassVar[dict[str, type[Archiver]]] = {
-        CBZ: ZipArchiver,
-        CBR: RarArchiver,
-        CBT: TarArchiver,
-    }
-
-    # Register optional archivers at class definition time
-    if PYMUPDF_AVAILABLE:
-        _ARCHIVER_MAP[PDF] = PdfArchiver
-
-    if PY7ZR_AVAILABLE:
-        _ARCHIVER_MAP[CB7] = SevenZipArchiver
+    _ARCHIVER_MAP: ClassVar[dict[str, type[Archiver]]] = _default_archiver_map()
 
     @classmethod
     def create_archiver(cls, path: Path) -> Archiver:
@@ -300,7 +288,7 @@ class ArchiverFactory:
             TypeError: If archiver_class is not a subclass of Archiver.
 
         Examples:
-            >>> from darkseid.archivers.seven_zip import SevenZipArchiver
+            >>> from darkseid.archivers.sevenzip import SevenZipArchiver
             >>> from darkseid.archivers.tar import TarArchiver
             >>>
             >>> # Register new archiver types
@@ -391,14 +379,4 @@ class ArchiverFactory:
             >>> len(ArchiverFactory.get_supported_extensions())  # 4
 
         """
-        base_map = {
-            CBZ: ZipArchiver,
-            CBR: RarArchiver,
-            CBT: TarArchiver,
-        }
-        # Add optional archivers if their dependencies are available
-        if PYMUPDF_AVAILABLE:
-            base_map[PDF] = PdfArchiver
-        if PY7ZR_AVAILABLE:
-            base_map[CB7] = SevenZipArchiver
-        cls._ARCHIVER_MAP = base_map
+        cls._ARCHIVER_MAP = _default_archiver_map()

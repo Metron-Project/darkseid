@@ -1787,3 +1787,51 @@ def _write_zip_with_encrypted_first_member(path, name, data, others=()):
     for signature, flag_offset in ((b"PK\x03\x04", 6), (b"PK\x01\x02", 8)):
         raw[raw.index(signature) + flag_offset] |= 0x1
     path.write_bytes(bytes(raw))
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("a.jpg", True),
+        ("a.JPEG", True),
+        ("dir/b.png", True),
+        ("c.gif", True),
+        ("d.webp", True),
+        ("e.jxl", True),
+        ("f.txt", False),
+        ("g.jpgx", False),
+        ("jpg", False),
+        ("h.tif", False),
+    ],
+)
+def test_image_ext_re_matches_page_image_extensions(name, expected):
+    """Test the derived image regex matches exactly the shared page image extensions."""
+    assert bool(Archiver.IMAGE_EXT_RE.search(name)) is expected
+
+
+def test_zip_stores_images_uncompressed_and_deflates_others(temp_dir):
+    """Test page images are stored as-is and other files are deflated."""
+    archive = ZipArchiver(temp_dir / "test.cbz")
+    assert archive.write_file("Page01.JPG", b"x" * 100)
+    assert archive.write_file("ComicInfo.xml", "<ComicInfo/>" * 10)
+
+    with zipfile.ZipFile(temp_dir / "test.cbz") as zf:
+        assert zf.getinfo("Page01.JPG").compress_type == zipfile.ZIP_STORED
+        assert zf.getinfo("ComicInfo.xml").compress_type == zipfile.ZIP_DEFLATED
+
+
+def test_pdf_page_dpi_matches_rendered_resolution(temp_dir):
+    """Test PAGE_DPI reports the resolution pages are actually rendered at."""
+    if not PYMUPDF_AVAILABLE:
+        pytest.skip("pymupdf not available")
+    from PIL import Image  # noqa: PLC0415
+
+    pdf_path = temp_dir / "page.pdf"
+    doc = pymupdf.open()
+    doc.new_page(width=72 * 8, height=72 * 10)  # 8 x 10 inches
+    doc.save(pdf_path)
+    doc.close()
+
+    page = Image.open(io.BytesIO(PdfArchiver(pdf_path).read_file("page_001.png")))
+    assert page.size == (8 * PdfArchiver.PAGE_DPI, 10 * PdfArchiver.PAGE_DPI)
+    assert PdfArchiver.PAGE_DPI == 144
