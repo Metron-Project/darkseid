@@ -125,6 +125,8 @@ omit = [
 ]
 
 [tool.pyright]
+# Tests are excluded, as ruff exempts them from the annotation rules.
+include = ["darkseid"]
 exclude = [
   "**/__pycache__",
   "**/node_modules",
