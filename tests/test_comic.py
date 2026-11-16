@@ -910,12 +910,14 @@ def test_remove_metadata_comic_rack(sample_cbz_file):
 def test_remove_metadata_not_found(sample_cbz_file):
     """Test removing metadata when not found."""
     with patch("darkseid.comic.ArchiverFactory.create_archiver") as mock_factory:
-        mock_factory.return_value = Mock()
+        mock_archiver = Mock()
+        mock_archiver.get_filename_list.return_value = ["page1.jpg"]
+        mock_factory.return_value = mock_archiver
         comic = Comic(sample_cbz_file)
 
-        with patch.object(comic, "has_metadata", return_value=False):
-            result = comic.remove_metadata([MetadataFormat.COMIC_INFO])
-            assert result is True  # No metadata to remove is considered success
+        result = comic.remove_metadata([MetadataFormat.COMIC_INFO])
+        assert result is True  # No metadata to remove is considered success
+        mock_archiver.remove_files.assert_not_called()
 
 
 def test_remove_metadata_unsupported_format(sample_cbz_file):
@@ -1850,3 +1852,51 @@ def test_unexpected_listing_error_propagates(sample_cbz_file):
         pytest.raises(RuntimeError, match="bug"),
     ):
         comic.get_page_name_list()
+
+
+def test_remove_metadata_from_archive_without_pages(tmp_path):
+    """Test metadata is removed even when the archive has no images."""
+    cbz = tmp_path / "no_pages.cbz"
+    with zipfile.ZipFile(cbz, "w") as zf:
+        zf.writestr("ComicInfo.xml", VALID_COMICINFO)
+        zf.writestr("notes.txt", "x")
+
+    assert Comic(cbz).remove_metadata([MetadataFormat.COMIC_INFO]) is True
+    with zipfile.ZipFile(cbz) as zf:
+        assert zf.namelist() == ["notes.txt"]
+
+
+def test_is_archive_valid_failure_not_logged_as_error(sample_cbz_file, caplog):
+    """Test a failed validity check is a quiet False, not an ERROR traceback."""
+    comic = Comic(sample_cbz_file)
+
+    with patch.object(comic._archiver, "test", side_effect=OSError("unreadable")):
+        assert comic.is_archive_valid() is False
+    assert not [r for r in caplog.records if r.levelname == "ERROR"]
+
+
+def test_read_metadata_encrypted_member_is_handled(tmp_path):
+    """Test an encrypted ComicInfo.xml is a metadata error, not a raw RuntimeError."""
+    cbz = tmp_path / "enc.cbz"
+    _write_zip_with_encrypted_first_member(cbz, "ComicInfo.xml", VALID_COMICINFO, ["01.jpg"])
+    comic = Comic(cbz)
+
+    assert comic.has_metadata(MetadataFormat.COMIC_INFO)
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO).is_empty
+    with pytest.raises(ComicMetadataError):
+        comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True)
+    # A write replaces the unreadable member instead of raising RuntimeError.
+    assert comic.write_metadata(_metadata_with_series("X"), MetadataFormat.COMIC_INFO) is True
+    assert comic.read_metadata(MetadataFormat.COMIC_INFO, strict=True).series.name == "X"
+
+
+def _write_zip_with_encrypted_first_member(path, name, data, others=()):
+    """Write a ZIP whose first member is flagged encrypted (zipfile won't write that flag)."""
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr(name, data)
+        for other in others:
+            zf.writestr(other, b"")
+    raw = bytearray(path.read_bytes())
+    for signature, flag_offset in ((b"PK\x03\x04", 6), (b"PK\x01\x02", 8)):
+        raw[raw.index(signature) + flag_offset] |= 0x1
+    path.write_bytes(bytes(raw))

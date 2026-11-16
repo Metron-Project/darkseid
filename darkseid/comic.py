@@ -426,8 +426,8 @@ class Comic:
         """
         try:
             return self._archiver.test()
-        except (ArchiverError, OSError):
-            logger.exception("Error testing archive %s", self._path)
+        except (ArchiverError, OSError) as e:
+            logger.debug("Archive test failed for %s: %s", self._path, e)
             return False
 
     def is_writable(self) -> bool:
@@ -983,18 +983,8 @@ class Comic:
             logger.warning("Unsupported metadata formats for removal: %s", metadata_format_list)
             return False
 
-        # has_metadata() reports an unreadable archive as having no metadata, which
-        # would make removal look successful, so check the archive can be listed first.
-        try:
-            self._archiver.get_filename_list()
-        except ArchiverReadError:
-            logger.exception("Cannot remove metadata from unreadable archive %s", self._path)
-            return False
-
-        if not any(self.has_metadata(fmt) for fmt in metadata_format_list):
-            logger.info("No metadata found in %s", self._path)
-            return True  # Already removed, consider it success
-
+        # Look for the files directly rather than through has_metadata(), which reports
+        # an unreadable archive, or one without pages, as having no metadata.
         return self._remove_metadata_files(metadata_format_list)
 
     def _metadata_present(self, metadata_format_filenames: list[str]) -> list[str]:
@@ -1019,7 +1009,8 @@ class Comic:
             metadata_format_list: A list of metadata formats to remove.
 
         Returns:
-            bool: True if successful, False otherwise.
+            bool: True if the files were removed or none were present, False if the
+                archive can't be read or the removal fails.
 
         """
         # Build list of filenames to remove
@@ -1032,8 +1023,14 @@ class Comic:
 
         try:
             all_metadata_present = self._metadata_present(metadata_format_filenames)
-            if not all_metadata_present:
-                return True  # No files to remove
+        except ArchiverReadError:
+            logger.exception("Cannot remove metadata from unreadable archive %s", self._path)
+            return False
+        if not all_metadata_present:
+            logger.info("No metadata found in %s", self._path)
+            return True  # Already removed, consider it success
+
+        try:
             return self._archiver.remove_files(all_metadata_present)
         except (ArchiverError, OSError):
             logger.exception("Error removing metadata from %s", self._path)

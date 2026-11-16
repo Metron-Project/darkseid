@@ -1732,3 +1732,58 @@ def test_list_files_library_errors_wrapped(sample_zip_path):
 
     with pytest.raises(ArchiverReadError, match="boom"):
         BrokenArchiver(sample_zip_path).get_filename_list()
+
+
+def test_zip_read_file_encrypted_member_raises_read_error(temp_dir):
+    """Test zipfile's RuntimeError for an encrypted member is wrapped in ArchiverReadError."""
+    cbz = temp_dir / "enc.cbz"
+    _write_zip_with_encrypted_first_member(cbz, "secret.txt", "data")
+
+    with pytest.raises(ArchiverReadError, match=r"secret\.txt") as exc_info:
+        ZipArchiver(cbz).read_file("secret.txt")
+    assert isinstance(exc_info.value.__cause__, RuntimeError)
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        rarfile.PasswordRequired("password"),
+        rarfile.RarCRCError("crc"),
+        rarfile.NeedFirstVolume("vol", None),
+        OSError("io"),
+    ],
+)
+@patch("rarfile.RarFile")
+def test_rar_read_file_library_errors_raise_read_error(mock_rar_file, sample_rar_path, error):
+    """Test every rarfile and I/O error from a read is wrapped in ArchiverReadError."""
+    mock_rar_file.return_value.__enter__.return_value.read.side_effect = error
+    mock_rar_file.return_value.__enter__.return_value.getinfo.return_value.file_size = 1
+
+    with pytest.raises(ArchiverReadError) as exc_info:
+        RarArchiver(sample_rar_path).read_file("page.jpg")
+    assert exc_info.value.__cause__ is error
+
+
+def test_zip_export_of_damaged_rar_returns_false(sample_rar_path, temp_dir):
+    """Test exporting a CBR whose member can't be read fails cleanly and leaves no output."""
+    out = temp_dir / "out.cbz"
+    with patch("rarfile.RarFile") as mock_rar_file:
+        rf = mock_rar_file.return_value.__enter__.return_value
+        rf.namelist.return_value = ["page.jpg"]
+        rf.getinfo.return_value.file_size = 1
+        rf.read.side_effect = rarfile.RarCRCError("crc")
+
+        assert not ZipArchiver(out).copy_from_archive(RarArchiver(sample_rar_path))
+    assert not out.exists()
+
+
+def _write_zip_with_encrypted_first_member(path, name, data, others=()):
+    """Write a ZIP whose first member is flagged encrypted (zipfile won't write that flag)."""
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr(name, data)
+        for other in others:
+            zf.writestr(other, b"")
+    raw = bytearray(path.read_bytes())
+    for signature, flag_offset in ((b"PK\x03\x04", 6), (b"PK\x01\x02", 8)):
+        raw[raw.index(signature) + flag_offset] |= 0x1
+    path.write_bytes(bytes(raw))

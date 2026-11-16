@@ -107,7 +107,8 @@ class RarArchiver(Archiver):
                 - RAR command execution failure (missing unrar tool)
                 - Corrupt or invalid RAR file
                 - File not found in the archive
-                - Other I/O errors
+                - Password-protected, CRC-damaged or multi-volume archives
+                - Other errors reported by rarfile, and file system errors
 
         Examples:
             >>> archiver = RarArchiver(Path("comics.rar"))
@@ -136,6 +137,12 @@ class RarArchiver(Archiver):
         except io.UnsupportedOperation:
             # Handle empty directories - return empty bytes
             return b""
+        except (rarfile.Error, OSError) as e:
+            # Everything else rarfile reports (e.g. password-protected, CRC-damaged or
+            # multi-volume archives) and file system errors.
+            self._handle_error("read", archive_file, e)
+            msg = f"Cannot read '{archive_file}' from RAR archive: {e}"
+            raise ArchiverReadError(msg) from e
 
     def write_file(self, archive_file: str, data: str | bytes) -> bool:  # noqa: ARG002
         """Attempt to write data to a file in the RAR archive.
