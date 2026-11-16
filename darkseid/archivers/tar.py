@@ -42,7 +42,7 @@ import io
 import logging
 import tarfile
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final, Literal
 
 from darkseid.archivers.archiver import Archiver, ArchiverReadError
 
@@ -51,6 +51,24 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+_Compression = Literal["", "gz", "bz2", "xz"]
+_ReadMode = Literal["r", "r:gz", "r:bz2", "r:xz"]
+_WriteMode = Literal["w", "w:gz", "w:bz2", "w:xz"]
+
+# tarfile.open() is typed with literal modes, so map each compression to them explicitly.
+_READ_MODES: Final[dict[_Compression, _ReadMode]] = {
+    "": "r",
+    "gz": "r:gz",
+    "bz2": "r:bz2",
+    "xz": "r:xz",
+}
+_WRITE_MODES: Final[dict[_Compression, _WriteMode]] = {
+    "": "w",
+    "gz": "w:gz",
+    "bz2": "w:bz2",
+    "xz": "w:xz",
+}
 
 
 class TarArchiver(Archiver):
@@ -96,13 +114,13 @@ class TarArchiver(Archiver):
 
         """
         super().__init__(path)
-        self._mode = self._determine_mode()
+        self._mode: _Compression = self._determine_mode()
 
-    def _determine_mode(self) -> str:  # noqa: PLR0911
-        """Determine the appropriate tarfile mode based on file extension.
+    def _determine_mode(self) -> _Compression:  # noqa: PLR0911
+        """Determine the archive's compression from its file extension.
 
         Returns:
-            String mode suitable for tarfile.open() calls.
+            The compression suffix for tarfile modes, or "" for an uncompressed TAR.
 
         """
         suffix = self._path.suffix.lower()
@@ -123,11 +141,11 @@ class TarArchiver(Archiver):
             return "xz"
         return ""  # Uncompressed TAR & .cbt
 
-    def _write_mode(self) -> str:
-        return f"w:{self._mode}" if self._mode else "w"
+    def _write_mode(self) -> _WriteMode:
+        return _WRITE_MODES[self._mode]
 
-    def _read_mode(self) -> str:
-        return f"r:{self._mode}" if self._mode else "r"
+    def _read_mode(self) -> _ReadMode:
+        return _READ_MODES[self._mode]
 
     def read_file(self, archive_file: str, max_size: int | None = None) -> bytes:
         """Read the contents of a file from the TAR archive.

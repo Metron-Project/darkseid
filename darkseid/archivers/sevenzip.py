@@ -39,16 +39,20 @@ from __future__ import annotations
 
 import logging
 from contextlib import suppress
+from typing import TYPE_CHECKING
+
+# Pyright treats the module as always bound; at runtime it's only used when available.
+if TYPE_CHECKING:
+    import py7zr
+    import py7zr.io
 
 try:
     import py7zr
+    import py7zr.io
 
     PY7ZR_AVAILABLE = True
 except ImportError:
     PY7ZR_AVAILABLE = False
-    py7zr = None
-
-from typing import TYPE_CHECKING
 
 from darkseid.archivers.archiver import Archiver, ArchiverReadError
 

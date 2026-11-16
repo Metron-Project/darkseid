@@ -34,18 +34,12 @@ from pathlib import Path
 from typing import ClassVar
 
 from darkseid.archivers.archiver import Archiver
-from darkseid.archivers.pdf import PYMUPDF_AVAILABLE
+from darkseid.archivers.pdf import PYMUPDF_AVAILABLE, PdfArchiver
 from darkseid.archivers.rar import RarArchiver
-from darkseid.archivers.sevenzip import PY7ZR_AVAILABLE
+from darkseid.archivers.sevenzip import PY7ZR_AVAILABLE, SevenZipArchiver
 from darkseid.archivers.tar import TarArchiver
 from darkseid.archivers.zip import ZipArchiver
 from darkseid.constants import CB7, CBR, CBT, CBZ, PDF
-
-if PYMUPDF_AVAILABLE:
-    from darkseid.archivers.pdf import PdfArchiver
-
-if PY7ZR_AVAILABLE:
-    from darkseid.archivers.sevenzip import SevenZipArchiver
 
 
 def _default_archiver_map() -> dict[str, type[Archiver]]:

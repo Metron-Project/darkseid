@@ -32,13 +32,16 @@ import logging
 from contextlib import contextmanager, suppress
 from typing import TYPE_CHECKING, Any
 
+# Pyright treats the module as always bound; at runtime it's only used when available.
+if TYPE_CHECKING:
+    import pymupdf
+
 try:
     import pymupdf
 
     PYMUPDF_AVAILABLE = True
 except ImportError:
     PYMUPDF_AVAILABLE = False
-    pymupdf = None  # type: ignore[assignment]
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -189,7 +192,7 @@ class PdfArchiver(Archiver):
 
         """
         try:
-            doc.save(doc.name, incremental=True, encryption=pymupdf.PDF_ENCRYPT_KEEP)
+            doc.saveIncr()
         finally:
             self.invalidate_cache()
 
